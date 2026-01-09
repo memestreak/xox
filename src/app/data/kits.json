@@ -1,0 +1,6 @@
+{
+  "kits": [
+    { "id": "classic-808", "name": "Classic 808", "folder": "808" },
+    { "id": "studio-rock", "name": "Studio Rock", "folder": "rock" }
+  ]
+}

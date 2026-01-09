@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# XOX-16 Playback Engine
 
-## Getting Started
+XOX-16 is a high-performance, 16-step drum sequencer built with Next.js and the Web Audio API. It focuses on precision timing, professional aesthetics, and a smooth user experience.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **High-Precision Timing**: Implements a Look-Ahead Scheduler to ensure rock-solid playback even under heavy UI load.
+- **16-Step Sequences**: Pre-defined and custom patterns for rhythm creation.
+- **Dynamic Kit Loading**: Switch between different drum kits (808, 909, etc.) on the fly.
+- **Advanced Mixer**: Individual Solo and Mute controls per track with proper priority logic.
+- **Real-time BPM Sync**: Adjust tempo smoothly during playback.
+- **Visual Feedback**: Running light indicator and active step highlighting.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠 Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Framework**: [Next.js (App Router)](https://nextjs.org/)
+- **Audio**: [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Icons & UI**: Custom SVG icons and a premium glassmorphic design.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🏗 Architecture
 
-## Learn More
+The application is split into two main layers:
 
-To learn more about Next.js, take a look at the following resources:
+1.  **Audio Engine ([`AudioEngine.ts`](./src/app/AudioEngine.ts))**:
+    - Manages the `AudioContext` lifecycle.
+    - Decodes and caches audio samples.
+    - Runs a high-priority scheduling loop that "looks ahead" in time to avoid audio dropouts.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2.  **UI Component ([`Sequencer.tsx`](./src/app/Sequencer.tsx))**:
+    - Manages the React state for playback, mixing, and visuals.
+    - Renders the responsive 16-step grid.
+    - Synchronizes visual updates with audio triggers using `requestAnimationFrame`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📂 Project Structure
 
-## Deploy on Vercel
+- `/public/kits/`: Static .wav samples organized by drum kit.
+- [`src/app/`](./src/app/README.md): Core application source code.
+- [`src/app/data/`](./src/app/data/README.md): JSON configuration for kits and patterns.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🚦 Getting Started
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
+
+2.  **Run the development server**:
+    ```bash
+    npm run dev
+    ```
+
+3.  **Open in browser**:
+    Navigate to [http://localhost:3000](http://localhost:3000).
+
+---
+
+Developed with a focus on audio-visual excellence.
