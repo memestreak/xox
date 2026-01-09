@@ -2,23 +2,23 @@
 
 XOX-16 is a high-performance, 16-step drum sequencer built with Next.js and the Web Audio API. It focuses on precision timing, professional aesthetics, and a smooth user experience.
 
-## 🚀 Features
+## Features
 
-- **High-Precision Timing**: Implements a Look-Ahead Scheduler to ensure rock-solid playback even under heavy UI load.
-- **16-Step Sequences**: Pre-defined and custom patterns for rhythm creation.
+- **High-Precision Timing**: Implements a Look-Ahead Scheduler to ensure consistent playback even under heavy UI load.
+- **16-Step Sequences**: Preconfigured patterns for rhythm creation.
 - **Dynamic Kit Loading**: Switch between different drum kits (808, 909, etc.) on the fly.
-- **Advanced Mixer**: Individual Solo and Mute controls per track with proper priority logic.
+- **Advanced Mixer**: Individual solo and mute controls per track with proper priority logic.
 - **Real-time BPM Sync**: Adjust tempo smoothly during playback.
 - **Visual Feedback**: Running light indicator and active step highlighting.
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Framework**: [Next.js (App Router)](https://nextjs.org/)
 - **Audio**: [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **Icons & UI**: Custom SVG icons and a premium glassmorphic design.
 
-## 🏗 Architecture
+## Architecture
 
 The application is split into two main layers:
 
@@ -32,13 +32,13 @@ The application is split into two main layers:
     - Renders the responsive 16-step grid.
     - Synchronizes visual updates with audio triggers using `requestAnimationFrame`.
 
-## 📂 Project Structure
+## Project Structure
 
 - `/public/kits/`: Static .wav samples organized by drum kit.
 - [`src/app/`](./src/app/README.md): Core application source code.
 - [`src/app/data/`](./src/app/data/README.md): JSON configuration for kits and patterns.
 
-## 🚦 Getting Started
+## Local Development
 
 1.  **Install dependencies**:
     ```bash
@@ -52,7 +52,3 @@ The application is split into two main layers:
 
 3.  **Open in browser**:
     Navigate to [http://localhost:3000](http://localhost:3000).
-
----
-
-Developed with a focus on audio-visual excellence.
