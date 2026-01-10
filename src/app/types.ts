@@ -1,7 +1,7 @@
 /**
  * Valid track identifiers for the 16-step sequencer.
  */
-export type TrackId = 'kick' | 'snare' | 'ch' | 'oh';
+export type TrackId = 'ac' | 'bd' | 'sd' | 'ch' | 'oh' | 'cy' | 'ht' | 'mt' | 'lt' | 'rs' | 'cp' | 'cb';
 
 /**
  * Represents a Drum Kit configuration.
@@ -18,7 +18,7 @@ export interface Kit {
 export interface Pattern {
   id: string;                               // Unique identifier
   name: string;                             // Display name
-  steps: Record<TrackId, number[]>;         // Array of 16 numbers (0 or 1) per track
+  steps: Record<TrackId, string>;             // Binary string of 16 characters (e.g., "1010...") per track
 }
 
 /**

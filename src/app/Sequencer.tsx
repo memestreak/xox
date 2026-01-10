@@ -10,10 +10,18 @@ import { Kit, Pattern, TrackId, TrackState } from './types';
  * Constants defining the instruments available in the sequencer.
  */
 const TRACKS: { id: TrackId; name: string }[] = [
-  { id: 'kick', name: 'Kick' },
-  { id: 'snare', name: 'Snare' },
+  { id: 'ac', name: 'Accent' },
+  { id: 'bd', name: 'Kick' },
+  { id: 'sd', name: 'Snare' },
   { id: 'ch', name: 'C-Hat' },
   { id: 'oh', name: 'O-Hat' },
+  { id: 'cy', name: 'Cymbal' },
+  { id: 'ht', name: 'Hi-Tom' },
+  { id: 'mt', name: 'Mid-Tom' },
+  { id: 'lt', name: 'Low-Tom' },
+  { id: 'rs', name: 'Rimshot' },
+  { id: 'cp', name: 'Clap' },
+  { id: 'cb', name: 'Cowbell' },
 ];
 
 /**
@@ -33,10 +41,18 @@ export default function Sequencer() {
 
   // --- Track Mixer State ---
   const [trackStates, setTrackStates] = useState<Record<TrackId, TrackState>>({
-    kick: { id: 'kick', name: 'Kick', isMuted: false, isSolo: false, gain: 1.0 },
-    snare: { id: 'snare', name: 'Snare', isMuted: false, isSolo: false, gain: 1.0 },
+    ac: { id: 'ac', name: 'Accent', isMuted: false, isSolo: false, gain: 1.0 },
+    bd: { id: 'bd', name: 'Kick', isMuted: false, isSolo: false, gain: 1.0 },
+    sd: { id: 'sd', name: 'Snare', isMuted: false, isSolo: false, gain: 1.0 },
     ch: { id: 'ch', name: 'C-Hat', isMuted: false, isSolo: false, gain: 1.0 },
     oh: { id: 'oh', name: 'O-Hat', isMuted: false, isSolo: false, gain: 1.0 },
+    cy: { id: 'cy', name: 'Cymbal', isMuted: false, isSolo: false, gain: 1.0 },
+    ht: { id: 'ht', name: 'Hi-Tom', isMuted: false, isSolo: false, gain: 1.0 },
+    mt: { id: 'mt', name: 'Mid-Tom', isMuted: false, isSolo: false, gain: 1.0 },
+    lt: { id: 'lt', name: 'Low-Tom', isMuted: false, isSolo: false, gain: 1.0 },
+    rs: { id: 'rs', name: 'Rimshot', isMuted: false, isSolo: false, gain: 1.0 },
+    cp: { id: 'cp', name: 'Clap', isMuted: false, isSolo: false, gain: 1.0 },
+    cb: { id: 'cb', name: 'Cowbell', isMuted: false, isSolo: false, gain: 1.0 },
   });
 
   /**
@@ -70,8 +86,11 @@ export default function Sequencer() {
 
     // 2. Audio trigger logic
     const anySoloActive = Object.values(trackStates).some(t => t.isSolo);
+    const isAccented = currentPattern.steps.ac[step] === '1';
 
     TRACKS.forEach(track => {
+      if (track.id === 'ac') return; // Accent is not a sound
+
       const state = trackStates[track.id];
 
       // SOLO/MUTE Logic:
@@ -80,8 +99,9 @@ export default function Sequencer() {
       const isVisible = anySoloActive ? state.isSolo : !state.isMuted;
 
       // Trigger if track is active and the pattern has a '1' at this step
-      if (isVisible && currentPattern.steps[track.id][step] === 1) {
-        audioEngine.playSound(track.id, time, state.gain);
+      if (isVisible && currentPattern.steps[track.id][step] === '1') {
+        const gain = isAccented ? state.gain * 1.5 : state.gain;
+        audioEngine.playSound(track.id, time, gain);
       }
     });
   }, [trackStates, currentPattern]);
@@ -176,38 +196,40 @@ export default function Sequencer() {
               {/* Track Info & Mute/Solo */}
               <div className="w-32 flex flex-col">
                 <span className="text-xs font-bold uppercase text-neutral-400 tracking-wider">{track.name}</span>
-                <div className="flex gap-1 mt-1">
+                <div className="flex gap-2 mt-1">
                   <button
                     onClick={() => setTrackStates(prev => ({
                       ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
                     }))}
-                    className={`text-[10px] px-2 py-0.5 rounded font-bold border transition-all ${trackStates[track.id].isMuted
-                      ? 'bg-red-900/40 border-red-800 text-red-500'
+                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isMuted
+                      ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
                       : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
                       }`}
+                    title="Mute"
                   >
-                    MUTE
+                    M
                   </button>
                   <button
                     onClick={() => setTrackStates(prev => ({
                       ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
                     }))}
-                    className={`text-[10px] px-2 py-0.5 rounded font-bold border transition-all ${trackStates[track.id].isSolo
-                      ? 'bg-yellow-900/40 border-yellow-800 text-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.2)]'
+                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isSolo
+                      ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
                       : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
                       }`}
+                    title="Solo"
                   >
-                    SOLO
+                    S
                   </button>
                 </div>
               </div>
 
               {/* 16-Step Grid */}
               <div className="flex-1 grid grid-cols-16 gap-1.5">
-                {currentPattern.steps[track.id].map((step, i) => (
+                {currentPattern.steps[track.id].split('').map((step, i) => (
                   <div
                     key={i}
-                    className={`h-12 rounded-sm transition-all duration-100 ${step === 1
+                    className={`h-12 rounded-sm transition-all duration-100 ${step === '1'
                       ? (i === currentStep ? 'bg-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.8)] z-10' : 'bg-orange-600')
                       : (i === currentStep ? 'bg-neutral-700' : 'bg-neutral-800/40')
                       } ${i % 4 === 0 ? 'border-l-2 border-neutral-700' : ''}`}
