@@ -1,7 +1,7 @@
 /**
  * Valid track identifiers for the 16-step sequencer.
  */
-export type TrackId = 'bd' | 'sd' | 'ch' | 'oh' | 'cy' | 'ht' | 'mt' | 'lt' | 'rs' | 'cp' | 'cb';
+export type TrackId = 'ac' | 'bd' | 'sd' | 'ch' | 'oh' | 'cy' | 'ht' | 'mt' | 'lt' | 'rs' | 'cp' | 'cb';
 
 /**
  * Represents a Drum Kit configuration.

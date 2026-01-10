@@ -40,6 +40,7 @@ export default function Sequencer() {
 
   // --- Track Mixer State ---
   const [trackStates, setTrackStates] = useState<Record<TrackId, TrackState>>({
+    ac: { id: 'ac', name: 'Accent', isMuted: false, isSolo: false, gain: 1.0 },
     bd: { id: 'bd', name: 'Kick', isMuted: false, isSolo: false, gain: 1.0 },
     sd: { id: 'sd', name: 'Snare', isMuted: false, isSolo: false, gain: 1.0 },
     ch: { id: 'ch', name: 'C-Hat', isMuted: false, isSolo: false, gain: 1.0 },
@@ -87,6 +88,7 @@ export default function Sequencer() {
     const isAccented = currentPattern.steps.ac[step] === '1';
 
     TRACKS.forEach(track => {
+
       const state = trackStates[track.id];
 
       // SOLO/MUTE Logic:
