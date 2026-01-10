@@ -1,13 +1,13 @@
-# XOX-16 Playback Engine
+# XOX
 
-XOX-16 is a high-performance, 16-step drum sequencer built with Next.js and the Web Audio API. It focuses on precision timing, professional aesthetics, and a smooth user experience.
+XOX is a 16-step drum sequencer built with Next.js and the [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API). It focuses on precision timing, professional aesthetics, and a smooth user experience.
 
 ## Features
 
-- **High-Precision Timing**: Implements a Look-Ahead Scheduler to ensure consistent playback even under heavy UI load.
+- **Precision Timing**: Implements a Look-Ahead Scheduler to ensure consistent playback even under heavy UI load.
 - **16-Step Sequences**: Preconfigured patterns for rhythm creation.
 - **Dynamic Kit Loading**: Switch between different drum kits (808, 909, etc.) on the fly.
-- **Advanced Mixer**: Individual solo and mute controls per track with proper priority logic.
+- **Mixer**: Individual solo and mute controls per track with proper priority logic.
 - **Real-time BPM Sync**: Adjust tempo smoothly during playback.
 - **Visual Feedback**: Running light indicator and active step highlighting.
 

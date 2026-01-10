@@ -10,7 +10,6 @@ import { Kit, Pattern, TrackId, TrackState } from './types';
  * Constants defining the instruments available in the sequencer.
  */
 const TRACKS: { id: TrackId; name: string }[] = [
-  { id: 'ac', name: 'Accent' },
   { id: 'bd', name: 'Kick' },
   { id: 'sd', name: 'Snare' },
   { id: 'ch', name: 'C-Hat' },
@@ -41,7 +40,6 @@ export default function Sequencer() {
 
   // --- Track Mixer State ---
   const [trackStates, setTrackStates] = useState<Record<TrackId, TrackState>>({
-    ac: { id: 'ac', name: 'Accent', isMuted: false, isSolo: false, gain: 1.0 },
     bd: { id: 'bd', name: 'Kick', isMuted: false, isSolo: false, gain: 1.0 },
     sd: { id: 'sd', name: 'Snare', isMuted: false, isSolo: false, gain: 1.0 },
     ch: { id: 'ch', name: 'C-Hat', isMuted: false, isSolo: false, gain: 1.0 },
@@ -89,8 +87,6 @@ export default function Sequencer() {
     const isAccented = currentPattern.steps.ac[step] === '1';
 
     TRACKS.forEach(track => {
-      if (track.id === 'ac') return; // Accent is not a sound
-
       const state = trackStates[track.id];
 
       // SOLO/MUTE Logic:
@@ -138,9 +134,8 @@ export default function Sequencer() {
         <header className="flex justify-between items-end border-b border-neutral-800 pb-6">
           <div>
             <h1 className="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">
-              XOX-16
+              XOX
             </h1>
-            <p className="text-neutral-500 font-medium">PLAYBACK ENGINE v1.1</p>
           </div>
           <div className="flex gap-4 items-center">
             <div className="flex flex-col">
@@ -256,9 +251,14 @@ export default function Sequencer() {
 
         {/* --- Footer --- */}
         <footer className="text-center pt-8">
-          <p className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] font-bold">
-            Professional Grade Timing &bull; Web Audio API &bull; 16-Step Precision
-          </p>
+          <a
+            href="https://github.com/memestreak/xox"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] font-bold hover:text-orange-500 transition-colors"
+          >
+            Source Code
+          </a>
         </footer>
       </div>
     </div>
