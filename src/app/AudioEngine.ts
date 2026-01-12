@@ -52,20 +52,29 @@ class AudioEngine {
   /**
    * Fetches and decodes audio samples for a specific kit folder.
    * Samples are stored in memory as AudioBuffers.
+   *
+   * @param kitFolder - The folder containing the kit samples. E.g., "808"
    */
   public async preloadKit(kitFolder: string) {
     this.init();
     const sounds: TrackId[] = ['bd', 'sd', 'ch', 'oh', 'ac', 'cy', 'ht', 'mt', 'lt', 'rs', 'cp', 'cb'];
     const filenames: Partial<Record<TrackId, string>> = {
-      bd: 'kick.wav',
-      sd: 'snare.wav',
-      ch: 'closed_hat.wav',
-      oh: 'open_hat.wav'
+      bd: 'bd.wav',
+      sd: 'sd.wav',
+      ch: 'ch.wav',
+      oh: 'oh.wav',
+      cy: 'cy.wav',
+      ht: 'ht.wav',
+      mt: 'mt.wav',
+      lt: 'lt.wav',
+      rs: 'rs.wav',
+      cp: 'cp.wav',
+      cb: 'cb.wav'
     };
 
     const promises = sounds.map(async (id) => {
       const filename = filenames[id];
-      if (!filename) return; // Skip tracks without samples for now
+      if (!filename) return;  // Skip tracks without samples for now
 
       try {
         const response = await fetch(`/kits/${kitFolder}/${filename}`);
