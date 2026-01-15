@@ -1,6 +1,6 @@
 # XOX
 
-XOX is a 16-step drum sequencer built with Next.js and the [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API). It focuses on precision timing, professional aesthetics, and a smooth user experience.
+XOX is a 16-step drum sequencer web application, built with Next.js and the [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API).
 
 ## Features
 

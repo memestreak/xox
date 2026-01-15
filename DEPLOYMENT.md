@@ -17,20 +17,21 @@ As of 2025-01-10, this is configured in your GitHub personal settings, under
 
 ### Cloudflare Steps
 
-1.  In the [Cloudflare Dashboard](https://dash.cloudflare.com/), create a new
+1. In the [Cloudflare Dashboard](https://dash.cloudflare.com/), create a new
     application from the **Workers & Pages** section.
-2.  Select the **Looking to deploy a page? Get Started** link and use the
+2. Select the **Looking to deploy a page? Get Started** link and use the
     **Next.js** preset.
-3.  Take the opportunity to create a custom subdomain for the deployment.
+3. Take the opportunity to create a custom subdomain for the deployment.
 
 ## Automatic Builds
 
 Once connected, every time you `git push` to the `main` branch, Cloudflare will
 automatically:
-1.  Pull the latest code.
-2.  Run `npm install`.
-3.  Run `npm run build`.
-4.  Deploy the contents of the `out` directory to your global edge network.
+
+1. Pull the latest code.
+2. Run `npm install`.
+3. Run `npm run build`.
+4. Deploy the contents of the `out` directory to your global edge network.
 
 ## Local Verification
 

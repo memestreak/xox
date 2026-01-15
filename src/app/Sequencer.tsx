@@ -129,6 +129,25 @@ export default function Sequencer() {
     }
   };
 
+  /**
+   * Toggles a specific step's active state.
+   */
+  const toggleStep = (trackId: TrackId, stepIndex: number) => {
+    setCurrentPattern(prev => {
+      const currentTrackSteps = prev.steps[trackId];
+      const newChar = currentTrackSteps[stepIndex] === '1' ? '0' : '1';
+      const newTrackSteps = currentTrackSteps.substring(0, stepIndex) + newChar + currentTrackSteps.substring(stepIndex + 1);
+
+      return {
+        ...prev,
+        steps: {
+          ...prev.steps,
+          [trackId]: newTrackSteps
+        }
+      };
+    });
+  };
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 p-8 font-sans">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -226,9 +245,10 @@ export default function Sequencer() {
                 {currentPattern.steps[track.id].split('').map((step, i) => (
                   <div
                     key={i}
-                    className={`h-12 rounded-sm transition-all duration-100 ${step === '1'
+                    onClick={() => toggleStep(track.id, i)}
+                    className={`h-12 rounded-sm transition-all duration-100 cursor-pointer ${step === '1'
                       ? (i === currentStep ? 'bg-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.8)] z-10' : 'bg-orange-600')
-                      : (i === currentStep ? 'bg-neutral-700' : 'bg-neutral-800/40')
+                      : (i === currentStep ? 'bg-neutral-700' : 'bg-neutral-800/40 hover:bg-neutral-800')
                       } ${i % 4 === 0 ? 'border-l-2 border-neutral-700' : ''}`}
                   />
                 ))}
