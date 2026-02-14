@@ -68,6 +68,13 @@ export default function Sequencer() {
   }, [currentKit]);
 
   /**
+   * Effect: Stop the audio engine when the component unmounts.
+   */
+  useEffect(() => {
+    return () => { audioEngine.stop(); };
+  }, []);
+
+  /**
    * Effect: Keep the AudioEngine's internal BPM in sync with the UI state.
    */
   useEffect(() => {
