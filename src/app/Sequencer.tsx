@@ -32,7 +32,7 @@ export default function Sequencer() {
   // --- Playback State ---
   const [isPlaying, setIsPlaying] = useState(false);
   const [bpm, setBpm] = useState(110);
-  const [currentStep, setCurrentStep] = useState(0); // For visual high-lighting
+  const [currentStep, setCurrentStep] = useState(-1); // -1 = no active step
   const [isLoaded, setIsLoaded] = useState(false);   // Ensuring samples are ready
 
   // --- Configuration State ---
@@ -128,7 +128,7 @@ export default function Sequencer() {
     if (isPlaying) {
       audioEngine.stop();
       setIsPlaying(false);
-      setCurrentStep(0);
+      setCurrentStep(-1);
     } else {
       audioEngine.start(bpm, (step, time) => {
         handleStep(step, time);
