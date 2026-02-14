@@ -1,14 +1,6 @@
 # Known Bugs
 
-## 1. `AudioContext.resume()` not awaited
-
-**Location:** `src/app/AudioEngine.ts:98-100`
-
-When the `AudioContext` is suspended (which browsers do automatically after a period of inactivity), `resume()` is called but not awaited. The scheduler then immediately runs with `this.ctx!.currentTime` which may still be frozen, causing the first step to fire with incorrect timing.
-
-**Fix:** Make `start()` async and await `this.ctx.resume()`.
-
-## 2. No cleanup on component unmount
+## 1. No cleanup on component unmount
 
 **Location:** `src/app/Sequencer.tsx`
 
@@ -21,7 +13,7 @@ useEffect(() => {
 }, []);
 ```
 
-## 3. Visual step indicator highlights step 0 when stopped
+## 2. Visual step indicator highlights step 0 when stopped
 
 **Location:** `src/app/Sequencer.tsx:124`
 

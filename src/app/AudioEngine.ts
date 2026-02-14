@@ -93,10 +93,10 @@ class AudioEngine {
   /**
    * Starts the sequencer playback loop.
    */
-  public start(bpm: number, onStep: (step: number, time: number) => void) {
+  public async start(bpm: number, onStep: (step: number, time: number) => void) {
     this.init();
     if (this.ctx?.state === 'suspended') {
-      this.ctx.resume();
+      await this.ctx.resume();
     }
     this.bpm = bpm;
     this.onStep = onStep;
