@@ -336,6 +336,62 @@ def clean_name(name: str) -> str:
   return " ".join(titled)
 
 
+def normalize_pattern(raw: dict) -> dict | None:
+  """Normalize a raw parsed pattern into app format.
+
+  Converts instrument names to lowercase track IDs, validates
+  step strings, and generates ID and display name.
+
+  Args:
+    raw: Dict with 'name', 'grid_width', and 'steps' keys.
+      Steps maps PDF instrument names (e.g. 'BD') to binary
+      strings.
+
+  Returns:
+    Normalized pattern dict with 'id', 'name', and 'steps'
+    keys, or None if the pattern should be skipped.
+  """
+  name = raw.get("name", "")
+  grid_width = raw.get("grid_width", 0)
+
+  if grid_width != 16:
+    return None
+
+  if "break" in name.lower():
+    return None
+
+  pattern_id = name_to_id(name)
+  if not pattern_id:
+    return None
+
+  display_name = clean_name(name)
+
+  steps: dict[str, str] = {}
+  raw_steps = raw.get("steps", {})
+  for pdf_key, track_id in INSTRUMENT_MAP.items():
+    step_str = raw_steps.get(pdf_key, "0" * 16)
+    if (
+      len(step_str) != 16
+      or not all(c in "01" for c in step_str)
+    ):
+      logger.warning(
+        "Invalid step string for %s in '%s': '%s'",
+        pdf_key, name, step_str,
+      )
+      step_str = "0" * 16
+    steps[track_id] = step_str
+
+  for tid in ALL_TRACK_IDS:
+    if tid not in steps:
+      steps[tid] = "0" * 16
+
+  return {
+    "id": pattern_id,
+    "name": display_name,
+    "steps": steps,
+  }
+
+
 def render_page_to_disk(
   pdf_path: Path,
   page_num: int,
@@ -530,7 +586,70 @@ def do_verify(args: argparse.Namespace) -> None:
 
 def do_merge(args: argparse.Namespace) -> None:
   """Merge consensus patterns into patterns.json."""
-  raise NotImplementedError("Task 6")
+  if not CONSENSUS_DIR.exists():
+    logger.error(
+      "No consensus directory. Run parse first."
+    )
+    sys.exit(1)
+
+  consensus_files = sorted(
+    CONSENSUS_DIR.glob("page_*.json")
+  )
+  if not consensus_files:
+    logger.error("No consensus files. Run parse first.")
+    sys.exit(1)
+
+  parsed: dict[str, dict] = {}
+  for cf in consensus_files:
+    data = json.loads(cf.read_text())
+    for raw in data.get("patterns", []):
+      normalized = normalize_pattern(raw)
+      if normalized:
+        parsed[normalized["id"]] = normalized
+
+  print(
+    f"Found {len(parsed)} unique patterns "
+    f"from {len(consensus_files)} pages"
+  )
+
+  existing_data = json.loads(PATTERNS_JSON.read_text())
+  existing = {
+    p["id"]: p for p in existing_data["patterns"]
+  }
+
+  new_ids = set(parsed) - set(existing)
+  updated_ids = set(parsed) & set(existing)
+
+  if args.dry_run:
+    print("\n--- Dry Run ---")
+    print(f"Would add {len(new_ids)} new patterns")
+    print(f"Would update {len(updated_ids)} existing")
+    if new_ids:
+      print(f"\nNew: {sorted(new_ids)}")
+    if updated_ids:
+      print(f"\nUpdated: {sorted(updated_ids)}")
+    return
+
+  merged = dict(existing)
+  merged.update(parsed)
+
+  sorted_patterns = sorted(
+    merged.values(), key=lambda p: p["id"]
+  )
+  output = {"patterns": sorted_patterns}
+  PATTERNS_JSON.write_text(
+    json.dumps(output, indent=2) + "\n"
+  )
+
+  print(
+    f"Wrote {len(sorted_patterns)} patterns "
+    f"to {PATTERNS_JSON}"
+  )
+  print(f"  Added: {len(new_ids)}")
+  print(f"  Updated: {len(updated_ids)}")
+  print(
+    f"  Kept: {len(existing) - len(updated_ids)}"
+  )
 
 
 def main() -> None:

@@ -142,3 +142,63 @@ class TestComputeConsensus:
     result, flagged = pp.compute_consensus(passes, 16)
     assert len(result) == 12
     assert flagged == 0
+
+
+class TestNormalizePattern:
+  """Tests for normalize_pattern."""
+
+  def test_basic_normalization(self) -> None:
+    raw = {
+      "name": "Rock: 1",
+      "grid_width": 16,
+      "steps": {
+        "BD": "1000100010001000",
+        "SD": "0000100000001000",
+        "CH": "1111111111111111",
+      },
+    }
+    result = pp.normalize_pattern(raw)
+    assert result is not None
+    assert result["id"] == "rock-1"
+    assert result["name"] == "Rock 1"
+    assert result["steps"]["bd"] == "1000100010001000"
+    assert result["steps"]["sd"] == "0000100000001000"
+    assert result["steps"]["cy"] == "0000000000000000"
+
+  def test_skip_non_16_step(self) -> None:
+    raw = {
+      "name": "Blues: 1",
+      "grid_width": 12,
+      "steps": {},
+    }
+    assert pp.normalize_pattern(raw) is None
+
+  def test_skip_break(self) -> None:
+    raw = {
+      "name": "Rock Break: 1",
+      "grid_width": 16,
+      "steps": {},
+    }
+    assert pp.normalize_pattern(raw) is None
+
+  def test_invalid_step_string(self) -> None:
+    raw = {
+      "name": "Pop: 1",
+      "grid_width": 16,
+      "steps": {"BD": "10001"},
+    }
+    result = pp.normalize_pattern(raw)
+    assert result is not None
+    assert result["steps"]["bd"] == "0000000000000000"
+
+  def test_all_12_tracks(self) -> None:
+    raw = {
+      "name": "Test: 1",
+      "grid_width": 16,
+      "steps": {},
+    }
+    result = pp.normalize_pattern(raw)
+    assert result is not None
+    assert len(result["steps"]) == 12
+    for tid in pp.ALL_TRACK_IDS:
+      assert tid in result["steps"]
