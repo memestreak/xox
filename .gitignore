@@ -41,3 +41,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# parsed pattern extraction artifacts
+scripts/parsed_patterns/
