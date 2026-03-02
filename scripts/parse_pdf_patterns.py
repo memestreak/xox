@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["google-genai", "jinja2"]
+# dependencies = ["google-genai", "jinja2", "pydantic"]
 # ///
 """Extract drum patterns from PDF using Gemini Vision API.
 
@@ -31,6 +31,8 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +67,98 @@ INSTRUMENT_ORDER = [
   "AC", "CY", "CH", "OH", "HT", "MT",
   "SD", "RS", "LT", "CPS", "CB", "BD",
 ]
+
+
+class Cell(BaseModel):
+  """A single cell in the pattern grid."""
+
+  column: int = Field(description="Column number, 1-indexed")
+  filled: bool = Field(
+    description="True if the cell is filled (black/hit)"
+  )
+
+
+class InstrumentRow(BaseModel):
+  """One instrument's row of cells in a grid."""
+
+  instrument: str = Field(
+    description=(
+      "Instrument abbreviation: AC, CY, CH, OH, HT, "
+      "MT, SD, RS, LT, CPS, CB, or BD"
+    )
+  )
+  cells: list[Cell] = Field(
+    description="Cells from left to right, one per column"
+  )
+
+
+class PatternGrid(BaseModel):
+  """A single pattern grid extracted from the page."""
+
+  name: str = Field(
+    description="Pattern name as printed, e.g. 'Rock: 3'"
+  )
+  grid_width: int = Field(
+    description="Number of columns (16 or 12)"
+  )
+  rows: list[InstrumentRow] = Field(
+    description="Instrument rows from top to bottom"
+  )
+
+
+class PageResponse(BaseModel):
+  """All pattern grids found on one page."""
+
+  patterns: list[PatternGrid] = Field(
+    description="Pattern grids found on this page"
+  )
+
+
+def cells_to_binary_string(cells: list[Cell]) -> str:
+  """Convert a list of Cell objects to a binary string.
+
+  Args:
+    cells: List of Cell objects sorted by column.
+
+  Returns:
+    String of '0' and '1' characters.
+  """
+  sorted_cells = sorted(cells, key=lambda c: c.column)
+  return "".join("1" if c.filled else "0" for c in sorted_cells)
+
+
+def compute_consensus(
+  passes: list[dict[str, str]],
+  grid_width: int,
+) -> tuple[dict[str, str], int]:
+  """Compute majority-vote consensus across passes.
+
+  Args:
+    passes: List of dicts mapping instrument name to
+      binary string, one dict per pass.
+    grid_width: Expected length of each binary string.
+
+  Returns:
+    Tuple of (consensus dict, number of flagged cells).
+    Consensus dict maps instrument name to binary string.
+  """
+  consensus: dict[str, str] = {}
+  flagged = 0
+  for instrument in INSTRUMENT_ORDER:
+    chars = []
+    for col in range(grid_width):
+      votes = sum(
+        1
+        for p in passes
+        if col < len(p.get(instrument, ""))
+        and p[instrument][col] == "1"
+      )
+      majority = votes > len(passes) / 2
+      chars.append("1" if majority else "0")
+      if votes != 0 and votes != len(passes):
+        flagged += 1
+    consensus[instrument] = "".join(chars)
+  return consensus, flagged
 
 
 def parse_page_range(

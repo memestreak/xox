@@ -63,3 +63,82 @@ class TestCleanName:
 
   def test_hyphenated(self) -> None:
     assert pp.clean_name("new wave: 1") == "New Wave 1"
+
+
+class TestCellsToBinaryString:
+  """Tests for cells_to_binary_string."""
+
+  def test_all_empty(self) -> None:
+    cells = [
+      pp.Cell(column=i, filled=False)
+      for i in range(1, 17)
+    ]
+    assert pp.cells_to_binary_string(cells) == (
+      "0000000000000000"
+    )
+
+  def test_all_filled(self) -> None:
+    cells = [
+      pp.Cell(column=i, filled=True)
+      for i in range(1, 17)
+    ]
+    assert pp.cells_to_binary_string(cells) == (
+      "1111111111111111"
+    )
+
+  def test_mixed(self) -> None:
+    fills = [
+      True, False, True, True, True, False, True, False,
+      True, False, True, False, True, False, True, False,
+    ]
+    cells = [
+      pp.Cell(column=i + 1, filled=f)
+      for i, f in enumerate(fills)
+    ]
+    assert pp.cells_to_binary_string(cells) == (
+      "1011101010101010"
+    )
+
+  def test_twelve_columns(self) -> None:
+    cells = [
+      pp.Cell(column=i, filled=(i % 2 == 1))
+      for i in range(1, 13)
+    ]
+    assert pp.cells_to_binary_string(cells) == (
+      "101010101010"
+    )
+
+
+class TestComputeConsensus:
+  """Tests for compute_consensus."""
+
+  def test_unanimous_agreement(self) -> None:
+    passes = [
+      {"AC": "1000000000000000"},
+      {"AC": "1000000000000000"},
+      {"AC": "1000000000000000"},
+    ]
+    result, flagged = pp.compute_consensus(passes, 16)
+    assert result["AC"] == "1000000000000000"
+    assert flagged == 0
+
+  def test_majority_vote(self) -> None:
+    passes = [
+      {"AC": "1000000000000000"},
+      {"AC": "1100000000000000"},
+      {"AC": "1000000000000000"},
+    ]
+    result, flagged = pp.compute_consensus(passes, 16)
+    assert result["AC"] == "1000000000000000"
+    assert flagged == 1
+
+  def test_all_instruments(self) -> None:
+    row = "0" * 16
+    passes = [
+      {k: row for k in pp.INSTRUMENT_ORDER},
+      {k: row for k in pp.INSTRUMENT_ORDER},
+      {k: row for k in pp.INSTRUMENT_ORDER},
+    ]
+    result, flagged = pp.compute_consensus(passes, 16)
+    assert len(result) == 12
+    assert flagged == 0
