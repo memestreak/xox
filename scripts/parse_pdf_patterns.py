@@ -96,6 +96,42 @@ def parse_page_range(
   )
 
 
+def name_to_id(name: str) -> str:
+  """Convert pattern name to an ID slug.
+
+  Args:
+    name: Pattern name as printed, e.g. 'Afro-cub: 1'.
+
+  Returns:
+    Lowercase slug, e.g. 'afro-cub-1'.
+  """
+  s = name.lower()
+  s = re.sub(r":\s*", "-", s)
+  s = re.sub(r"[^a-z0-9\-]", "-", s)
+  s = re.sub(r"-+", "-", s)
+  s = s.strip("-")
+  return s
+
+
+def clean_name(name: str) -> str:
+  """Clean up pattern name for display.
+
+  Args:
+    name: Pattern name as printed, e.g. 'Afro-cub: 1'.
+
+  Returns:
+    Cleaned display name, e.g. 'Afro-Cub 1'.
+  """
+  s = re.sub(r":\s*", " ", name)
+  s = re.sub(r"\s+", " ", s).strip()
+  parts = s.split(" ")
+  titled = []
+  for part in parts:
+    subparts = part.split("-")
+    titled.append("-".join(w.capitalize() for w in subparts))
+  return " ".join(titled)
+
+
 def do_extract(args: argparse.Namespace) -> None:
   """Render PDF pages to PNG images."""
   raise NotImplementedError("Task 3")
