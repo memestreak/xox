@@ -24,8 +24,12 @@ Requires:
 
 import argparse
 import logging
+import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -132,9 +136,58 @@ def clean_name(name: str) -> str:
   return " ".join(titled)
 
 
+def render_page_to_disk(
+  pdf_path: Path,
+  page_num: int,
+  output_path: Path,
+) -> None:
+  """Render a single PDF page to PNG on disk.
+
+  Args:
+    pdf_path: Path to the PDF file.
+    page_num: PDF page number to render.
+    output_path: Where to write the PNG file.
+  """
+  with tempfile.TemporaryDirectory() as tmpdir:
+    prefix = os.path.join(tmpdir, "page")
+    subprocess.run(
+      [
+        "pdftoppm", "-png",
+        "-f", str(page_num),
+        "-l", str(page_num),
+        "-r", "300",
+        str(pdf_path), prefix,
+      ],
+      check=True,
+      capture_output=True,
+    )
+    pngs = list(Path(tmpdir).glob("*.png"))
+    if not pngs:
+      raise RuntimeError(
+        f"pdftoppm produced no output for page {page_num}"
+      )
+    shutil.move(str(pngs[0]), str(output_path))
+
+
 def do_extract(args: argparse.Namespace) -> None:
   """Render PDF pages to PNG images."""
-  raise NotImplementedError("Task 3")
+  pdf_path = Path(args.pdf).expanduser()
+  if not pdf_path.exists():
+    logger.error("PDF not found: %s", pdf_path)
+    sys.exit(1)
+
+  start, end = parse_page_range(args.pages)
+  IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+
+  for page_num in range(start, end + 1):
+    output_path = IMAGES_DIR / f"page_{page_num:03d}.png"
+    if output_path.exists():
+      print(f"Page {page_num}: image exists, skipping")
+      continue
+    print(f"Page {page_num}: rendering...")
+    render_page_to_disk(pdf_path, page_num, output_path)
+
+  print(f"Done. Images in {IMAGES_DIR}")
 
 
 def do_parse(args: argparse.Namespace) -> None:
