@@ -5,6 +5,7 @@ import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import { audioEngine } from './AudioEngine';
 import TempoController from './TempoController';
+import Knob from './Knob';
 import { Kit, Pattern, TrackId, TrackState } from './types';
 
 /**
@@ -106,7 +107,8 @@ export default function Sequencer() {
 
       // Trigger if track is active and the pattern has a '1' at this step
       if (isVisible && currentPattern.steps[track.id][step] === '1') {
-        const gain = isAccented ? state.gain * 1.5 : state.gain;
+        const perceptualGain = state.gain * state.gain * state.gain;
+        const gain = isAccented ? perceptualGain * 1.5 : perceptualGain;
         audioEngine.playSound(track.id, time, gain);
       }
     });
@@ -210,34 +212,39 @@ export default function Sequencer() {
           {TRACKS.map(track => (
             <div key={track.id} className="flex gap-4 items-center">
               {/* Track Info & Mute/Solo */}
-              <div className="w-32 flex flex-col">
-                <span className="text-xs font-bold uppercase text-neutral-400 tracking-wider">{track.name}</span>
-                <div className="flex gap-2 mt-1">
-                  <button
-                    onClick={() => setTrackStates(prev => ({
-                      ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
-                    }))}
-                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isMuted
-                      ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
-                      : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
-                      }`}
-                    title="Mute"
-                  >
-                    M
-                  </button>
-                  <button
-                    onClick={() => setTrackStates(prev => ({
-                      ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
-                    }))}
-                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isSolo
-                      ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
-                      : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
-                      }`}
-                    title="Solo"
-                  >
-                    S
-                  </button>
-                </div>
+              <div className="w-48 flex items-center gap-2">
+                <span className="w-16 truncate text-xs font-bold uppercase text-neutral-400 tracking-wider">{track.name}</span>
+                <button
+                  onClick={() => setTrackStates(prev => ({
+                    ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
+                  }))}
+                  className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isMuted
+                    ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
+                    : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
+                    }`}
+                  title="Mute"
+                >
+                  M
+                </button>
+                <button
+                  onClick={() => setTrackStates(prev => ({
+                    ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
+                  }))}
+                  className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isSolo
+                    ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                    : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
+                    }`}
+                  title="Solo"
+                >
+                  S
+                </button>
+                <Knob
+                  value={trackStates[track.id].gain}
+                  onChange={(v) => setTrackStates(prev => ({
+                    ...prev,
+                    [track.id]: { ...prev[track.id], gain: v }
+                  }))}
+                />
               </div>
 
               {/* 16-Step Grid */}
@@ -258,7 +265,7 @@ export default function Sequencer() {
 
           {/* Running Light (Visual Step Indicator) */}
           <div className="flex gap-4 items-center pt-2">
-            <div className="w-32" />
+            <div className="w-48" />
             <div className="flex-1 grid grid-cols-16 gap-1.5">
               {Array.from({ length: 16 }).map((_, i) => (
                 <div
