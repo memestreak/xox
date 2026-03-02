@@ -184,7 +184,7 @@ export default function Sequencer() {
               XOX
             </h1>
           </div>
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-4 items-end">
             <TempoController bpm={bpm} setBpm={setBpm} />
             <button
               onClick={handleTogglePlay}
