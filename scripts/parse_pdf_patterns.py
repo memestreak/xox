@@ -162,6 +162,118 @@ If the page has no pattern grids (just text or notation),
 return an empty patterns list.
 """
 
+REPORT_TEMPLATE = """\
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pattern Extraction Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: monospace; background: #1a1a1a;
+         color: #eee; padding: 20px; }
+  h1 { margin-bottom: 20px; }
+  .page { display: flex; gap: 20px; margin-bottom: 40px;
+          border-bottom: 2px solid #444;
+          padding-bottom: 20px; }
+  .page-image { flex: 0 0 auto; }
+  .page-image img { max-height: 800px;
+                    border: 1px solid #444; }
+  .page-patterns { flex: 1; }
+  .pattern { margin-bottom: 20px; }
+  .pattern h3 { margin-bottom: 8px; color: #8cf; }
+  .stats { color: #aaa; font-size: 12px;
+           margin-bottom: 4px; }
+  table { border-collapse: collapse; }
+  td { width: 24px; height: 20px; border: 1px solid #555;
+       text-align: center; font-size: 10px; }
+  td.filled { background: #4a9eff; }
+  td.empty { background: #2a2a2a; }
+  td.flagged { background: #ff4; color: #000; }
+  .col-header { background: #333; color: #aaa;
+                font-size: 9px; }
+  .inst-label { background: #333; color: #ccc;
+                width: 40px; text-align: right;
+                padding-right: 4px; }
+  .summary { background: #222; padding: 12px;
+             margin: 20px 0; border-radius: 4px; }
+  .flagged-warning { color: #ff4; }
+  .ground-truth { margin-top: 10px; }
+  .gt-match { color: #4f4; }
+  .gt-mismatch { color: #f44; }
+</style>
+</head>
+<body>
+<h1>Pattern Extraction Report</h1>
+<div class="summary">
+  Pages: {{ pages|length }} |
+  Patterns: {{ total_patterns }} |
+  Flagged cells:
+  <span class="{% if total_flagged > 0 %}flagged-warning{% endif %}">
+    {{ total_flagged }}</span>
+  {% if ground_truth_results %}
+  | Ground truth:
+  {% for gt in ground_truth_results %}
+    <span class="{{ 'gt-match' if gt.match else 'gt-mismatch' }}">
+      {{ gt.id }}
+      ({{ 'OK' if gt.match else gt.diff_count ~ ' diffs' }})
+    </span>
+  {% endfor %}
+  {% endif %}
+</div>
+
+{% for page in pages %}
+<div class="page" id="page-{{ page.number }}">
+  <div class="page-image">
+    <h2>Page {{ page.number }}</h2>
+    {% if page.image_path %}
+    <img src="{{ page.image_path }}"
+         alt="Page {{ page.number }}">
+    {% else %}
+    <p>No image</p>
+    {% endif %}
+  </div>
+  <div class="page-patterns">
+    {% if not page.patterns %}
+    <p>No patterns on this page.</p>
+    {% endif %}
+    {% for pattern in page.patterns %}
+    <div class="pattern">
+      <h3>{{ pattern.name }}
+        {% if pattern.grid_width != 16 %}
+          ({{ pattern.grid_width }} steps)
+        {% endif %}
+      </h3>
+      <div class="stats">
+        Flagged: {{ pattern.flagged_count }}
+      </div>
+      <table>
+        <tr>
+          <td class="inst-label"></td>
+          {% for col in range(1, pattern.grid_width + 1) %}
+          <td class="col-header">{{ col }}</td>
+          {% endfor %}
+        </tr>
+        {% for inst in instrument_order %}
+        <tr>
+          <td class="inst-label">{{ inst }}</td>
+          {% for c in pattern.steps[inst] %}
+          <td class="{{ 'filled' if c == '1' else 'empty' }}">
+            {{ c }}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+</body>
+</html>
+"""
+
 
 def send_to_gemini(
   client: "genai.Client",
@@ -581,7 +693,90 @@ def do_parse(args: argparse.Namespace) -> None:
 
 def do_verify(args: argparse.Namespace) -> None:
   """Generate HTML verification report."""
-  raise NotImplementedError("Task 7")
+  from jinja2 import Template
+
+  start, end = parse_page_range(args.pages)
+
+  ground_truth: dict[str, dict] = {}
+  if PATTERNS_JSON.exists():
+    data = json.loads(PATTERNS_JSON.read_text())
+    for p in data["patterns"]:
+      ground_truth[p["id"]] = p
+
+  pages_data = []
+  total_patterns = 0
+  total_flagged = 0
+  ground_truth_results = []
+
+  for page_num in range(start, end + 1):
+    consensus_path = (
+      CONSENSUS_DIR / f"page_{page_num:03d}.json"
+    )
+    image_path = IMAGES_DIR / f"page_{page_num:03d}.png"
+
+    if not consensus_path.exists():
+      continue
+
+    data = json.loads(consensus_path.read_text())
+    patterns = data.get("patterns", [])
+    total_patterns += len(patterns)
+    total_flagged += data.get("total_flagged", 0)
+
+    for pat in patterns:
+      normalized = normalize_pattern(pat)
+      if normalized and normalized["id"] in ground_truth:
+        gt = ground_truth[normalized["id"]]
+        diff_count = 0
+        for tid in ALL_TRACK_IDS:
+          gt_steps = gt["steps"].get(tid, "0" * 16)
+          parsed_steps = normalized["steps"].get(
+            tid, "0" * 16
+          )
+          for a, b in zip(gt_steps, parsed_steps):
+            if a != b:
+              diff_count += 1
+        ground_truth_results.append({
+          "id": normalized["id"],
+          "match": diff_count == 0,
+          "diff_count": diff_count,
+        })
+
+    rel_image = (
+      str(image_path.relative_to(OUTPUT_DIR))
+      if image_path.exists()
+      else None
+    )
+
+    pages_data.append({
+      "number": page_num,
+      "image_path": rel_image,
+      "patterns": patterns,
+    })
+
+  template = Template(REPORT_TEMPLATE)
+  html = template.render(
+    pages=pages_data,
+    total_patterns=total_patterns,
+    total_flagged=total_flagged,
+    ground_truth_results=ground_truth_results,
+    instrument_order=INSTRUMENT_ORDER,
+  )
+
+  report_path = OUTPUT_DIR / "report.html"
+  report_path.write_text(html)
+  print(f"Report written to {report_path}")
+  print(
+    f"  {total_patterns} patterns, "
+    f"{total_flagged} flagged cells"
+  )
+  if ground_truth_results:
+    matches = sum(
+      1 for g in ground_truth_results if g["match"]
+    )
+    print(
+      f"  Ground truth: {matches}/"
+      f"{len(ground_truth_results)} match"
+    )
 
 
 def do_merge(args: argparse.Namespace) -> None:
