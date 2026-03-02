@@ -23,6 +23,7 @@ Requires:
 """
 
 import argparse
+import json
 import logging
 import os
 import re
@@ -30,9 +31,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+  from google import genai
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +118,106 @@ class PageResponse(BaseModel):
   patterns: list[PatternGrid] = Field(
     description="Pattern grids found on this page"
   )
+
+
+EXTRACTION_PROMPT = """\
+Analyze this drum machine pattern page. It may contain zero
+or more drum pattern grids and musical notation. Ignore the
+musical notation entirely — only extract the grid patterns.
+
+For each grid pattern found:
+
+1. Read the pattern name exactly as printed above the grid
+   (e.g. "Afro-cub: 1", "Rock: 3", "Break: 2").
+
+2. Count the grid columns. There will be either 16 or 12.
+   The numbers printed above the grid (1, 3, 5, ...) mark
+   the odd-numbered columns.
+
+3. The instrument rows from top to bottom are ALWAYS:
+   AC, CY, CH, OH, HT, MT, SD, RS, LT, CPS, CB, BD
+
+4. For EVERY instrument row, examine EVERY cell from column
+   1 to column grid_width individually:
+   - Black/filled box -> filled: true
+   - White/empty box -> filled: false
+   - "F" marking (flam) -> filled: true
+
+5. Rows that do NOT have an arrow next to them should have
+   ALL cells set to filled: false.
+
+CRITICAL RULES — read carefully:
+- Examine each cell INDEPENDENTLY. Never assume a pattern.
+- Adjacent cells CAN both be filled. Do not merge them.
+- Count every column for every row. Do not skip any.
+- After each row, verify: your filled count matches the
+  number of black boxes visible in that row.
+
+WRONG: Seeing fills at columns 1,3,5 and assuming the rest
+  follows an alternating pattern.
+RIGHT: Check column 2 independently. Check column 4
+  independently. Each cell is its own decision.
+
+If the page has no pattern grids (just text or notation),
+return an empty patterns list.
+"""
+
+
+def send_to_gemini(
+  client: "genai.Client",
+  image_path: Path,
+  model: str,
+) -> list[PatternGrid]:
+  """Send a page image to Gemini and get structured output.
+
+  Args:
+    client: Gemini API client.
+    image_path: Path to the PNG image.
+    model: Gemini model name.
+
+  Returns:
+    List of PatternGrid objects extracted from the page.
+  """
+  from google.genai import types
+
+  image_data = image_path.read_bytes()
+  image_part = types.Part.from_bytes(
+    data=image_data, mime_type="image/png"
+  )
+
+  response = client.models.generate_content(
+    model=model,
+    contents=[image_part, EXTRACTION_PROMPT],
+    config=types.GenerateContentConfig(
+      response_mime_type="application/json",
+      response_schema=PageResponse,
+    ),
+  )
+
+  return response.parsed.patterns
+
+
+def grid_to_steps_dict(grid: PatternGrid) -> dict[str, str]:
+  """Convert a PatternGrid to instrument->binary-string dict.
+
+  Args:
+    grid: A PatternGrid from Gemini structured output.
+
+  Returns:
+    Dict mapping instrument name to binary string.
+  """
+  steps: dict[str, str] = {}
+  for row in grid.rows:
+    instrument = row.instrument.upper()
+    if (
+      instrument in INSTRUMENT_MAP
+      or instrument in INSTRUMENT_ORDER
+    ):
+      steps[instrument] = cells_to_binary_string(row.cells)
+  for inst in INSTRUMENT_ORDER:
+    if inst not in steps:
+      steps[inst] = "0" * grid.grid_width
+  return steps
 
 
 def cells_to_binary_string(cells: list[Cell]) -> str:
@@ -286,7 +392,135 @@ def do_extract(args: argparse.Namespace) -> None:
 
 def do_parse(args: argparse.Namespace) -> None:
   """Send images to Gemini for pattern extraction."""
-  raise NotImplementedError("Task 5")
+  from google import genai
+
+  start, end = parse_page_range(args.pages)
+  num_passes = args.passes
+  model = args.model
+
+  api_key = os.environ.get("GEMINI_API_KEY")
+  if not api_key:
+    logger.error("GEMINI_API_KEY environment variable not set")
+    sys.exit(1)
+
+  client = genai.Client(api_key=api_key)
+
+  PASSES_DIR.mkdir(parents=True, exist_ok=True)
+  CONSENSUS_DIR.mkdir(parents=True, exist_ok=True)
+
+  for page_num in range(start, end + 1):
+    image_path = IMAGES_DIR / f"page_{page_num:03d}.png"
+    if not image_path.exists():
+      print(f"Page {page_num}: no image, run extract first")
+      continue
+
+    consensus_path = (
+      CONSENSUS_DIR / f"page_{page_num:03d}.json"
+    )
+    if consensus_path.exists() and not args.force:
+      print(f"Page {page_num}: consensus exists, skipping")
+      continue
+
+    # Run multiple passes
+    all_pass_grids: list[list[PatternGrid]] = []
+    for pass_idx in range(1, num_passes + 1):
+      pass_path = (
+        PASSES_DIR
+        / f"page_{page_num:03d}_pass{pass_idx}.json"
+      )
+
+      if pass_path.exists() and not args.force:
+        print(
+          f"Page {page_num} pass {pass_idx}: "
+          f"exists, loading"
+        )
+        raw = json.loads(pass_path.read_text())
+        grids = [PatternGrid(**g) for g in raw]
+      else:
+        print(
+          f"Page {page_num} pass {pass_idx}: "
+          f"sending to Gemini..."
+        )
+        try:
+          grids = send_to_gemini(client, image_path, model)
+        except Exception as e:
+          logger.error(
+            "Page %d pass %d: ERROR - %s",
+            page_num, pass_idx, e,
+          )
+          grids = []
+
+        # Save raw pass result
+        pass_path.write_text(
+          json.dumps(
+            [g.model_dump() for g in grids], indent=2
+          )
+          + "\n"
+        )
+        time.sleep(1)  # Rate limiting
+
+      all_pass_grids.append(grids)
+
+    # Build consensus
+    if not all_pass_grids or not all_pass_grids[0]:
+      print(f"Page {page_num}: no patterns found")
+      consensus_path.write_text(
+        json.dumps({"page": page_num, "patterns": []})
+        + "\n"
+      )
+      continue
+
+    # Use first pass as reference for pattern count/names
+    reference = all_pass_grids[0]
+    consensus_patterns = []
+    total_flagged = 0
+
+    for pat_idx, ref_grid in enumerate(reference):
+      # Collect this pattern's steps from each pass
+      pass_steps: list[dict[str, str]] = []
+      for pass_grids in all_pass_grids:
+        if pat_idx < len(pass_grids):
+          pass_steps.append(
+            grid_to_steps_dict(pass_grids[pat_idx])
+          )
+
+      if not pass_steps:
+        continue
+
+      consensus_steps, flagged = compute_consensus(
+        pass_steps, ref_grid.grid_width
+      )
+      total_flagged += flagged
+
+      consensus_patterns.append({
+        "name": ref_grid.name,
+        "grid_width": ref_grid.grid_width,
+        "steps": consensus_steps,
+        "flagged_count": flagged,
+      })
+
+    # Save consensus
+    consensus_data = {
+      "page": page_num,
+      "patterns": consensus_patterns,
+      "total_flagged": total_flagged,
+    }
+    consensus_path.write_text(
+      json.dumps(consensus_data, indent=2) + "\n"
+    )
+
+    names = [p["name"] for p in consensus_patterns]
+    flag_msg = (
+      f" ({total_flagged} flagged cells)"
+      if total_flagged
+      else ""
+    )
+    print(
+      f"Page {page_num}: {len(consensus_patterns)} "
+      f"patterns{flag_msg} {names}"
+    )
+
+  print("Done.")
 
 
 def do_verify(args: argparse.Namespace) -> None:
