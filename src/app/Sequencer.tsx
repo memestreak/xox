@@ -126,7 +126,7 @@ export default function Sequencer() {
   /**
    * Toggles the playback state.
    */
-  const handleTogglePlay = () => {
+  const handleTogglePlay = useCallback(() => {
     if (isPlaying) {
       audioEngine.stop();
       setIsPlaying(false);
@@ -137,7 +137,23 @@ export default function Sequencer() {
       });
       setIsPlaying(true);
     }
-  };
+  }, [isPlaying, bpm, handleStep]);
+
+  /**
+   * Effect: Global spacebar shortcut to toggle play/stop.
+   */
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isLoaded) return;
+      if (event.code !== 'Space') return;
+      const tag = (event.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      event.preventDefault();
+      handleTogglePlay();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleTogglePlay, isLoaded]);
 
   /**
    * Toggles a specific step's active state.
