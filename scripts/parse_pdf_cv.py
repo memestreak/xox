@@ -6,6 +6,7 @@
 #     "Pillow",
 #     "pytesseract",
 #     "numpy",
+#     "google-genai",
 # ]
 # ///
 """Extract drum patterns from PDF page images using OpenCV.
@@ -27,11 +28,16 @@ Requires:
 import argparse
 import json
 import logging
+import os
 import re
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+  from google import genai
 
 import cv2
 import numpy as np
@@ -50,6 +56,19 @@ PATTERNS_JSON = PROJECT_ROOT / "src" / "app" / "data" / "patterns.json"
 
 DEFAULT_PAGE_START = 9
 DEFAULT_PAGE_END = 97
+NAMES_DIR = OUTPUT_DIR / "names"
+GEMINI_MODEL = "gemini-2.5-flash"
+
+NAMES_PROMPT = """\
+List ONLY the pattern names printed on this drum machine page.
+Each page has 0-3 pattern names like "Afro-cub: 1", "Rock: 3",
+"Blues: 4", etc. Return them in order from top to bottom.
+
+Return a JSON array of strings, e.g.:
+["Afro-cub: 1", "Afro-cub: 2", "Afro-cub: 3"]
+
+If there are no pattern names, return [].
+"""
 
 ALL_TRACK_IDS = [
   "ac",
@@ -95,6 +114,80 @@ INSTRUMENT_ORDER = [
   "CB",
   "BD",
 ]
+
+
+def extract_names_gemini(
+  client: "genai.Client",
+  image_path: Path,
+) -> list[str]:
+  """Extract pattern names from a page image via Gemini.
+
+  Uses a cheap, fast model call to read only the pattern
+  names (not the grid data). Returns names in page order.
+
+  Args:
+    client: Gemini API client.
+    image_path: Path to the page PNG.
+
+  Returns:
+    List of pattern name strings, top-to-bottom.
+  """
+  from google.genai import types
+
+  image_data = image_path.read_bytes()
+  image_part = types.Part.from_bytes(
+    data=image_data, mime_type="image/png"
+  )
+
+  response = client.models.generate_content(
+    model=GEMINI_MODEL,
+    contents=[image_part, NAMES_PROMPT],
+    config=types.GenerateContentConfig(
+      response_mime_type="application/json",
+    ),
+  )
+
+  try:
+    names = json.loads(response.text)
+    if isinstance(names, list):
+      return [str(n) for n in names]
+  except (json.JSONDecodeError, TypeError):
+    logger.warning("Failed to parse Gemini names response")
+  return []
+
+
+def get_names_for_page(
+  client: "genai.Client",
+  page_num: int,
+  force: bool = False,
+) -> list[str]:
+  """Get pattern names for a page, with caching.
+
+  Caches results in NAMES_DIR to avoid redundant API calls.
+
+  Args:
+    client: Gemini API client.
+    page_num: Page number.
+    force: Re-fetch even if cached.
+
+  Returns:
+    List of pattern names.
+  """
+  NAMES_DIR.mkdir(parents=True, exist_ok=True)
+  cache_path = NAMES_DIR / f"page_{page_num:03d}.json"
+
+  if cache_path.exists() and not force:
+    cached: list[str] = json.loads(cache_path.read_text())
+    return cached
+
+  image_path = IMAGES_DIR / f"page_{page_num:03d}.png"
+  if not image_path.exists():
+    return []
+
+  names = extract_names_gemini(client, image_path)
+  cache_path.write_text(json.dumps(names, indent=2) + "\n")
+  time.sleep(0.5)  # Rate limiting
+  return names
 
 
 @dataclass
@@ -1021,6 +1114,16 @@ def main() -> None:
     action="store_true",
     help="Save side-by-side debug images",
   )
+  parser.add_argument(
+    "--gemini-names",
+    action="store_true",
+    help="Use Gemini to extract pattern names (requires GEMINI_API_KEY)",
+  )
+  parser.add_argument(
+    "--force-names",
+    action="store_true",
+    help="Re-fetch Gemini names even if cached",
+  )
 
   args = parser.parse_args()
 
@@ -1028,12 +1131,34 @@ def main() -> None:
     do_merge(args.dry_run)
     return
 
+  # Set up Gemini client if needed
+  gemini_client = None
+  if args.gemini_names:
+    from google import genai
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+      logger.error("GEMINI_API_KEY environment variable not set")
+      sys.exit(1)
+    gemini_client = genai.Client(api_key=api_key)
+
   start, end = parse_page_range(args.pages)
   CV_DIR.mkdir(parents=True, exist_ok=True)
 
   total_patterns = 0
   for page_num in range(start, end + 1):
     result = process_page(page_num, args.debug)
+
+    # Override names with Gemini if requested
+    if gemini_client and result["patterns"]:
+      gemini_names = get_names_for_page(
+        gemini_client, page_num, args.force_names
+      )
+      # Match by position — both are top-to-bottom ordered
+      for i, pat in enumerate(result["patterns"]):
+        if i < len(gemini_names):
+          pat["name"] = gemini_names[i]
+
     n_patterns = len(result["patterns"])
     total_patterns += n_patterns
 
@@ -1044,7 +1169,10 @@ def main() -> None:
     if n_patterns > 0:
       names = [p["name"] for p in result["patterns"]]
       widths = [p["grid_width"] for p in result["patterns"]]
-      print(f"Page {page_num}: {n_patterns} patterns {names} (cols: {widths})")
+      print(
+        f"Page {page_num}: {n_patterns} patterns "
+        f"{names} (cols: {widths})"
+      )
     else:
       print(f"Page {page_num}: no patterns")
 
