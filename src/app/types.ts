@@ -31,3 +31,36 @@ export interface TrackState {
   isSolo: boolean;
   gain: number;   // Master volume for this track (0.0 to 1.0)
 }
+
+/**
+ * Canonical track ordering for binary serialization.
+ * Append only — never reorder once URLs are in the wild.
+ */
+export const TRACK_IDS: readonly TrackId[] = [
+  'ac', 'bd', 'sd', 'ch', 'oh', 'cy',
+  'ht', 'mt', 'lt', 'rs', 'cp', 'cb',
+] as const;
+
+/**
+ * Per-track mixer state within a serialized config.
+ */
+export interface TrackMixerState {
+  gain: number;      // 0.0 - 1.0
+  isMuted: boolean;
+  isSolo: boolean;
+}
+
+/**
+ * Complete serializable sequencer configuration.
+ *
+ * This is the single source of truth for all persistable
+ * state. Transient state (isPlaying, isLoaded, showMixer,
+ * stepRef) is excluded.
+ */
+export interface SequencerConfig {
+  version: number;
+  kitId: string;
+  bpm: number;
+  steps: Record<TrackId, string>;
+  mixer: Record<TrackId, TrackMixerState>;
+}

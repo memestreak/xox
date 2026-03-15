@@ -27,16 +27,29 @@ the Web Audio API. Implements a look-ahead scheduler (25ms timer,
 and caches kit samples as AudioBuffers. Core loop:
 `scheduler()` → `advanceStep()` → `playSound()`.
 
-**Sequencer (`src/app/Sequencer.tsx`)** — Main React component
-owning all UI state (playback, BPM, kit/pattern selection, track
-mixer). Uses `requestAnimationFrame` for visual step sync.
+**SequencerContext (`src/app/SequencerContext.tsx`)** — React
+context provider managing all state. Split into two internal
+contexts for render isolation: ConfigContext (serializable
+state via `SequencerConfig`) and TransientContext (playback/UI).
+Consumer API is `useSequencer()` returning `{ state, actions,
+meta }`. Uses `requestAnimationFrame` for visual step sync.
 Solo/mute priority: if any track is soloed, only soloed tracks
 play; otherwise non-muted tracks play. Accented steps play at
 1.5x gain.
 
+**SequencerConfig (`src/app/types.ts`)** — Canonical type for
+all persistable state (kit, BPM, steps, mixer). Single source
+of truth for serializable configuration.
+
+**configCodec (`src/app/configCodec.ts`)** — Encodes/decodes
+`SequencerConfig` as compressed JSON + base64url for URL hash
+sharing. Uses `CompressionStream('deflate-raw')`.
+
 Supporting files:
-- `types.ts` — `TrackId`, `Kit`, `Pattern`, `TrackState` types
-- `TempoController.tsx` — BPM input (clamped 20–300)
+- `types.ts` — `TrackId`, `Kit`, `Pattern`, `TrackState`,
+  `SequencerConfig`, `TrackMixerState` types
+- `TempoController.tsx` — BPM input (clamped 20-300)
+- `SettingsPopover.tsx` — Gear icon settings menu with Export
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `data/patterns.json` — 16-step patterns as binary strings
   (`"1010101010101010"`)

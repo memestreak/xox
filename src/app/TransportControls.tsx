@@ -4,6 +4,7 @@ import { memo } from 'react';
 import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import TempoController from './TempoController';
+import SettingsPopover from './SettingsPopover';
 import { useSequencer } from './SequencerContext';
 
 /**
@@ -39,6 +40,7 @@ function TransportControlsInner() {
           >
             {isPlaying ? 'STOP' : 'PLAY'}
           </button>
+          <SettingsPopover />
         </div>
       </div>
       {/* Row 2: Kit + Pattern */}
@@ -86,6 +88,9 @@ function TransportControlsInner() {
             }}
             className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors"
           >
+            {currentPattern.id === 'custom' && (
+              <option value="custom">Custom</option>
+            )}
             {patternsData.patterns.map(p => (
               <option key={p.id} value={p.id}>
                 {p.name}

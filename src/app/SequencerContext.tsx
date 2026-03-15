@@ -7,12 +7,20 @@ import {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
   type ReactNode,
 } from 'react';
 import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import { audioEngine } from './AudioEngine';
-import { Kit, Pattern, TrackId, TrackState } from './types';
+import { defaultConfig, decodeConfig } from './configCodec';
+import type {
+  Kit,
+  Pattern,
+  SequencerConfig,
+  TrackId,
+  TrackState,
+} from './types';
 
 /**
  * Track definitions for the sequencer grid (excludes accent).
@@ -31,56 +39,23 @@ export const TRACKS: { id: TrackId; name: string }[] = [
   { id: 'cb', name: 'Cowbell' },
 ];
 
-const INITIAL_TRACK_STATES: Record<TrackId, TrackState> = {
-  ac: {
-    id: 'ac', name: 'Accent',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  bd: {
-    id: 'bd', name: 'Kick',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  sd: {
-    id: 'sd', name: 'Snare',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  ch: {
-    id: 'ch', name: 'C-Hat',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  oh: {
-    id: 'oh', name: 'O-Hat',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  cy: {
-    id: 'cy', name: 'Cymbal',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  ht: {
-    id: 'ht', name: 'Hi-Tom',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  mt: {
-    id: 'mt', name: 'Mid-Tom',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  lt: {
-    id: 'lt', name: 'Low-Tom',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  rs: {
-    id: 'rs', name: 'Rimshot',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  cp: {
-    id: 'cp', name: 'Clap',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
-  cb: {
-    id: 'cb', name: 'Cowbell',
-    isMuted: false, isSolo: false, gain: 1.0,
-  },
+/** Map of TrackId to display name (includes accent). */
+const TRACK_NAMES: Record<TrackId, string> = {
+  ac: 'Accent',
+  bd: 'Kick',
+  sd: 'Snare',
+  ch: 'C-Hat',
+  oh: 'O-Hat',
+  cy: 'Cymbal',
+  ht: 'Hi-Tom',
+  mt: 'Mid-Tom',
+  lt: 'Low-Tom',
+  rs: 'Rimshot',
+  cp: 'Clap',
+  cb: 'Cowbell',
 };
+
+// ─── Interfaces (unchanged consumer API) ──────────────
 
 interface SequencerState {
   isPlaying: boolean;
@@ -106,6 +81,7 @@ interface SequencerActions {
 
 interface SequencerMeta {
   stepRef: React.RefObject<number>;
+  config: SequencerConfig;
 }
 
 interface SequencerContextValue {
@@ -114,6 +90,38 @@ interface SequencerContextValue {
   meta: SequencerMeta;
 }
 
+// ─── Contexts ─────────────────────────────────────────
+
+/** Config context: serializable state that changes on edits. */
+const ConfigContext = createContext<{
+  config: SequencerConfig;
+  setConfig: React.Dispatch<
+    React.SetStateAction<SequencerConfig>
+  >;
+  selectedPatternId: string;
+  setSelectedPatternId: React.Dispatch<
+    React.SetStateAction<string>
+  >;
+} | null>(null);
+
+/** Transient context: playback/UI state. */
+const TransientContext = createContext<{
+  isPlaying: boolean;
+  setIsPlaying: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
+  isLoaded: boolean;
+  setIsLoaded: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
+  showMixer: boolean;
+  setShowMixer: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
+  stepRef: React.RefObject<number>;
+} | null>(null);
+
+/** Combined context for the public useSequencer() hook. */
 const SequencerContext = createContext<
   SequencerContextValue | null
 >(null);
@@ -139,30 +147,88 @@ interface SequencerProviderProps {
 /**
  * Provides all sequencer state, actions, and audio engine
  * integration to the component tree.
+ *
+ * Internally split into ConfigContext (serializable state)
+ * and TransientContext (playback/UI) for render isolation.
  */
 export function SequencerProvider({
   children,
 }: SequencerProviderProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [bpm, setBpmState] = useState(110);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [currentKit, setCurrentKit] = useState<Kit>(
-    kitsData.kits[0]
+  // ─── Config state ─────────────────────────────────
+  const [config, setConfig] = useState<SequencerConfig>(
+    defaultConfig
   );
-  const [currentPattern, setCurrentPattern] =
-    useState<Pattern>(patternsData.patterns[0]);
-  const [showMixer, setShowMixer] = useState(false);
-  const [trackStates, setTrackStates] =
-    useState<Record<TrackId, TrackState>>(
-      INITIAL_TRACK_STATES
-    );
+  const [selectedPatternId, setSelectedPatternId] =
+    useState(patternsData.patterns[0].id);
 
-  // Ref-based step tracking: avoids full re-renders on
-  // every 16th-note tick during playback.
+  // ─── Transient state ──────────────────────────────
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [showMixer, setShowMixer] = useState(false);
   const stepRef = useRef<number>(-1);
 
-  // Refs for values needed in the audio callback to avoid
-  // stale closures and unnecessary effect re-runs.
+  // ─── Import config from URL hash on mount ─────────
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    decodeConfig(hash)
+      .then(decoded => {
+        setConfig(decoded);
+        setSelectedPatternId('custom');
+      })
+      .catch(() => {
+        // Silently fall back to default config
+      });
+  }, []);
+
+  // ─── Derived state via useMemo ────────────────────
+
+  const currentKit = useMemo<Kit>(() => {
+    const kit = kitsData.kits.find(
+      k => k.id === config.kitId
+    );
+    return kit ?? kitsData.kits[0];
+  }, [config.kitId]);
+
+  const currentPattern = useMemo<Pattern>(() => {
+    if (selectedPatternId === 'custom') {
+      return {
+        id: 'custom',
+        name: 'Custom',
+        steps: config.steps,
+      };
+    }
+    const preset = patternsData.patterns.find(
+      p => p.id === selectedPatternId
+    );
+    return {
+      id: selectedPatternId,
+      name: preset?.name ?? 'Custom',
+      steps: config.steps,
+    };
+  }, [config.steps, selectedPatternId]);
+
+  const trackStates = useMemo<
+    Record<TrackId, TrackState>
+  >(() => {
+    const result = {} as Record<TrackId, TrackState>;
+    for (const id of Object.keys(
+      config.mixer
+    ) as TrackId[]) {
+      const m = config.mixer[id];
+      result[id] = {
+        id,
+        name: TRACK_NAMES[id],
+        gain: m.gain,
+        isMuted: m.isMuted,
+        isSolo: m.isSolo,
+      };
+    }
+    return result;
+  }, [config.mixer]);
+
+  // ─── Audio refs (belt-and-suspenders) ─────────────
+
   const trackStatesRef = useRef(trackStates);
   const patternRef = useRef(currentPattern);
 
@@ -174,7 +240,7 @@ export function SequencerProvider({
     patternRef.current = currentPattern;
   }, [currentPattern]);
 
-  // --- Effects ---
+  // ─── Effects ──────────────────────────────────────
 
   useEffect(() => {
     const load = async () => {
@@ -192,10 +258,10 @@ export function SequencerProvider({
   }, []);
 
   useEffect(() => {
-    audioEngine.setBpm(bpm);
-  }, [bpm]);
+    audioEngine.setBpm(config.bpm);
+  }, [config.bpm]);
 
-  // --- Audio step callback ---
+  // ─── Audio step callback ──────────────────────────
 
   const handleStep = useCallback(
     (step: number, time: number) => {
@@ -233,7 +299,7 @@ export function SequencerProvider({
     }
   }, [handleStep, isPlaying]);
 
-  // --- Actions ---
+  // ─── Actions ──────────────────────────────────────
 
   const togglePlay = useCallback(() => {
     if (isPlaying) {
@@ -241,10 +307,10 @@ export function SequencerProvider({
       setIsPlaying(false);
       stepRef.current = -1;
     } else {
-      audioEngine.start(bpm, handleStep);
+      audioEngine.start(config.bpm, handleStep);
       setIsPlaying(true);
     }
-  }, [isPlaying, bpm, handleStep]);
+  }, [isPlaying, config.bpm, handleStep]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -264,20 +330,24 @@ export function SequencerProvider({
   }, [togglePlay, isLoaded]);
 
   const setBpm = useCallback((v: number) => {
-    setBpmState(v);
+    setConfig(prev => ({ ...prev, bpm: v }));
   }, []);
 
   const setKit = useCallback((kit: Kit) => {
-    setCurrentKit(kit);
+    setConfig(prev => ({ ...prev, kitId: kit.id }));
   }, []);
 
   const setPattern = useCallback((pattern: Pattern) => {
-    setCurrentPattern(pattern);
+    setConfig(prev => ({
+      ...prev,
+      steps: pattern.steps,
+    }));
+    setSelectedPatternId(pattern.id);
   }, []);
 
   const toggleStep = useCallback(
     (trackId: TrackId, stepIndex: number) => {
-      setCurrentPattern(prev => {
+      setConfig(prev => {
         const cur = prev.steps[trackId];
         const bit =
           cur[stepIndex] === '1' ? '0' : '1';
@@ -290,37 +360,47 @@ export function SequencerProvider({
           steps: { ...prev.steps, [trackId]: next },
         };
       });
+      setSelectedPatternId('custom');
     },
     []
   );
 
   const toggleMute = useCallback((trackId: TrackId) => {
-    setTrackStates(prev => ({
+    setConfig(prev => ({
       ...prev,
-      [trackId]: {
-        ...prev[trackId],
-        isMuted: !prev[trackId].isMuted,
+      mixer: {
+        ...prev.mixer,
+        [trackId]: {
+          ...prev.mixer[trackId],
+          isMuted: !prev.mixer[trackId].isMuted,
+        },
       },
     }));
   }, []);
 
   const toggleSolo = useCallback((trackId: TrackId) => {
-    setTrackStates(prev => ({
+    setConfig(prev => ({
       ...prev,
-      [trackId]: {
-        ...prev[trackId],
-        isSolo: !prev[trackId].isSolo,
+      mixer: {
+        ...prev.mixer,
+        [trackId]: {
+          ...prev.mixer[trackId],
+          isSolo: !prev.mixer[trackId].isSolo,
+        },
       },
     }));
   }, []);
 
   const setGain = useCallback(
     (trackId: TrackId, value: number) => {
-      setTrackStates(prev => ({
+      setConfig(prev => ({
         ...prev,
-        [trackId]: {
-          ...prev[trackId],
-          gain: value,
+        mixer: {
+          ...prev.mixer,
+          [trackId]: {
+            ...prev.mixer[trackId],
+            gain: value,
+          },
         },
       }));
     },
@@ -331,10 +411,12 @@ export function SequencerProvider({
     setShowMixer(prev => !prev);
   }, []);
 
+  // ─── Context value ────────────────────────────────
+
   const value: SequencerContextValue = {
     state: {
       isPlaying,
-      bpm,
+      bpm: config.bpm,
       currentKit,
       currentPattern,
       trackStates,
@@ -352,12 +434,33 @@ export function SequencerProvider({
       setGain,
       toggleMixer,
     },
-    meta: { stepRef },
+    meta: { stepRef, config },
   };
 
   return (
-    <SequencerContext value={value}>
-      {children}
-    </SequencerContext>
+    <ConfigContext
+      value={{
+        config,
+        setConfig,
+        selectedPatternId,
+        setSelectedPatternId,
+      }}
+    >
+      <TransientContext
+        value={{
+          isPlaying,
+          setIsPlaying,
+          isLoaded,
+          setIsLoaded,
+          showMixer,
+          setShowMixer,
+          stepRef,
+        }}
+      >
+        <SequencerContext value={value}>
+          {children}
+        </SequencerContext>
+      </TransientContext>
+    </ConfigContext>
   );
 }
