@@ -56,7 +56,7 @@ DEFAULT_PDF = PROJECT_ROOT / "260_drum_machine_patterns_1987.pdf"
 DEFAULT_PAGE_START = 9
 DEFAULT_PAGE_END = 97
 DEFAULT_PASSES = 3
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-3.1-pro-preview"
 
 ALL_TRACK_IDS = [
   "ac", "bd", "sd", "ch", "oh", "cy",
@@ -146,12 +146,36 @@ For each grid pattern found:
 5. Rows that do NOT have an arrow next to them should have
    ALL cells set to filled: false.
 
+ROW-SPECIFIC GUIDANCE:
+- AC (accent, top row): This row uses a DIFFERENT visual
+  marker than other rows — triangles, carets, or small
+  marks instead of filled boxes. Most patterns have SPARSE
+  and IRREGULAR accents. Do NOT assume AC follows any
+  repeating pattern. Carefully distinguish the accent
+  markers from empty cells.
+- BD (bass drum, bottom row) and CB (cowbell, second from
+  bottom): These rows are near the grid edge. Verify each
+  cell individually — do not let proximity to the border
+  cause misreads. Make sure you are reading the correct
+  row and not confusing BD with CB.
+- Columns 1-4 (leftmost): These are adjacent to the
+  instrument labels. Column 1 is the FIRST grid cell to
+  the right of the label. Do not confuse the label area
+  with grid cells.
+
 CRITICAL RULES — read carefully:
 - Examine each cell INDEPENDENTLY. Never assume a pattern.
 - Adjacent cells CAN both be filled. Do not merge them.
 - Count every column for every row. Do not skip any.
-- After each row, verify: your filled count matches the
-  number of black boxes visible in that row.
+
+VERIFICATION — do this for every row:
+- Count the filled cells you recorded for the row.
+- Visually re-count the black boxes in that row of the
+  image.
+- If the counts do not match, re-examine cell by cell.
+- SANITY CHECK: Most rows have 0-8 fills out of 16. If
+  you are marking more than 10 cells filled in a single
+  row, double-check — rows more than 50% filled are rare.
 
 WRONG: Seeing fills at columns 1,3,5 and assuming the rest
   follows an alternating pattern.
@@ -176,7 +200,8 @@ REPORT_TEMPLATE = """\
   .page { display: flex; gap: 20px; margin-bottom: 40px;
           border-bottom: 2px solid #444;
           padding-bottom: 20px; }
-  .page-image { flex: 0 0 auto; }
+  .page-image { flex: 0 0 auto; position: sticky;
+               top: 20px; align-self: flex-start; }
   .page-image img { max-height: 800px;
                     border: 1px solid #444; }
   .page-patterns { flex: 1; }
@@ -303,6 +328,10 @@ def send_to_gemini(
     config=types.GenerateContentConfig(
       response_mime_type="application/json",
       response_schema=PageResponse,
+      thinking_config=types.ThinkingConfig(
+        thinking_level="high",
+      ),
+      media_resolution="MEDIA_RESOLUTION_HIGH",
     ),
   )
 
