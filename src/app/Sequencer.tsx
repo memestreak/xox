@@ -224,72 +224,151 @@ export default function Sequencer() {
         </header>
 
         {/* --- Sequencer Grid Section --- */}
-        <div className="space-y-4 bg-neutral-900/30 p-6 rounded-2xl border border-neutral-800/50">
+        <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-3 lg:p-6 rounded-xl lg:rounded-2xl border border-neutral-800/50">
           {TRACKS.map(track => (
-            <div key={track.id} className="flex gap-4 items-center">
-              {/* Track Info & Mute/Solo */}
-              <div className="w-48 flex items-center gap-2">
-                <span className="w-16 truncate text-xs font-bold uppercase text-neutral-400 tracking-wider">{track.name}</span>
-                <button
-                  onClick={() => setTrackStates(prev => ({
-                    ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
-                  }))}
-                  className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isMuted
-                    ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
-                    : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
-                    }`}
-                  title="Mute"
-                >
-                  M
-                </button>
-                <button
-                  onClick={() => setTrackStates(prev => ({
-                    ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
-                  }))}
-                  className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isSolo
-                    ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
-                    : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
-                    }`}
-                  title="Solo"
-                >
-                  S
-                </button>
-                <Knob
-                  value={trackStates[track.id].gain}
-                  onChange={(v) => setTrackStates(prev => ({
-                    ...prev,
-                    [track.id]: { ...prev[track.id], gain: v }
-                  }))}
-                />
+            <div key={track.id}>
+              {/* Mobile: track name + M/S above grid */}
+              <div className="flex items-center gap-2 mb-1 lg:hidden">
+                <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
+                  {track.name}
+                </span>
+                <div className="flex gap-1 ml-auto">
+                  <button
+                    onClick={() => setTrackStates(prev => ({
+                      ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
+                    }))}
+                    className={`shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-[8px] rounded font-bold border transition-all ${trackStates[track.id].isMuted
+                      ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
+                      : 'bg-neutral-800 border-neutral-700 text-neutral-500'
+                      }`}
+                    title="Mute"
+                  >
+                    M
+                  </button>
+                  <button
+                    onClick={() => setTrackStates(prev => ({
+                      ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
+                    }))}
+                    className={`shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-[8px] rounded font-bold border transition-all ${trackStates[track.id].isSolo
+                      ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                      : 'bg-neutral-800 border-neutral-700 text-neutral-500'
+                      }`}
+                    title="Solo"
+                  >
+                    S
+                  </button>
+                </div>
               </div>
 
-              {/* 16-Step Grid */}
-              <div className="flex-1 grid grid-cols-16 gap-1.5">
-                {currentPattern.steps[track.id].split('').map((step, i) => (
-                  <div
-                    key={i}
-                    onClick={() => toggleStep(track.id, i)}
-                    className={`h-12 rounded-sm transition-all duration-100 cursor-pointer ${step === '1'
-                      ? (i === currentStep ? 'bg-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.8)] z-10' : 'bg-orange-600')
-                      : (i === currentStep ? 'bg-neutral-700' : 'bg-neutral-800/40 hover:bg-neutral-800')
-                      } ${i % 4 === 0 ? 'border-l-2 border-neutral-700' : ''}`}
+              <div className="flex gap-4 items-center">
+                {/* Desktop: sidebar with name, M/S, knob */}
+                <div className="hidden lg:flex w-48 items-center gap-2">
+                  <span className="w-16 truncate text-xs font-bold uppercase text-neutral-400 tracking-wider">
+                    {track.name}
+                  </span>
+                  <button
+                    onClick={() => setTrackStates(prev => ({
+                      ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
+                    }))}
+                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isMuted
+                      ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
+                      : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
+                      }`}
+                    title="Mute"
+                  >
+                    M
+                  </button>
+                  <button
+                    onClick={() => setTrackStates(prev => ({
+                      ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
+                    }))}
+                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isSolo
+                      ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                      : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
+                      }`}
+                    title="Solo"
+                  >
+                    S
+                  </button>
+                  <Knob
+                    value={trackStates[track.id].gain}
+                    onChange={(v) => setTrackStates(prev => ({
+                      ...prev,
+                      [track.id]: { ...prev[track.id], gain: v }
+                    }))}
                   />
-                ))}
+                </div>
+
+                {/* Step grid: 2x8 on mobile, 1x16 on desktop */}
+                <div className="flex-1">
+                  {/* Desktop: 1x16 */}
+                  <div className="hidden lg:grid grid-cols-16 gap-1.5">
+                    {currentPattern.steps[track.id].split('').map((step, i) => (
+                      <div
+                        key={i}
+                        onClick={() => toggleStep(track.id, i)}
+                        className={`h-12 rounded-sm transition-all duration-100 cursor-pointer ${step === '1'
+                          ? (i === currentStep ? 'bg-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.8)] z-10' : 'bg-orange-600')
+                          : (i === currentStep ? 'bg-neutral-700' : 'bg-neutral-800/40 hover:bg-neutral-800')
+                          } ${i % 4 === 0 ? 'border-l-2 border-neutral-700' : ''}`}
+                      />
+                    ))}
+                  </div>
+                  {/* Mobile: 2x8 */}
+                  <div className="lg:hidden space-y-[3px]">
+                    {[0, 8].map(rowStart => (
+                      <div key={rowStart} className="grid grid-cols-8 gap-[3px]">
+                        {currentPattern.steps[track.id].slice(rowStart, rowStart + 8).split('').map((step, posInRow) => {
+                          const i = rowStart + posInRow;
+                          return (
+                            <div
+                              key={i}
+                              onClick={() => toggleStep(track.id, i)}
+                              className={`h-8 rounded-sm transition-all duration-100 cursor-pointer ${step === '1'
+                                ? (i === currentStep ? 'bg-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.8)] z-10' : 'bg-orange-600')
+                                : (i === currentStep ? 'bg-neutral-700' : 'bg-neutral-800/40 hover:bg-neutral-800')
+                                } ${posInRow % 4 === 0 ? 'border-l-2 border-neutral-700' : ''}`}
+                            />
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           ))}
 
           {/* Running Light (Visual Step Indicator) */}
           <div className="flex gap-4 items-center pt-2">
-            <div className="w-48" />
-            <div className="flex-1 grid grid-cols-16 gap-1.5">
-              {Array.from({ length: 16 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all duration-100 ${i === currentStep ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]' : 'bg-neutral-900'
-                    }`}
-                />
-              ))}
+            {/* Desktop spacer for sidebar alignment */}
+            <div className="hidden lg:block w-48" />
+            <div className="flex-1">
+              {/* Desktop: 1x16 */}
+              <div className="hidden lg:grid grid-cols-16 gap-1.5">
+                {Array.from({ length: 16 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-100 ${i === currentStep ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]' : 'bg-neutral-900'}`}
+                  />
+                ))}
+              </div>
+              {/* Mobile: 2x8 */}
+              <div className="lg:hidden space-y-[3px]">
+                {[0, 8].map(rowStart => (
+                  <div key={rowStart} className="grid grid-cols-8 gap-[3px]">
+                    {Array.from({ length: 8 }).map((_, posInRow) => {
+                      const i = rowStart + posInRow;
+                      return (
+                        <div
+                          key={i}
+                          className={`h-1.5 rounded-full transition-all duration-100 ${i === currentStep ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]' : 'bg-neutral-900'}`}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
