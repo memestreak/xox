@@ -175,53 +175,53 @@ export default function Sequencer() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 p-8 font-sans">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* --- Header Section --- */}
-        <header className="flex justify-between items-end border-b border-neutral-800 pb-6">
-          <div>
-            <h1 className="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 p-3 lg:p-8 font-sans">
+      <div className="max-w-none lg:max-w-4xl mx-auto space-y-4 lg:space-y-8">
+        {/* --- Sticky Header (mobile) / Static Header (desktop) --- */}
+        <header className="sticky top-0 z-20 bg-neutral-950 safe-area-top safe-area-x border-b border-neutral-800 pb-3 lg:pb-6 lg:static space-y-2 lg:space-y-0">
+          {/* Row 1: Logo + BPM + Play */}
+          <div className="flex justify-between items-center lg:items-end">
+            <h1 className="text-2xl lg:text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">
               XOX
             </h1>
+            <div className="flex gap-2 lg:gap-4 items-center lg:items-end">
+              <TempoController bpm={bpm} setBpm={setBpm} />
+              <button
+                onClick={handleTogglePlay}
+                disabled={!isLoaded}
+                className={`px-4 lg:px-8 py-2 rounded-full font-bold text-sm lg:text-base transition-all ${isPlaying
+                  ? 'bg-red-600 hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.4)]'
+                  : 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_20px_rgba(234,88,12,0.4)]'
+                  } ${!isLoaded ? 'opacity-50 cursor-wait' : ''}`}
+              >
+                {isPlaying ? 'STOP' : 'PLAY'}
+              </button>
+            </div>
           </div>
-          <div className="flex gap-4 items-end">
-            <TempoController bpm={bpm} setBpm={setBpm} />
-            <button
-              onClick={handleTogglePlay}
-              disabled={!isLoaded}
-              className={`px-8 py-2 rounded-full font-bold transition-all ${isPlaying
-                ? 'bg-red-600 hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.4)]'
-                : 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_20px_rgba(234,88,12,0.4)]'
-                } ${!isLoaded ? 'opacity-50 cursor-wait' : ''}`}
-            >
-              {isPlaying ? 'STOP' : 'PLAY'}
-            </button>
+          {/* Row 2: Kit + Pattern (inside sticky zone) */}
+          <div className="grid grid-cols-2 gap-2 lg:gap-4 pt-2 lg:pt-0">
+            <div className="bg-neutral-900/50 p-2 lg:p-4 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
+              <label className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 lg:mb-2 block font-bold">Drum Kit</label>
+              <select
+                value={currentKit.id}
+                onChange={(e) => setCurrentKit(kitsData.kits.find(k => k.id === e.target.value)!)}
+                className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus:outline-none hover:border-neutral-600 transition-colors"
+              >
+                {kitsData.kits.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+              </select>
+            </div>
+            <div className="bg-neutral-900/50 p-2 lg:p-4 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
+              <label className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 lg:mb-2 block font-bold">Pattern</label>
+              <select
+                value={currentPattern.id}
+                onChange={(e) => setCurrentPattern(patternsData.patterns.find(p => p.id === e.target.value)!)}
+                className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus:outline-none hover:border-neutral-600 transition-colors"
+              >
+                {patternsData.patterns.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
           </div>
         </header>
-
-        {/* --- Controls Section --- */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-neutral-900/50 p-4 border border-neutral-800 rounded-xl shadow-inner">
-            <label className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2 block font-bold">Drum Kit</label>
-            <select
-              value={currentKit.id}
-              onChange={(e) => setCurrentKit(kitsData.kits.find(k => k.id === e.target.value)!)}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 focus:outline-none hover:border-neutral-600 transition-colors"
-            >
-              {kitsData.kits.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
-            </select>
-          </div>
-          <div className="bg-neutral-900/50 p-4 border border-neutral-800 rounded-xl shadow-inner">
-            <label className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2 block font-bold">Pattern</label>
-            <select
-              value={currentPattern.id}
-              onChange={(e) => setCurrentPattern(patternsData.patterns.find(p => p.id === e.target.value)!)}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 focus:outline-none hover:border-neutral-600 transition-colors"
-            >
-              {patternsData.patterns.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-        </div>
 
         {/* --- Sequencer Grid Section --- */}
         <div className="space-y-4 bg-neutral-900/30 p-6 rounded-2xl border border-neutral-800/50">
