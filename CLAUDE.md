@@ -55,6 +55,28 @@ Supporting files:
   (`"1010101010101010"`)
 - `public/kits/{808,electro}/` — .wav samples per kit
 
+## Testing
+
+Tests live in `src/__tests__/` and run via Vitest + jsdom.
+A pre-push git hook runs `npm test` and `npm run lint`
+before every push.
+
+Test areas:
+- `configCodec.test.ts` — round-trip, defensive decoding,
+  field validation
+- `configCodec.golden.test.ts` — backward-compatible
+  serialization (golden hashes, base64url safety)
+- `types.test.ts` — TRACK_IDS ordering snapshot
+- `SequencerContext.test.tsx` — state actions, derived
+  state, pattern state machine, URL hash import
+- `handleStep.test.ts` — solo/mute priority, accent gain
+- `audioEngine.test.ts` — timing math, step wrapping
+- UI tests — SettingsPopover, TransportControls,
+  TempoController
+
+Run `npm test` after any logic change. Run `npm test --
+-u` to update snapshots after intentional format changes.
+
 ## Key Conventions
 
 - State management is local React state only (no external stores)
