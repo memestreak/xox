@@ -44,3 +44,7 @@ next-env.d.ts
 
 # parsed pattern extraction artifacts
 scripts/parsed_patterns/
+
+# python
+__pycache__/
+*.egg-info/
