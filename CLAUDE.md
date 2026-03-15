@@ -9,9 +9,9 @@ working with code in this repository.
 npm run dev      # Dev server at localhost:3000
 npm run build    # Production build (static export to /out/)
 npm run lint     # ESLint
+npm test         # Vitest (unit + integration)
+npm run test:watch  # Vitest in watch mode
 ```
-
-No test framework is configured.
 
 ## Architecture
 

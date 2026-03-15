@@ -1,0 +1,355 @@
+import { describe, expect, it } from 'vitest';
+import {
+  decodeConfig,
+  defaultConfig,
+  encodeConfig,
+} from '../app/configCodec';
+import type { SequencerConfig } from '../app/types';
+import { TRACK_IDS } from '../app/types';
+
+/**
+ * Helper: build a config with overrides merged into defaults.
+ */
+function makeConfig(
+  overrides: Partial<SequencerConfig> = {}
+): SequencerConfig {
+  return { ...defaultConfig(), ...overrides };
+}
+
+/**
+ * Helper: encode a raw object as if it were a valid config,
+ * bypassing validation on the encode side.
+ */
+async function encodeRaw(obj: unknown): Promise<string> {
+  const json = JSON.stringify(obj);
+  const stream = new Blob([json]).stream()
+    .pipeThrough(new CompressionStream('deflate-raw'));
+  const bytes = new Uint8Array(
+    await new Response(stream).arrayBuffer()
+  );
+  let binary = '';
+  for (const b of bytes) {
+    binary += String.fromCharCode(b);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+// -------------------------------------------------------
+// A. Round-trip fidelity
+// -------------------------------------------------------
+describe('round-trip fidelity', () => {
+  it('default config round-trips identically', async () => {
+    const config = defaultConfig();
+    const hash = await encodeConfig(config);
+    const decoded = await decodeConfig(hash);
+    expect(decoded).toEqual(config);
+  });
+
+  it('config with all steps set to 1', async () => {
+    const config = defaultConfig();
+    for (const id of TRACK_IDS) {
+      config.steps[id] = '1111111111111111';
+    }
+    const hash = await encodeConfig(config);
+    const decoded = await decodeConfig(hash);
+    expect(decoded).toEqual(config);
+  });
+
+  it('config with mixed mixer states', async () => {
+    const config = defaultConfig();
+    config.mixer.bd = {
+      gain: 0.3, isMuted: true, isSolo: false,
+    };
+    config.mixer.sd = {
+      gain: 0.7, isMuted: false, isSolo: true,
+    };
+    config.mixer.ch = {
+      gain: 0, isMuted: true, isSolo: true,
+    };
+    const hash = await encodeConfig(config);
+    const decoded = await decodeConfig(hash);
+    expect(decoded).toEqual(config);
+  });
+
+  it('config with edge BPM values', async () => {
+    for (const bpm of [20, 300]) {
+      const config = makeConfig({ bpm });
+      const hash = await encodeConfig(config);
+      const decoded = await decodeConfig(hash);
+      expect(decoded).toEqual(config);
+    }
+  });
+
+  it('config with each kit ID', async () => {
+    for (const kitId of ['808', 'electro']) {
+      const config = makeConfig({ kitId });
+      const hash = await encodeConfig(config);
+      const decoded = await decodeConfig(hash);
+      expect(decoded).toEqual(config);
+    }
+  });
+});
+
+// -------------------------------------------------------
+// B. Defensive decoding
+// -------------------------------------------------------
+describe('defensive decoding', () => {
+  it('empty string rejects', async () => {
+    await expect(decodeConfig('')).rejects.toThrow();
+  });
+
+  it('random non-base64 string rejects', async () => {
+    await expect(
+      decodeConfig('not!valid@base64#')
+    ).rejects.toThrow();
+  });
+
+  it('valid base64 but invalid JSON rejects', async () => {
+    // "hello" in base64url -- valid base64 but not
+    // deflate-compressed JSON
+    await expect(decodeConfig('aGVsbG8')).rejects.toThrow();
+  });
+
+  it('valid JSON {} merges with defaults', async () => {
+    const hash = await encodeRaw({});
+    const decoded = await decodeConfig(hash);
+    expect(decoded).toEqual(defaultConfig());
+  });
+
+  it('valid JSON null returns defaults', async () => {
+    const hash = await encodeRaw(null);
+    const decoded = await decodeConfig(hash);
+    expect(decoded).toEqual(defaultConfig());
+  });
+
+  it('extra unknown fields are ignored', async () => {
+    const config = defaultConfig();
+    const raw = { ...config, unknownField: 'surprise' };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded).toEqual(config);
+  });
+
+  it('wrong version number is overwritten', async () => {
+    const config = defaultConfig();
+    const raw = { ...config, version: 999 };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.version).toBe(1);
+  });
+
+  it('partial config (only kitId) fills defaults', async () => {
+    const hash = await encodeRaw({ kitId: 'electro' });
+    const decoded = await decodeConfig(hash);
+    const defaults = defaultConfig();
+    expect(decoded.kitId).toBe('electro');
+    expect(decoded.bpm).toBe(defaults.bpm);
+    expect(decoded.steps).toEqual(defaults.steps);
+    expect(decoded.mixer).toEqual(defaults.mixer);
+  });
+
+  it('missing tracks in steps filled from default', async () => {
+    const config = defaultConfig();
+    // Only provide bd and sd steps
+    const partialSteps = {
+      bd: '1010101010101010',
+      sd: '0101010101010101',
+    };
+    const raw = { ...config, steps: partialSteps };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.steps.bd).toBe('1010101010101010');
+    expect(decoded.steps.sd).toBe('0101010101010101');
+    // Missing tracks should use defaults
+    const defaults = defaultConfig();
+    for (const id of TRACK_IDS) {
+      if (id !== 'bd' && id !== 'sd') {
+        expect(decoded.steps[id]).toBe(defaults.steps[id]);
+      }
+    }
+  });
+
+  it('missing tracks in mixer filled from default', async () => {
+    const config = defaultConfig();
+    const partialMixer = {
+      bd: { gain: 0.5, isMuted: true, isSolo: false },
+    };
+    const raw = { ...config, mixer: partialMixer };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.mixer.bd.gain).toBe(0.5);
+    expect(decoded.mixer.bd.isMuted).toBe(true);
+    const defaults = defaultConfig();
+    for (const id of TRACK_IDS) {
+      if (id !== 'bd') {
+        expect(decoded.mixer[id]).toEqual(defaults.mixer[id]);
+      }
+    }
+  });
+});
+
+// -------------------------------------------------------
+// C. Field-level validation (via encodeRaw + decodeConfig)
+// -------------------------------------------------------
+describe('validateKitId', () => {
+  it('"808" passes through', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), kitId: '808' });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.kitId).toBe('808');
+  });
+
+  it('"electro" passes through', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), kitId: 'electro' });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.kitId).toBe('electro');
+  });
+
+  it('unknown string falls back to "808"', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), kitId: 'unknown' });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.kitId).toBe('808');
+  });
+
+  it('non-string falls back to "808"', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), kitId: 123 });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.kitId).toBe('808');
+  });
+
+  it('null falls back to "808"', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), kitId: null });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.kitId).toBe('808');
+  });
+});
+
+describe('validateBpm', () => {
+  it('110 passes through', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), bpm: 110 });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.bpm).toBe(110);
+  });
+
+  it('below minimum clamped to 20', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), bpm: 10 });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.bpm).toBe(20);
+  });
+
+  it('above maximum clamped to 300', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), bpm: 500 });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.bpm).toBe(300);
+  });
+
+  it('float rounded to integer', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), bpm: 120.7 });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.bpm).toBe(121);
+  });
+
+  it('NaN defaults to 110', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), bpm: NaN });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.bpm).toBe(110);
+  });
+
+  it('Infinity defaults to 110', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), bpm: Infinity });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.bpm).toBe(110);
+  });
+
+  it('non-number defaults to 110', async () => {
+    const hash = await encodeRaw({ ...defaultConfig(), bpm: 'fast' });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.bpm).toBe(110);
+  });
+});
+
+describe('validateSteps', () => {
+  it('valid 16-char binary string passes', async () => {
+    const config = defaultConfig();
+    config.steps.bd = '1010101010101010';
+    const hash = await encodeRaw(config);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.steps.bd).toBe('1010101010101010');
+  });
+
+  it('wrong length uses fallback', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      steps: { ...config.steps, bd: '101010101010101' },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.steps.bd).toBe(defaultConfig().steps.bd);
+  });
+
+  it('non-binary chars use fallback', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      steps: { ...config.steps, bd: '10102010xxxxxxxx' },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.steps.bd).toBe(defaultConfig().steps.bd);
+  });
+
+  it('null steps uses entire fallback', async () => {
+    const raw = { ...defaultConfig(), steps: null };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.steps).toEqual(defaultConfig().steps);
+  });
+});
+
+describe('validateMixer', () => {
+  it('negative gain clamped to 0', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      mixer: {
+        ...config.mixer,
+        bd: { gain: -0.5, isMuted: false, isSolo: false },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.mixer.bd.gain).toBe(0);
+  });
+
+  it('gain above 1 clamped to 1', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      mixer: {
+        ...config.mixer,
+        bd: { gain: 1.5, isMuted: false, isSolo: false },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.mixer.bd.gain).toBe(1);
+  });
+
+  it('non-boolean isMuted uses fallback', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      mixer: {
+        ...config.mixer,
+        bd: { gain: 0.8, isMuted: 'yes', isSolo: false },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.mixer.bd.isMuted).toBe(false);
+    expect(decoded.mixer.bd.gain).toBe(0.8);
+  });
+});

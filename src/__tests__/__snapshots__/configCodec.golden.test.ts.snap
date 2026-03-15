@@ -1,0 +1,85 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden-file tests > defaultConfig() snapshot 1`] = `
+{
+  "bpm": 110,
+  "kitId": "808",
+  "mixer": {
+    "ac": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "bd": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "cb": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "ch": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "cp": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "cy": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "ht": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "lt": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "mt": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "oh": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "rs": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+    "sd": {
+      "gain": 1,
+      "isMuted": false,
+      "isSolo": false,
+    },
+  },
+  "steps": {
+    "ac": "0000000000000000",
+    "bd": "1000000010100010",
+    "cb": "0000000000000000",
+    "ch": "1011101010101010",
+    "cp": "0000000000000000",
+    "cy": "0000000000000000",
+    "ht": "0000000000000000",
+    "lt": "0000000000000000",
+    "mt": "0000000000000000",
+    "oh": "0000000000000000",
+    "rs": "0001001000001000",
+    "sd": "0000000000000000",
+  },
+  "version": 1,
+}
+`;
