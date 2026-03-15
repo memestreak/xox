@@ -437,7 +437,7 @@ export default function Sequencer() {
         </button>
 
         {/* --- Footer --- */}
-        <footer className="text-center pt-8">
+        <footer className="text-center pt-4 lg:pt-8">
           <a
             href="https://github.com/memestreak/xox"
             target="_blank"
