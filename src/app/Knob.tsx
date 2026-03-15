@@ -52,16 +52,41 @@ export default function Knob({ value, onChange, size = 24 }: KnobProps) {
     dragRef.current = null;
   }, []);
 
+  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
+    let next = value;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+      next = Math.min(1, value + (e.shiftKey ? 0.1 : 0.01));
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+      next = Math.max(0, value - (e.shiftKey ? 0.1 : 0.01));
+    } else if (e.key === 'Home') {
+      next = 0;
+    } else if (e.key === 'End') {
+      next = 1;
+    } else {
+      return;
+    }
+    e.preventDefault();
+    onChange(next);
+  }, [value, onChange]);
+
   return (
     <div className="group relative flex items-center justify-center">
       <svg
         width={size}
         height={size}
-        className="cursor-ns-resize"
+        role="slider"
+        tabIndex={0}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(value * 100)}
+        aria-label="Volume"
+        className="cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-full"
+        style={{ touchAction: 'manipulation' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={release}
         onLostPointerCapture={release}
+        onKeyDown={onKeyDown}
       >
         <path
           d={describeArc(cx, cy, r, startAngle, endAngle)}

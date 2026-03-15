@@ -1,0 +1,33 @@
+[project]
+name = "xox-scripts"
+version = "0.1.0"
+description = "Pattern extraction scripts for XOX drum sequencer"
+requires-python = ">=3.11"
+dependencies = [
+  "google-genai",
+  "jinja2",
+  "numpy>=2.4.3",
+  "opencv-python-headless>=4.13.0.92",
+  "pillow>=12.1.1",
+  "pydantic",
+  "pytesseract>=0.3.13",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "ruff",
+  "mypy",
+]
+
+[tool.ruff]
+line-length = 80
+indent-width = 2
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

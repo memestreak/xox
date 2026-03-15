@@ -2,7 +2,7 @@ import Sequencer from './Sequencer';
 
 export default function Home() {
   return (
-    <main>
+    <main id="main-content">
       <Sequencer />
     </main>
   );

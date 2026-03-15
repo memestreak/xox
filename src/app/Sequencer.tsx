@@ -179,6 +179,9 @@ export default function Sequencer() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 p-3 lg:p-8 font-sans">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-orange-600 focus:text-white focus:rounded">
+        Skip to main content
+      </a>
       <div className="max-w-none lg:max-w-4xl mx-auto space-y-4 lg:space-y-8">
         {/* --- Sticky Header (mobile) / Static Header (desktop) --- */}
         <header className="sticky top-0 z-20 bg-neutral-950 safe-area-top safe-area-x border-b border-neutral-800 pb-3 lg:pb-6 lg:static space-y-2 lg:space-y-8">
@@ -192,7 +195,7 @@ export default function Sequencer() {
               <button
                 onClick={handleTogglePlay}
                 disabled={!isLoaded}
-                className={`px-4 lg:px-8 py-2 rounded-full font-bold text-sm lg:text-base transition-all ${isPlaying
+                className={`px-4 lg:px-8 py-2 rounded-full font-bold text-sm lg:text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${isPlaying
                   ? 'bg-red-600 hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.4)]'
                   : 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_20px_rgba(234,88,12,0.4)]'
                   } ${!isLoaded ? 'opacity-50 cursor-wait' : ''}`}
@@ -208,7 +211,7 @@ export default function Sequencer() {
               <select
                 value={currentKit.id}
                 onChange={(e) => setCurrentKit(kitsData.kits.find(k => k.id === e.target.value)!)}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus:outline-none hover:border-neutral-600 transition-colors"
+                className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors"
               >
                 {kitsData.kits.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
               </select>
@@ -218,7 +221,7 @@ export default function Sequencer() {
               <select
                 value={currentPattern.id}
                 onChange={(e) => setCurrentPattern(patternsData.patterns.find(p => p.id === e.target.value)!)}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus:outline-none hover:border-neutral-600 transition-colors"
+                className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors"
               >
                 {patternsData.patterns.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
@@ -241,11 +244,12 @@ export default function Sequencer() {
                     onClick={() => setTrackStates(prev => ({
                       ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
                     }))}
-                    className={`shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-[8px] rounded font-bold border transition-all ${trackStates[track.id].isMuted
+                    className={`shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-[8px] rounded font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${trackStates[track.id].isMuted
                       ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
                       : 'bg-neutral-800 border-neutral-700 text-neutral-500'
                       }`}
-                    title="Mute"
+                    aria-label={`Mute ${track.name}`}
+                    aria-pressed={trackStates[track.id].isMuted}
                   >
                     M
                   </button>
@@ -253,11 +257,12 @@ export default function Sequencer() {
                     onClick={() => setTrackStates(prev => ({
                       ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
                     }))}
-                    className={`shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-[8px] rounded font-bold border transition-all ${trackStates[track.id].isSolo
+                    className={`shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-[8px] rounded font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${trackStates[track.id].isSolo
                       ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
                       : 'bg-neutral-800 border-neutral-700 text-neutral-500'
                       }`}
-                    title="Solo"
+                    aria-label={`Solo ${track.name}`}
+                    aria-pressed={trackStates[track.id].isSolo}
                   >
                     S
                   </button>
@@ -274,11 +279,12 @@ export default function Sequencer() {
                     onClick={() => setTrackStates(prev => ({
                       ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
                     }))}
-                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isMuted
+                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${trackStates[track.id].isMuted
                       ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
                       : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
                       }`}
-                    title="Mute"
+                    aria-label={`Mute ${track.name}`}
+                    aria-pressed={trackStates[track.id].isMuted}
                   >
                     M
                   </button>
@@ -286,11 +292,12 @@ export default function Sequencer() {
                     onClick={() => setTrackStates(prev => ({
                       ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
                     }))}
-                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-all ${trackStates[track.id].isSolo
+                    className={`shrink-0 w-6 h-6 flex items-center justify-center text-[10px] rounded-md font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${trackStates[track.id].isSolo
                       ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
                       : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-600'
                       }`}
-                    title="Solo"
+                    aria-label={`Solo ${track.name}`}
+                    aria-pressed={trackStates[track.id].isSolo}
                   >
                     S
                   </button>
@@ -308,11 +315,13 @@ export default function Sequencer() {
                   {/* Desktop: 1x16 */}
                   <div className="hidden lg:grid grid-cols-16 gap-1.5">
                     {currentPattern.steps[track.id].split('').map((step, i) => (
-                      <div
+                      <button
                         key={i}
                         onClick={() => toggleStep(track.id, i)}
-                        className={`h-12 rounded-sm transition-all duration-100 cursor-pointer ${step === '1'
-                          ? (i === currentStep ? 'bg-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.8)] z-10' : 'bg-orange-600')
+                        aria-label={`${track.name} step ${i + 1}`}
+                        aria-pressed={step === '1'}
+                        className={`h-12 rounded-sm transition-colors duration-100 motion-safe:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${step === '1'
+                          ? (i === currentStep ? 'bg-orange-400 motion-safe:scale-105 shadow-[0_0_20px_rgba(251,146,60,0.8)] z-10' : 'bg-orange-600')
                           : (i === currentStep ? 'bg-neutral-700' : 'bg-neutral-800/40 hover:bg-neutral-800')
                           } ${i % 4 === 0 ? 'border-l-2 border-neutral-700' : ''}`}
                       />
@@ -325,11 +334,13 @@ export default function Sequencer() {
                         {currentPattern.steps[track.id].slice(rowStart, rowStart + 8).split('').map((step, posInRow) => {
                           const i = rowStart + posInRow;
                           return (
-                            <div
+                            <button
                               key={i}
                               onClick={() => toggleStep(track.id, i)}
-                              className={`h-8 rounded-sm transition-all duration-100 cursor-pointer ${step === '1'
-                                ? (i === currentStep ? 'bg-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.8)] z-10' : 'bg-orange-600')
+                              aria-label={`${track.name} step ${i + 1}`}
+                              aria-pressed={step === '1'}
+                              className={`h-8 rounded-sm transition-colors duration-100 motion-safe:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${step === '1'
+                                ? (i === currentStep ? 'bg-orange-400 motion-safe:scale-105 shadow-[0_0_20px_rgba(251,146,60,0.8)] z-10' : 'bg-orange-600')
                                 : (i === currentStep ? 'bg-neutral-700' : 'bg-neutral-800/40 hover:bg-neutral-800')
                                 } ${posInRow % 4 === 0 ? 'border-l-2 border-neutral-700' : ''}`}
                             />
@@ -353,7 +364,7 @@ export default function Sequencer() {
                 {Array.from({ length: 16 }).map((_, i) => (
                   <div
                     key={i}
-                    className={`h-1.5 rounded-full transition-all duration-100 ${i === currentStep ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]' : 'bg-neutral-900'}`}
+                    className={`h-1.5 rounded-full transition-colors duration-100 ${i === currentStep ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]' : 'bg-neutral-900'}`}
                   />
                 ))}
               </div>
@@ -366,7 +377,7 @@ export default function Sequencer() {
                       return (
                         <div
                           key={i}
-                          className={`h-1.5 rounded-full transition-all duration-100 ${i === currentStep ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]' : 'bg-neutral-900'}`}
+                          className={`h-1.5 rounded-full transition-colors duration-100 ${i === currentStep ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]' : 'bg-neutral-900'}`}
                         />
                       );
                     })}
@@ -390,10 +401,12 @@ export default function Sequencer() {
                   onClick={() => setTrackStates(prev => ({
                     ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
                   }))}
-                  className={`shrink-0 w-[26px] h-[22px] flex items-center justify-center text-[9px] rounded font-bold border transition-all ${trackStates[track.id].isMuted
+                  className={`shrink-0 w-[26px] h-[22px] flex items-center justify-center text-[9px] rounded font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${trackStates[track.id].isMuted
                     ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
                     : 'bg-neutral-800 border-neutral-700 text-neutral-500'
                     }`}
+                  aria-label={`Mute ${track.name}`}
+                  aria-pressed={trackStates[track.id].isMuted}
                 >
                   M
                 </button>
@@ -401,10 +414,12 @@ export default function Sequencer() {
                   onClick={() => setTrackStates(prev => ({
                     ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
                   }))}
-                  className={`shrink-0 w-[26px] h-[22px] flex items-center justify-center text-[9px] rounded font-bold border transition-all ${trackStates[track.id].isSolo
+                  className={`shrink-0 w-[26px] h-[22px] flex items-center justify-center text-[9px] rounded font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${trackStates[track.id].isSolo
                     ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
                     : 'bg-neutral-800 border-neutral-700 text-neutral-500'
                     }`}
+                  aria-label={`Solo ${track.name}`}
+                  aria-pressed={trackStates[track.id].isSolo}
                 >
                   S
                 </button>
@@ -418,6 +433,7 @@ export default function Sequencer() {
                     ...prev,
                     [track.id]: { ...prev[track.id], gain: Number(e.target.value) }
                   }))}
+                  aria-label={`Volume ${track.name}`}
                   className="flex-1"
                 />
               </div>
@@ -428,7 +444,7 @@ export default function Sequencer() {
         {/* Mobile Mixer Toggle Button */}
         <button
           onClick={() => setShowMixer(prev => !prev)}
-          className={`lg:hidden w-full rounded-lg py-3 text-[10px] uppercase tracking-widest font-bold transition-colors ${showMixer
+          className={`lg:hidden w-full rounded-lg py-3 text-[10px] uppercase tracking-widest font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${showMixer
             ? 'bg-orange-600 text-white'
             : 'bg-neutral-800 border border-neutral-700 text-neutral-400 hover:border-neutral-600'
             }`}
