@@ -40,6 +40,9 @@ export default function Sequencer() {
   const [currentKit, setCurrentKit] = useState<Kit>(kitsData.kits[0]);
   const [currentPattern, setCurrentPattern] = useState<Pattern>(patternsData.patterns[0]);
 
+  // --- Mobile Mixer Panel ---
+  const [showMixer, setShowMixer] = useState(false);
+
   // --- Track Mixer State ---
   const [trackStates, setTrackStates] = useState<Record<TrackId, TrackState>>({
     ac: { id: 'ac', name: 'Accent', isMuted: false, isSolo: false, gain: 1.0 },
@@ -223,6 +226,7 @@ export default function Sequencer() {
           </div>
         </header>
 
+        <div className={showMixer ? 'hidden lg:block' : ''}>
         {/* --- Sequencer Grid Section --- */}
         <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-3 lg:p-6 rounded-xl lg:rounded-2xl border border-neutral-800/50">
           {TRACKS.map(track => (
@@ -372,6 +376,65 @@ export default function Sequencer() {
             </div>
           </div>
         </div>
+        </div>
+
+        {/* Mobile Mixer Panel */}
+        {showMixer && (
+          <div className="lg:hidden space-y-2 bg-neutral-900/30 p-3 rounded-xl border border-neutral-800/50">
+            {TRACKS.map(track => (
+              <div key={track.id} className="flex items-center gap-2 bg-neutral-900 rounded-lg p-2 border border-neutral-800">
+                <span className="w-12 text-[10px] font-bold uppercase text-neutral-400 tracking-wider truncate">
+                  {track.name}
+                </span>
+                <button
+                  onClick={() => setTrackStates(prev => ({
+                    ...prev, [track.id]: { ...prev[track.id], isMuted: !prev[track.id].isMuted }
+                  }))}
+                  className={`shrink-0 w-[26px] h-[22px] flex items-center justify-center text-[9px] rounded font-bold border transition-all ${trackStates[track.id].isMuted
+                    ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(220,38,38,0.4)]'
+                    : 'bg-neutral-800 border-neutral-700 text-neutral-500'
+                    }`}
+                >
+                  M
+                </button>
+                <button
+                  onClick={() => setTrackStates(prev => ({
+                    ...prev, [track.id]: { ...prev[track.id], isSolo: !prev[track.id].isSolo }
+                  }))}
+                  className={`shrink-0 w-[26px] h-[22px] flex items-center justify-center text-[9px] rounded font-bold border transition-all ${trackStates[track.id].isSolo
+                    ? 'bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                    : 'bg-neutral-800 border-neutral-700 text-neutral-500'
+                    }`}
+                >
+                  S
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={trackStates[track.id].gain}
+                  onChange={(e) => setTrackStates(prev => ({
+                    ...prev,
+                    [track.id]: { ...prev[track.id], gain: Number(e.target.value) }
+                  }))}
+                  className="flex-1"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Mobile Mixer Toggle Button */}
+        <button
+          onClick={() => setShowMixer(prev => !prev)}
+          className={`lg:hidden w-full rounded-lg py-3 text-[10px] uppercase tracking-widest font-bold transition-colors ${showMixer
+            ? 'bg-orange-600 text-white'
+            : 'bg-neutral-800 border border-neutral-700 text-neutral-400 hover:border-neutral-600'
+            }`}
+        >
+          {showMixer ? 'BACK TO SEQUENCER' : 'MIXER'}
+        </button>
 
         {/* --- Footer --- */}
         <footer className="text-center pt-8">
