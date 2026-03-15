@@ -25,6 +25,7 @@
 *.pem
 .claude/
 .playwright-cli/
+.worktrees/
 
 # debug
 npm-debug.log*
