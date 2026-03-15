@@ -181,7 +181,7 @@ export default function Sequencer() {
     <div className="min-h-screen bg-neutral-950 text-neutral-100 p-3 lg:p-8 font-sans">
       <div className="max-w-none lg:max-w-4xl mx-auto space-y-4 lg:space-y-8">
         {/* --- Sticky Header (mobile) / Static Header (desktop) --- */}
-        <header className="sticky top-0 z-20 bg-neutral-950 safe-area-top safe-area-x border-b border-neutral-800 pb-3 lg:pb-6 lg:static space-y-2 lg:space-y-0">
+        <header className="sticky top-0 z-20 bg-neutral-950 safe-area-top safe-area-x border-b border-neutral-800 pb-3 lg:pb-6 lg:static space-y-2 lg:space-y-8">
           {/* Row 1: Logo + BPM + Play */}
           <div className="flex justify-between items-center lg:items-end">
             <h1 className="text-2xl lg:text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">
