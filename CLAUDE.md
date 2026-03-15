@@ -77,6 +77,25 @@ Test areas:
 Run `npm test` after any logic change. Run `npm test --
 -u` to update snapshots after intentional format changes.
 
+## Issue Workflow
+
+Issues are tracked on GitHub with priority labels
+(`P0-critical` through `P3-low`) and status labels
+(`ready`, `needs-spec`, `blocked`).
+
+**Branch naming:** `issue-<number>-<short-kebab-description>`
+(e.g., `issue-42-fix-tempo-crash`)
+
+**One PR per issue.** Use `Fixes #<number>` in the PR body
+to auto-close the issue on merge.
+
+**Worktrees for concurrent work:**
+```bash
+git worktree add .worktrees/issue-<N> -b issue-<N>-<desc>
+```
+
+See `@skills/github-issues/SKILL.md` for the full workflow.
+
 ## Key Conventions
 
 - State management is local React state only (no external stores)
