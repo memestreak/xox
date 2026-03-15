@@ -14,6 +14,7 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
         id="bpm-input"
         name="bpm"
         type="number"
+        inputMode="numeric"
         autoComplete="off"
         value={bpm}
         min={MIN_BPM}
