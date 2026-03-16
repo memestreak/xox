@@ -1,5 +1,5 @@
 /**
- * Valid track identifiers for the 16-step sequencer.
+ * Valid track identifiers for the sequencer.
  */
 export type TrackId = 'ac' | 'bd' | 'sd' | 'ch' | 'oh' | 'cy' | 'ht' | 'mt' | 'lt' | 'rs' | 'cp' | 'cb';
 
@@ -13,12 +13,12 @@ export interface Kit {
 }
 
 /**
- * Represents a 16-step pattern.
+ * Represents a pattern with variable-length step strings.
  */
 export interface Pattern {
-  id: string;                               // Unique identifier
-  name: string;                             // Display name
-  steps: Record<TrackId, string>;             // Binary string of 16 characters (e.g., "1010...") per track
+  id: string;
+  name: string;
+  steps: Record<TrackId, string>;
 }
 
 /**
@@ -29,6 +29,7 @@ export interface TrackState {
   name: string;
   isMuted: boolean;
   isSolo: boolean;
+  freeRun: boolean;
   gain: number;   // Master volume for this track (0.0 to 1.0)
 }
 
@@ -48,6 +49,7 @@ export interface TrackMixerState {
   gain: number;      // 0.0 - 1.0
   isMuted: boolean;
   isSolo: boolean;
+  freeRun: boolean;
 }
 
 /**
@@ -61,6 +63,8 @@ export interface SequencerConfig {
   version: number;
   kitId: string;
   bpm: number;
+  patternLength: number;
+  trackLengths: Record<TrackId, number>;
   steps: Record<TrackId, string>;
   mixer: Record<TrackId, TrackMixerState>;
 }

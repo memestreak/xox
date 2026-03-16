@@ -13,9 +13,13 @@ import RunningLight from './RunningLight';
  */
 export default function StepGrid() {
   const { state, actions, meta } = useSequencer();
-  const { currentPattern, trackStates } = state;
   const {
-    toggleStep, toggleMute, toggleSolo, setGain,
+    currentPattern, trackStates,
+    patternLength, trackLengths,
+  } = state;
+  const {
+    toggleStep, toggleMute, toggleSolo,
+    setGain, setTrackLength, toggleFreeRun,
   } = actions;
   const { stepRef } = meta;
 
@@ -49,17 +53,27 @@ export default function StepGrid() {
           trackId={track.id}
           trackName={track.name}
           steps={currentPattern.steps[track.id]}
+          trackLength={trackLengths[track.id]}
+          patternLength={patternLength}
           isMuted={trackStates[track.id].isMuted}
           isSolo={trackStates[track.id].isSolo}
+          isFreeRun={
+            trackStates[track.id].freeRun
+          }
           gain={trackStates[track.id].gain}
           currentStep={displayStep}
           onToggleStep={toggleStep}
           onToggleMute={toggleMute}
           onToggleSolo={toggleSolo}
           onSetGain={setGain}
+          onSetTrackLength={setTrackLength}
+          onToggleFreeRun={toggleFreeRun}
         />
       ))}
-      <RunningLight currentStep={displayStep} />
+      <RunningLight
+        currentStep={displayStep}
+        patternLength={patternLength}
+      />
     </div>
   );
 }

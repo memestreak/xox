@@ -8,12 +8,15 @@ interface StepButtonProps {
   isActive: boolean;
   isCurrent: boolean;
   isBeat: boolean;
+  isDisabled: boolean;
   onToggle: () => void;
 }
 
 /**
  * Individual step toggle button. Memoized so it only
  * re-renders when its active/current state changes.
+ * Disabled steps (beyond the track's length) are dimmed
+ * and non-interactive.
  */
 function StepButtonInner({
   trackName,
@@ -21,8 +24,26 @@ function StepButtonInner({
   isActive,
   isCurrent,
   isBeat,
+  isDisabled,
   onToggle,
 }: StepButtonProps) {
+  if (isDisabled) {
+    return (
+      <div
+        aria-label={
+          `${trackName} step ${stepIndex + 1} (inactive)`
+        }
+        className={
+          'h-8 lg:h-12 rounded-sm'
+          + ' bg-neutral-900/20 cursor-not-allowed'
+          + (isBeat
+            ? ' border-l-2 border-neutral-800/30'
+            : '')
+        }
+      />
+    );
+  }
+
   let color: string;
   if (isActive) {
     color = isCurrent
@@ -50,7 +71,9 @@ function StepButtonInner({
         + ' focus-visible:ring-2'
         + ' focus-visible:ring-orange-500 '
         + color
-        + (isBeat ? ' border-l-2 border-neutral-700' : '')
+        + (isBeat
+          ? ' border-l-2 border-neutral-700'
+          : '')
       }
     />
   );

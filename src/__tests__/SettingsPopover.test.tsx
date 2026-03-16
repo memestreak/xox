@@ -12,6 +12,7 @@ vi.mock('../app/AudioEngine', () => ({
     start: vi.fn(),
     stop: vi.fn(),
     setBpm: vi.fn(),
+    setPatternLength: vi.fn(),
     playSound: vi.fn(),
     onStep: vi.fn(),
   },

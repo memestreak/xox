@@ -30,12 +30,13 @@ class AudioEngine {
   private silentAudio: HTMLAudioElement | null = null;
 
   // Scheduler State
-  private nextStepTime: number = 0;       // When the next 16th note step should occur
-  private currentStep: number = 0;        // The current 0-15 step index
+  private nextStepTime: number = 0;
+  private currentStep: number = 0;
   private schedulerTimer: NodeJS.Timeout | null = null;
 
   // Scheduler Configuration
   private bpm: number = 110;
+  private patternLength: number = 16;
   private lookahead: number = 25.0;       // How often to call the scheduler (ms)
   private scheduleAheadTime: number = 0.1; // How far ahead to schedule audio (s)
 
@@ -128,13 +129,18 @@ class AudioEngine {
    * Starts the sequencer playback loop. Must be called from a
    * user gesture (tap/click) to ensure iOS audio works.
    */
-  public async start(bpm: number, onStep: (step: number, time: number) => void) {
+  public async start(
+    bpm: number,
+    onStep: (step: number, time: number) => void,
+    patternLength: number = 16
+  ) {
     this.init();
     this.bypassSilentMode();
     if (this.ctx?.state === 'suspended') {
       await this.ctx.resume();
     }
     this.bpm = bpm;
+    this.patternLength = patternLength;
     this.onStep = onStep;
     this.nextStepTime = this.ctx!.currentTime;
     this.currentStep = 0;
@@ -159,6 +165,13 @@ class AudioEngine {
   }
 
   /**
+   * Updates the pattern length in real-time.
+   */
+  public setPatternLength(length: number) {
+    this.patternLength = length;
+  }
+
+  /**
    * The core scheduling loop.
    * It looks ahead in time and pre-schedules events to the AudioContext timeline.
    */
@@ -178,7 +191,8 @@ class AudioEngine {
     const secondsPerBeat = 60.0 / this.bpm;
     // 16th note = 1/4 of a quarter note (beat)
     this.nextStepTime += 0.25 * secondsPerBeat;
-    this.currentStep = (this.currentStep + 1) % 16;
+    this.currentStep =
+      (this.currentStep + 1) % this.patternLength;
   }
 
   /**

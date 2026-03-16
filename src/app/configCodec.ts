@@ -9,11 +9,14 @@ import type {
 } from './types';
 import { TRACK_IDS } from './types';
 
-const CONFIG_VERSION = 1;
+const CONFIG_VERSION = 2;
 const DEFAULT_KIT_ID = '808';
 const BPM_MIN = 20;
 const BPM_MAX = 300;
 const DEFAULT_BPM = 110;
+const PATTERN_LENGTH_MIN = 1;
+const PATTERN_LENGTH_MAX = 64;
+const DEFAULT_PATTERN_LENGTH = 16;
 
 /**
  * Build the default config from the first kit and pattern.
@@ -21,13 +24,22 @@ const DEFAULT_BPM = 110;
 export function defaultConfig(): SequencerConfig {
   const firstPattern = patternsData.patterns[0];
   const mixer = {} as Record<TrackId, TrackMixerState>;
+  const trackLengths = {} as Record<TrackId, number>;
   for (const id of TRACK_IDS) {
-    mixer[id] = { gain: 1.0, isMuted: false, isSolo: false };
+    mixer[id] = {
+      gain: 1.0,
+      isMuted: false,
+      isSolo: false,
+      freeRun: false,
+    };
+    trackLengths[id] = DEFAULT_PATTERN_LENGTH;
   }
   return {
     version: CONFIG_VERSION,
     kitId: kitsData.kits[0].id,
     bpm: DEFAULT_BPM,
+    patternLength: DEFAULT_PATTERN_LENGTH,
+    trackLengths,
     steps: firstPattern.steps as Record<TrackId, string>,
     mixer,
   };
@@ -119,14 +131,14 @@ export async function decodeConfig(
  * Validate and sanitize a raw parsed config object.
  *
  * Merges missing fields from defaults, clamps BPM, and
- * validates the kit ID against known kits.
+ * validates the kit ID against known kits. V1 configs
+ * without patternLength/trackLengths get defaults.
  */
-function validateConfig(raw: unknown): SequencerConfig {
+function validateConfig(
+  raw: unknown
+): SequencerConfig {
   const defaults = defaultConfig();
-  if (
-    raw === null ||
-    typeof raw !== 'object'
-  ) {
+  if (raw === null || typeof raw !== 'object') {
     return defaults;
   }
 
@@ -134,13 +146,25 @@ function validateConfig(raw: unknown): SequencerConfig {
 
   const kitId = validateKitId(obj.kitId);
   const bpm = validateBpm(obj.bpm);
-  const steps = validateSteps(obj.steps, defaults.steps);
-  const mixer = validateMixer(obj.mixer, defaults.mixer);
+  const patternLength = validatePatternLength(
+    obj.patternLength
+  );
+  const trackLengths = validateTrackLengths(
+    obj.trackLengths, patternLength
+  );
+  const steps = validateSteps(
+    obj.steps, defaults.steps, trackLengths
+  );
+  const mixer = validateMixer(
+    obj.mixer, defaults.mixer
+  );
 
   return {
     version: CONFIG_VERSION,
     kitId,
     bpm,
+    patternLength,
+    trackLengths,
     steps,
     mixer,
   };
@@ -148,7 +172,9 @@ function validateConfig(raw: unknown): SequencerConfig {
 
 function validateKitId(value: unknown): string {
   if (typeof value !== 'string') return DEFAULT_KIT_ID;
-  const known = kitsData.kits.find(k => k.id === value);
+  const known = kitsData.kits.find(
+    k => k.id === value
+  );
   return known ? value : DEFAULT_KIT_ID;
 }
 
@@ -156,15 +182,56 @@ function validateBpm(value: unknown): number {
   if (typeof value !== 'number' || !isFinite(value)) {
     return DEFAULT_BPM;
   }
-  return Math.max(BPM_MIN, Math.min(BPM_MAX, Math.round(value)));
+  return Math.max(
+    BPM_MIN, Math.min(BPM_MAX, Math.round(value))
+  );
 }
 
+function validatePatternLength(value: unknown): number {
+  if (typeof value !== 'number' || !isFinite(value)) {
+    return DEFAULT_PATTERN_LENGTH;
+  }
+  return Math.max(
+    PATTERN_LENGTH_MIN,
+    Math.min(PATTERN_LENGTH_MAX, Math.round(value))
+  );
+}
+
+function validateTrackLengths(
+  value: unknown,
+  patternLength: number
+): Record<TrackId, number> {
+  const result = {} as Record<TrackId, number>;
+  for (const id of TRACK_IDS) {
+    result[id] = patternLength;
+  }
+  if (value === null || typeof value !== 'object') {
+    return result;
+  }
+  const obj = value as Record<string, unknown>;
+  for (const id of TRACK_IDS) {
+    const v = obj[id];
+    if (typeof v === 'number' && isFinite(v)) {
+      result[id] = Math.max(
+        1, Math.min(patternLength, Math.round(v))
+      );
+    }
+  }
+  return result;
+}
+
+/**
+ * Validate step strings. Accepts 1-64 char binary strings.
+ * Normalizes each string to its track's length from
+ * trackLengths (pads with '0' or truncates).
+ */
 function validateSteps(
   value: unknown,
-  fallback: Record<TrackId, string>
+  fallback: Record<TrackId, string>,
+  trackLengths: Record<TrackId, number>
 ): Record<TrackId, string> {
   if (value === null || typeof value !== 'object') {
-    return fallback;
+    return normalizeSteps(fallback, trackLengths);
   }
   const obj = value as Record<string, unknown>;
   const result = { ...fallback };
@@ -172,10 +239,32 @@ function validateSteps(
     const s = obj[id];
     if (
       typeof s === 'string' &&
-      s.length === 16 &&
+      s.length >= 1 &&
+      s.length <= PATTERN_LENGTH_MAX &&
       /^[01]+$/.test(s)
     ) {
       result[id] = s;
+    }
+  }
+  return normalizeSteps(result, trackLengths);
+}
+
+/**
+ * Pad or truncate each track's step string to match its
+ * track length.
+ */
+function normalizeSteps(
+  steps: Record<TrackId, string>,
+  trackLengths: Record<TrackId, number>
+): Record<TrackId, string> {
+  const result = { ...steps };
+  for (const id of TRACK_IDS) {
+    const len = trackLengths[id];
+    const cur = result[id];
+    if (cur.length < len) {
+      result[id] = cur.padEnd(len, '0');
+    } else if (cur.length > len) {
+      result[id] = cur.substring(0, len);
     }
   }
   return result;
@@ -195,15 +284,22 @@ function validateMixer(
     if (track !== null && typeof track === 'object') {
       const t = track as Record<string, unknown>;
       result[id] = {
-        gain: typeof t.gain === 'number' && isFinite(t.gain)
-          ? Math.max(0, Math.min(1, t.gain))
-          : fallback[id].gain,
-        isMuted: typeof t.isMuted === 'boolean'
-          ? t.isMuted
-          : fallback[id].isMuted,
-        isSolo: typeof t.isSolo === 'boolean'
-          ? t.isSolo
-          : fallback[id].isSolo,
+        gain:
+          typeof t.gain === 'number' && isFinite(t.gain)
+            ? Math.max(0, Math.min(1, t.gain))
+            : fallback[id].gain,
+        isMuted:
+          typeof t.isMuted === 'boolean'
+            ? t.isMuted
+            : fallback[id].isMuted,
+        isSolo:
+          typeof t.isSolo === 'boolean'
+            ? t.isSolo
+            : fallback[id].isSolo,
+        freeRun:
+          typeof t.freeRun === 'boolean'
+            ? t.freeRun
+            : fallback[id].freeRun,
       };
     }
   }
