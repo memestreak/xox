@@ -51,7 +51,8 @@ Internal layout (horizontal flex):
   font-bold`
 - Steps dropdown: same `<select>` styling as Kit/Pattern
 - Swing knob: reuses rotary knob pattern from TrackRow
-  gain controls
+  gain controls, displays current percentage as a label
+  below the knob (e.g., "0%", "50%")
 - CLR button: `bg-neutral-800 border border-neutral-700
   rounded` with uppercase text
 
@@ -71,6 +72,8 @@ Add `swing: number` field (0-100, default 0).
 - Sets all 12 track step strings to
   `"0".repeat(trackLength)` per track
 - Sets `selectedPatternId` to `'custom'`
+- No confirmation dialog — intentional for fast workflow
+  (loading a pattern is a quick recovery path)
 
 **`setSwing(value: number)`**
 - Clamps to 0-100
@@ -98,11 +101,28 @@ delay = (swing / 100) * (secondsPerStep / 2)
 - At 50%: triplet feel
 - At 100%: even 16ths merge with next beat
 
-Implementation in `AudioEngine.ts`:
-- `playSound()` or `advanceStep()` adds the swing delay
-  to the scheduled time for odd-indexed steps
-- Swing value is passed from SequencerContext via the
-  existing `handleStep` callback or read directly
+**Edge case — odd pattern lengths:** When the pattern
+length is odd, the last step may be an odd-indexed step
+with no "next beat" to merge into. Swing delay still
+applies normally — it shifts the step's timing within
+the pattern cycle. At extreme swing values this may
+produce a very short gap before the pattern loops, which
+is musically acceptable and consistent with how hardware
+sequencers handle this case.
+
+**Implementation in `AudioEngine.ts`:**
+- Add a `swing` property (0-100, default 0) with a
+  public setter `setSwing(value: number)`
+- In `advanceStep()`, after computing the base
+  `nextStepTime`, add the swing delay for odd-indexed
+  steps: `this.nextStepTime += delay`
+- SequencerContext sets `audioEngine.setSwing(value)`
+  via a `useEffect` watching `config.swing`, matching
+  the existing pattern for `setBpm()` and
+  `setPatternLength()`
+
+**No changes to `handleStep` signature.** Swing is
+purely a timing concern handled inside AudioEngine.
 
 ## Serialization — configCodec
 
