@@ -9,6 +9,7 @@ let mockCurrentTime = 0;
 class MockAudioContext {
   state = 'running';
   destination = {};
+  sampleRate = 44100;
   resume = vi.fn().mockResolvedValue(undefined);
 
   get currentTime() {
@@ -20,6 +21,10 @@ class MockAudioContext {
       gain: { value: 1 },
       connect: vi.fn(),
     };
+  }
+
+  createBuffer() {
+    return {};
   }
 
   createBufferSource() {
