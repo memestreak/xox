@@ -20,15 +20,19 @@ function SequencerInner() {
         <TransportControls />
         <StepGrid />
 
-        <footer className="text-center pt-4 lg:pt-8">
+        <footer className="grid grid-cols-3 items-center pt-4 lg:pt-8">
+          <div />
           <a
             href="https://github.com/memestreak/xox"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] font-bold hover:text-orange-500 transition-colors"
+            className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] font-bold hover:text-orange-500 transition-colors text-center"
           >
             Source Code
           </a>
+          <span className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] font-bold font-mono text-right">
+            Built at commit {process.env.NEXT_PUBLIC_COMMIT_HASH ?? 'dev'}
+          </span>
         </footer>
       </div>
     </div>
