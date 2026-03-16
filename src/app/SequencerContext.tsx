@@ -64,7 +64,6 @@ interface SequencerState {
   currentPattern: Pattern;
   trackStates: Record<TrackId, TrackState>;
   isLoaded: boolean;
-  showMixer: boolean;
 }
 
 interface SequencerActions {
@@ -76,7 +75,6 @@ interface SequencerActions {
   toggleMute: (trackId: TrackId) => void;
   toggleSolo: (trackId: TrackId) => void;
   setGain: (trackId: TrackId, value: number) => void;
-  toggleMixer: () => void;
 }
 
 interface SequencerMeta {
@@ -112,10 +110,6 @@ const TransientContext = createContext<{
   >;
   isLoaded: boolean;
   setIsLoaded: React.Dispatch<
-    React.SetStateAction<boolean>
-  >;
-  showMixer: boolean;
-  setShowMixer: React.Dispatch<
     React.SetStateAction<boolean>
   >;
   stepRef: React.RefObject<number>;
@@ -164,7 +158,6 @@ export function SequencerProvider({
   // ─── Transient state ──────────────────────────────
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [showMixer, setShowMixer] = useState(false);
   const stepRef = useRef<number>(-1);
 
   // ─── Import config from URL hash on mount ─────────
@@ -317,7 +310,7 @@ export function SequencerProvider({
       if (!isLoaded) return;
       if (event.code !== 'Space') return;
       const tag = (event.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       event.preventDefault();
       togglePlay();
     };
@@ -407,10 +400,6 @@ export function SequencerProvider({
     []
   );
 
-  const toggleMixer = useCallback(() => {
-    setShowMixer(prev => !prev);
-  }, []);
-
   // ─── Context value ────────────────────────────────
 
   const value: SequencerContextValue = {
@@ -421,7 +410,6 @@ export function SequencerProvider({
       currentPattern,
       trackStates,
       isLoaded,
-      showMixer,
     },
     actions: {
       togglePlay,
@@ -432,7 +420,6 @@ export function SequencerProvider({
       toggleMute,
       toggleSolo,
       setGain,
-      toggleMixer,
     },
     meta: { stepRef, config },
   };
@@ -452,8 +439,6 @@ export function SequencerProvider({
           setIsPlaying,
           isLoaded,
           setIsLoaded,
-          showMixer,
-          setShowMixer,
           stepRef,
         }}
       >

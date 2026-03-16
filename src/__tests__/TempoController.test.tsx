@@ -121,7 +121,7 @@ describe('TempoController tap tempo', () => {
     expect(setBpm).toHaveBeenLastCalledWith(120);
   });
 
-  it('BPM rounded to 1 decimal place', () => {
+  it('BPM rounded to nearest 0.5', () => {
     const setBpm = vi.fn();
     render(
       <TempoController bpm={120} setBpm={setBpm} />
@@ -129,13 +129,13 @@ describe('TempoController tap tempo', () => {
     const btn = screen.getByRole('button', {
       name: 'Tap tempo',
     });
-    // 470ms interval -> 60000/470 = 127.6595... -> 127.7
+    // 470ms interval -> 60000/470 = 127.6595... -> 127.5
     perfSpy
       .mockReturnValueOnce(1000)
       .mockReturnValueOnce(1470);
     fireEvent.click(btn);
     fireEvent.click(btn);
-    expect(setBpm).toHaveBeenCalledWith(127.7);
+    expect(setBpm).toHaveBeenCalledWith(127.5);
   });
 
   it('buffer resets after >2000ms gap', () => {
