@@ -264,6 +264,28 @@ describe('setPatternLength track lengths', () => {
     }
   });
 
+  it('shrinking preserves shorter track step strings', () => {
+    const { result } = renderSequencer();
+    // Set bd to custom length 6
+    act(() => {
+      result.current.actions.setTrackLength('bd', 6);
+    });
+    expect(
+      result.current.meta.config.steps.bd.length
+    ).toBe(6);
+    // Shrink pattern from 16 to 10
+    act(() => {
+      result.current.actions.setPatternLength(10);
+    });
+    // bd should still have length 6 and 6-char step string
+    expect(
+      result.current.meta.config.trackLengths.bd
+    ).toBe(6);
+    expect(
+      result.current.meta.config.steps.bd.length
+    ).toBe(6);
+  });
+
   it('growing expands tracks that were at old max', () => {
     const { result } = renderSequencer();
     // Shrink to 8 (all tracks follow to 8)

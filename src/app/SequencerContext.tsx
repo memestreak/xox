@@ -471,11 +471,12 @@ export function SequencerProvider({
           ) {
             newTrackLengths[id] = clamped;
           }
+          const len = newTrackLengths[id];
           const cur = newSteps[id];
-          if (cur.length < clamped) {
-            newSteps[id] = cur.padEnd(clamped, '0');
-          } else if (cur.length > clamped) {
-            newSteps[id] = cur.substring(0, clamped);
+          if (cur.length < len) {
+            newSteps[id] = cur.padEnd(len, '0');
+          } else if (cur.length > len) {
+            newSteps[id] = cur.substring(0, len);
           }
         }
         return {
