@@ -2,13 +2,13 @@
 
 import { TrackId } from './types';
 
-// Bypass iOS Silent Mode switch by forcing the "playback"
-// audio session category. Dynamically imported because the
-// library accesses `window` at module scope, which breaks
-// Next.js static export.
-if (typeof window !== 'undefined') {
-  import('unmute-ios-audio').then(m => m.default());
-}
+// Minimal silent WAV (8-bit mono, 7 samples at 44100 Hz).
+// Playing this via an <audio> element forces iOS to switch
+// from the "ambient" audio session (respects mute switch)
+// to the "playback" category (ignores mute switch).
+const SILENT_WAV =
+  'data:audio/wav;base64,UklGRisAAABXQVZFZm10IBAAAAABAAEA' +
+  'RKwAAESsAAABAAgAZGF0YQcAAACAgICAgICAAAA=';
 
 /**
  * AudioEngine manages the Web Audio API context, sample loading, and
@@ -27,6 +27,7 @@ class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private buffers: Map<TrackId, AudioBuffer> = new Map();
+  private silentAudio: HTMLAudioElement | null = null;
 
   // Scheduler State
   private nextStepTime: number = 0;       // When the next 16th note step should occur
@@ -59,6 +60,25 @@ class AudioEngine {
     this.ctx = new AudioCtx();
     this.masterGain = this.ctx.createGain();
     this.masterGain.connect(this.ctx.destination);
+  }
+
+  /**
+   * Bypasses the iOS hardware Silent Mode switch by playing
+   * a looping silent <audio> element. This forces the audio
+   * session from "ambient" (obeys mute) to "playback"
+   * (ignores mute). Must be called within a user gesture.
+   * Harmless no-op on non-iOS platforms.
+   */
+  private bypassSilentMode() {
+    if (this.silentAudio) return;
+    const audio = document.createElement('audio');
+    audio.setAttribute('x-webkit-airplay', 'deny');
+    audio.preload = 'auto';
+    audio.loop = true;
+    audio.src = SILENT_WAV;
+    audio.load();
+    audio.play().catch(() => {});
+    this.silentAudio = audio;
   }
 
   /**
@@ -110,6 +130,7 @@ class AudioEngine {
    */
   public async start(bpm: number, onStep: (step: number, time: number) => void) {
     this.init();
+    this.bypassSilentMode();
     if (this.ctx?.state === 'suspended') {
       await this.ctx.resume();
     }

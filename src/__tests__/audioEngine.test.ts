@@ -41,6 +41,24 @@ class MockAudioContext {
 vi.stubGlobal('AudioContext', MockAudioContext);
 vi.useFakeTimers();
 
+// Mock HTMLAudioElement for bypassSilentMode()
+const origCreateElement = document.createElement.bind(document);
+vi.spyOn(document, 'createElement').mockImplementation(
+  (tag: string) => {
+    if (tag === 'audio') {
+      return {
+        setAttribute: vi.fn(),
+        load: vi.fn(),
+        play: vi.fn().mockResolvedValue(undefined),
+        preload: '',
+        loop: false,
+        src: '',
+      } as unknown as HTMLAudioElement;
+    }
+    return origCreateElement(tag);
+  }
+);
+
 // Import the singleton after mocks are in place.
 const { audioEngine } = await import('../app/AudioEngine');
 
