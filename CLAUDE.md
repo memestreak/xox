@@ -87,7 +87,11 @@ Issues are tracked on GitHub with priority labels
 (e.g., `issue-42-fix-tempo-crash`)
 
 **One PR per issue.** Use `Fixes #<number>` in the PR body
-to auto-close the issue on merge.
+to auto-close the issue on merge. **Never put
+`Fixes #<number>` in a commit message pushed directly to
+`main`** — it auto-closes the issue before the fix is
+verified. Instead, close issues manually with `gh issue
+close` after verification.
 
 **Worktrees for concurrent work:**
 ```bash
@@ -113,11 +117,15 @@ https://dash.cloudflare.com/24104e90cc6b2473822a3e91479614cb/pages/view/xox
 
 iOS routes Web Audio through the "ambient" audio session
 by default, which obeys the hardware Silent Mode switch.
-The `unmute-ios-audio` library forces the "playback"
-category on user gesture, bypassing the mute switch. It
-must be dynamically imported (`import()`) because it
-accesses `window` at module scope, which breaks Next.js
-static export.
+`AudioEngine.bypassSilentMode()` forces the "playback"
+category by playing a looping silent `<audio>` element
+(WAV data URI) on first `start()`. This runs within the
+user gesture context and requires no external library.
+
+The AudioContext is created eagerly in `preloadKit()` —
+`decodeAudioData` works on a suspended context, so
+deferring init to a user gesture is unnecessary and
+introduces race conditions.
 
 ## Key Conventions
 
