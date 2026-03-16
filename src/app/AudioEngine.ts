@@ -27,8 +27,6 @@ class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private buffers: Map<TrackId, AudioBuffer> = new Map();
-  private pendingBuffers: Map<TrackId, ArrayBuffer> = new Map();
-  private unlocked: boolean = false;
 
   // Scheduler State
   private nextStepTime: number = 0;       // When the next 16th note step should occur
@@ -49,8 +47,10 @@ class AudioEngine {
   constructor() {}
 
   /**
-   * Initializes the AudioContext on user interaction.
-   * Required because browsers block audio until a user gesture occurs.
+   * Initializes the AudioContext. Called eagerly during
+   * preloadKit so samples can be decoded immediately.
+   * On iOS the context may start suspended; it is resumed
+   * on the first user gesture in start().
    */
   private init() {
     if (this.ctx) return;
@@ -62,14 +62,13 @@ class AudioEngine {
   }
 
   /**
-   * Fetches audio samples for a specific kit folder and decodes them
-   * if the AudioContext is available. On iOS, the context may not
-   * exist yet (created on first user gesture), so raw ArrayBuffers
-   * are stored and decoded later via decodePendingBuffers().
+   * Fetches and decodes audio samples for a specific kit folder.
+   * Samples are stored in memory as AudioBuffers.
    *
    * @param kitFolder - The folder containing the kit samples. E.g., "808"
    */
   public async preloadKit(kitFolder: string) {
+    this.init();
     const sounds: TrackId[] = ['bd', 'sd', 'ch', 'oh', 'ac', 'cy', 'ht', 'mt', 'lt', 'rs', 'cp', 'cb'];
     const filenames: Partial<Record<TrackId, string>> = {
       bd: 'bd.wav',
@@ -86,7 +85,6 @@ class AudioEngine {
     };
 
     this.buffers.clear();
-    this.pendingBuffers.clear();
 
     const promises = sounds.map(async (id) => {
       const filename = filenames[id];
@@ -96,13 +94,8 @@ class AudioEngine {
         const response = await fetch(`/kits/${kitFolder}/${filename}`);
         if (!response.ok) throw new Error(`Status: ${response.status}`);
         const arrayBuffer = await response.arrayBuffer();
-
-        if (this.ctx) {
-          const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
-          this.buffers.set(id, audioBuffer);
-        } else {
-          this.pendingBuffers.set(id, arrayBuffer);
-        }
+        const audioBuffer = await this.ctx!.decodeAudioData(arrayBuffer);
+        this.buffers.set(id, audioBuffer);
       } catch (e) {
         console.error(`Failed to load ${id} for kit ${kitFolder}`, e);
       }
@@ -112,63 +105,14 @@ class AudioEngine {
   }
 
   /**
-   * Decodes any raw ArrayBuffers that were fetched before the
-   * AudioContext was available (e.g., on iOS where context creation
-   * is deferred to a user gesture).
-   */
-  private async decodePendingBuffers() {
-    if (!this.ctx || this.pendingBuffers.size === 0) return;
-
-    const entries = Array.from(this.pendingBuffers.entries());
-    this.pendingBuffers.clear();
-
-    await Promise.all(
-      entries.map(async ([id, arrayBuffer]) => {
-        try {
-          const audioBuffer = await this.ctx!.decodeAudioData(arrayBuffer);
-          this.buffers.set(id, audioBuffer);
-        } catch (e) {
-          console.error(`Failed to decode ${id}`, e);
-        }
-      })
-    );
-  }
-
-  /**
-   * Unlocks audio playback on iOS. Must be called from a user
-   * gesture handler. Performs three actions:
-   * 1. Creates the AudioContext if it doesn't exist yet.
-   * 2. Resumes a suspended context.
-   * 3. Plays a silent buffer to fully unlock iOS audio output
-   *    (works around the ringer/silent switch muting Web Audio).
-   */
-  private async unlock() {
-    this.init();
-    if (!this.ctx) return;
-
-    if (this.ctx.state === 'suspended') {
-      await this.ctx.resume();
-    }
-
-    if (!this.unlocked) {
-      const buffer = this.ctx.createBuffer(
-        1, 1, this.ctx.sampleRate
-      );
-      const source = this.ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(this.ctx.destination);
-      source.start();
-      this.unlocked = true;
-    }
-  }
-
-  /**
    * Starts the sequencer playback loop. Must be called from a
    * user gesture (tap/click) to ensure iOS audio works.
    */
   public async start(bpm: number, onStep: (step: number, time: number) => void) {
-    await this.unlock();
-    await this.decodePendingBuffers();
+    this.init();
+    if (this.ctx?.state === 'suspended') {
+      await this.ctx.resume();
+    }
     this.bpm = bpm;
     this.onStep = onStep;
     this.nextStepTime = this.ctx!.currentTime;
