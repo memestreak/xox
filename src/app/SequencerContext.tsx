@@ -290,6 +290,15 @@ export function SequencerProvider({
       const states = trackStatesRef.current;
       const pattern = patternRef.current;
       const cfg = configRef.current;
+
+      // Swing: offset odd steps forward in time
+      const halfStep =
+        (60 / cfg.bpm) * 0.25 / 2;
+      const swingOffset = step % 2 === 1
+        ? (cfg.swing / 100) * 0.7 * halfStep
+        : 0;
+      const scheduledTime = time + swingOffset;
+
       const anySolo = Object.values(states).some(
         t => t.isSolo
       );
@@ -323,7 +332,7 @@ export function SequencerProvider({
           const gain =
             isAccented ? cubic * 1.5 : cubic;
           audioEngine.playSound(
-            track.id, time, gain
+            track.id, scheduledTime, gain
           );
         }
       });

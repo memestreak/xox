@@ -225,3 +225,240 @@ describe('handleStep', () => {
     expect(gainArg).toBeCloseTo(0.125);
   });
 });
+
+// -------------------------------------------------
+// handleStep swing timing
+// -------------------------------------------------
+describe('handleStep swing timing', () => {
+  beforeEach(() => {
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+    mockStop.mockClear();
+  });
+
+  it('odd step with swing: time is offset', async () => {
+    const { result } = renderSequencer();
+
+    // Set swing to 50 and activate bd at step 1
+    await act(async () => {
+      result.current.actions.setSwing(50);
+      // Clear step 0 for bd, set step 1
+      for (const id of TRACK_IDS) {
+        const cur =
+          result.current.meta.config.steps[id];
+        if (cur[0] === '1') {
+          result.current.actions.toggleStep(id, 0);
+        }
+      }
+    });
+
+    await act(async () => {
+      const cur =
+        result.current.meta.config.steps.bd;
+      if (cur[1] === '0') {
+        result.current.actions.toggleStep('bd', 1);
+      }
+    });
+
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+
+    await act(async () => {
+      result.current.actions.togglePlay();
+    });
+
+    const onStep = mockStart.mock.calls[0][1] as (
+      step: number, time: number
+    ) => void;
+
+    await waitFor(() => {
+      expect(
+        result.current.state.isPlaying
+      ).toBe(true);
+    });
+    mockPlaySound.mockClear();
+
+    // Trigger odd step (step 1) at time 1.0
+    onStep(1, 1.0);
+
+    expect(mockPlaySound).toHaveBeenCalledTimes(1);
+    const scheduledTime = mockPlaySound.mock.calls[0][1];
+    // BPM 110 (default): halfStep = (60/110)*0.25/2 = 0.06818
+    // offset = (50/100) * 0.7 * 0.06818 = 0.02386
+    expect(scheduledTime).toBeGreaterThan(1.0);
+    expect(scheduledTime).toBeCloseTo(
+      1.0 + 0.5 * 0.7 * ((60 / 110) * 0.25 / 2),
+      4
+    );
+  });
+
+  it('even step with swing: no offset', async () => {
+    const { result } = renderSequencer();
+
+    await act(async () => {
+      result.current.actions.setSwing(80);
+    });
+
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+
+    await act(async () => {
+      result.current.actions.togglePlay();
+    });
+
+    const onStep = mockStart.mock.calls[0][1] as (
+      step: number, time: number
+    ) => void;
+
+    await waitFor(() => {
+      expect(
+        result.current.state.isPlaying
+      ).toBe(true);
+    });
+    mockPlaySound.mockClear();
+
+    // Trigger even step (step 0) at time 1.0
+    onStep(0, 1.0);
+
+    // Check that time passed to playSound is exactly
+    // 1.0 (no offset for even steps)
+    for (const call of mockPlaySound.mock.calls) {
+      expect(call[1]).toBe(1.0);
+    }
+  });
+
+  it('max swing capped by 0.7 multiplier', async () => {
+    const { result } = renderSequencer();
+
+    await act(async () => {
+      result.current.actions.setSwing(100);
+      for (const id of TRACK_IDS) {
+        const cur =
+          result.current.meta.config.steps[id];
+        if (cur[0] === '1') {
+          result.current.actions.toggleStep(id, 0);
+        }
+      }
+    });
+
+    await act(async () => {
+      const cur =
+        result.current.meta.config.steps.bd;
+      if (cur[1] === '0') {
+        result.current.actions.toggleStep('bd', 1);
+      }
+    });
+
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+
+    await act(async () => {
+      result.current.actions.togglePlay();
+    });
+
+    const onStep = mockStart.mock.calls[0][1] as (
+      step: number, time: number
+    ) => void;
+
+    await waitFor(() => {
+      expect(
+        result.current.state.isPlaying
+      ).toBe(true);
+    });
+    mockPlaySound.mockClear();
+
+    onStep(1, 1.0);
+
+    const scheduledTime = mockPlaySound.mock.calls[0][1];
+    // BPM 110: halfStep = (60/110)*0.25/2
+    // Max offset = 1.0 * 0.7 * halfStep
+    const halfStep = (60 / 110) * 0.25 / 2;
+    const maxOffset = 0.7 * halfStep;
+    expect(scheduledTime).toBeCloseTo(
+      1.0 + maxOffset, 4
+    );
+    // Verify it's less than a full halfStep
+    expect(scheduledTime - 1.0).toBeLessThan(halfStep);
+  });
+
+  it('swing offset scales with BPM', async () => {
+    const { result } = renderSequencer();
+
+    await act(async () => {
+      result.current.actions.setBpm(60);
+      result.current.actions.setSwing(50);
+      for (const id of TRACK_IDS) {
+        const cur =
+          result.current.meta.config.steps[id];
+        if (cur[0] === '1') {
+          result.current.actions.toggleStep(id, 0);
+        }
+      }
+    });
+
+    await act(async () => {
+      const cur =
+        result.current.meta.config.steps.bd;
+      if (cur[1] === '0') {
+        result.current.actions.toggleStep('bd', 1);
+      }
+    });
+
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+
+    await act(async () => {
+      result.current.actions.togglePlay();
+    });
+
+    const onStep = mockStart.mock.calls[0][1] as (
+      step: number, time: number
+    ) => void;
+
+    await waitFor(() => {
+      expect(
+        result.current.state.isPlaying
+      ).toBe(true);
+    });
+    mockPlaySound.mockClear();
+
+    onStep(1, 1.0);
+
+    const scheduledTime = mockPlaySound.mock.calls[0][1];
+    // BPM 60: halfStep = (60/60)*0.25/2 = 0.125
+    // offset = 0.5 * 0.7 * 0.125 = 0.04375
+    const halfStep = (60 / 60) * 0.25 / 2;
+    expect(scheduledTime).toBeCloseTo(
+      1.0 + 0.5 * 0.7 * halfStep, 4
+    );
+  });
+
+  it('zero swing: no offset on any step', async () => {
+    const { result } = renderSequencer();
+    // swing defaults to 0
+
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+
+    await act(async () => {
+      result.current.actions.togglePlay();
+    });
+
+    const onStep = mockStart.mock.calls[0][1] as (
+      step: number, time: number
+    ) => void;
+
+    await waitFor(() => {
+      expect(
+        result.current.state.isPlaying
+      ).toBe(true);
+    });
+    mockPlaySound.mockClear();
+
+    onStep(1, 1.0);
+
+    for (const call of mockPlaySound.mock.calls) {
+      expect(call[1]).toBe(1.0);
+    }
+  });
+});
