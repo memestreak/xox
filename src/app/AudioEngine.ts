@@ -2,6 +2,14 @@
 
 import { TrackId } from './types';
 
+// Bypass iOS Silent Mode switch by forcing the "playback"
+// audio session category. Dynamically imported because the
+// library accesses `window` at module scope, which breaks
+// Next.js static export.
+if (typeof window !== 'undefined') {
+  import('unmute-ios-audio').then(m => m.default());
+}
+
 /**
  * AudioEngine manages the Web Audio API context, sample loading, and
  * high-precision playback timing.
