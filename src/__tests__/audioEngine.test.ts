@@ -41,19 +41,23 @@ class MockAudioContext {
 vi.stubGlobal('AudioContext', MockAudioContext);
 vi.useFakeTimers();
 
-// Mock HTMLAudioElement for bypassSilentMode()
+// Mock HTMLAudioElement for bypassSilentMode().
+// Track created elements so tests can inspect them.
+const mockAudioElements: Record<string, unknown>[] = [];
 const origCreateElement = document.createElement.bind(document);
 vi.spyOn(document, 'createElement').mockImplementation(
   (tag: string) => {
     if (tag === 'audio') {
-      return {
+      const el = {
         setAttribute: vi.fn(),
         load: vi.fn(),
         play: vi.fn().mockResolvedValue(undefined),
         preload: '',
         loop: false,
         src: '',
-      } as unknown as HTMLAudioElement;
+      };
+      mockAudioElements.push(el);
+      return el as unknown as HTMLAudioElement;
     }
     return origCreateElement(tag);
   }
@@ -177,6 +181,53 @@ describe('AudioEngine timing', () => {
     const step3 = stepLog.find(s => s.step === 3);
     expect(step3).toBeDefined();
     expect(step3!.time).toBeCloseTo(0.3125, 4);
+  });
+});
+
+describe('iOS silent mode bypass', () => {
+  beforeEach(() => {
+    // Reset the private silentAudio so each test gets a
+    // fresh bypass attempt.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (audioEngine as any).silentAudio = null;
+  });
+
+  afterEach(() => {
+    audioEngine.stop();
+  });
+
+  it('start() creates a looping silent <audio> element', async () => {
+    const before = mockAudioElements.length;
+    await audioEngine.start(120, vi.fn());
+
+    const created = mockAudioElements.slice(before);
+    expect(created).toHaveLength(1);
+
+    const el = created[0];
+    expect(el.loop).toBe(true);
+    expect(el.src).toContain('data:audio/wav;base64,');
+    expect(el.play).toHaveBeenCalled();
+    expect(el.load).toHaveBeenCalled();
+  });
+
+  it('only creates one <audio> element across multiple starts', async () => {
+    const before = mockAudioElements.length;
+    await audioEngine.start(120, vi.fn());
+    audioEngine.stop();
+    await audioEngine.start(120, vi.fn());
+
+    const created = mockAudioElements.slice(before);
+    expect(created).toHaveLength(1);
+  });
+
+  it('disables AirPlay widget on the silent element', async () => {
+    const before = mockAudioElements.length;
+    await audioEngine.start(120, vi.fn());
+
+    const el = mockAudioElements[before];
+    expect(el.setAttribute).toHaveBeenCalledWith(
+      'x-webkit-airplay', 'deny'
+    );
   });
 });
 
