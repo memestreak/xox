@@ -248,7 +248,51 @@ describe('pattern state machine', () => {
 });
 
 // -------------------------------------------------------
-// E. clearAll and setSwing actions
+// E. setPatternLength track length behavior
+// -------------------------------------------------------
+describe('setPatternLength track lengths', () => {
+  it('shrinking clamps tracks exceeding new length', () => {
+    const { result } = renderSequencer();
+    // Default: all tracks at 16
+    act(() => {
+      result.current.actions.setPatternLength(8);
+    });
+    for (const id of TRACK_IDS) {
+      expect(
+        result.current.meta.config.trackLengths[id]
+      ).toBe(8);
+    }
+  });
+
+  it('growing expands tracks that were at old max', () => {
+    const { result } = renderSequencer();
+    // Shrink to 8 (all tracks follow to 8)
+    act(() => {
+      result.current.actions.setPatternLength(8);
+    });
+    // Set bd to a custom shorter length
+    act(() => {
+      result.current.actions.setTrackLength('bd', 5);
+    });
+    // Grow back to 12 — tracks at 8 (old max) should
+    // expand to 12, but bd at 5 should stay at 5
+    act(() => {
+      result.current.actions.setPatternLength(12);
+    });
+    expect(
+      result.current.meta.config.trackLengths.bd
+    ).toBe(5);
+    expect(
+      result.current.meta.config.trackLengths.sd
+    ).toBe(12);
+    expect(
+      result.current.meta.config.trackLengths.ch
+    ).toBe(12);
+  });
+});
+
+// -------------------------------------------------------
+// F. clearAll and setSwing actions
 // -------------------------------------------------------
 describe('clearAll', () => {
   it('sets all track steps to zeros', () => {

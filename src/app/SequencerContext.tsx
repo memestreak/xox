@@ -466,6 +466,10 @@ export function SequencerProvider({
         for (const id of TRACK_IDS) {
           if (newTrackLengths[id] > clamped) {
             newTrackLengths[id] = clamped;
+          } else if (
+            newTrackLengths[id] === prev.patternLength
+          ) {
+            newTrackLengths[id] = clamped;
           }
           const cur = newSteps[id];
           if (cur.length < clamped) {
