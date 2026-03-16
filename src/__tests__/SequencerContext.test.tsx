@@ -182,18 +182,6 @@ describe('action isolation', () => {
     ).toBe(1);
   });
 
-  it('toggleMixer toggles showMixer', () => {
-    const { result } = renderSequencer();
-    expect(result.current.state.showMixer).toBe(false);
-    act(() => {
-      result.current.actions.toggleMixer();
-    });
-    expect(result.current.state.showMixer).toBe(true);
-    act(() => {
-      result.current.actions.toggleMixer();
-    });
-    expect(result.current.state.showMixer).toBe(false);
-  });
 });
 
 // -------------------------------------------------------

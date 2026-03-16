@@ -61,7 +61,7 @@ function TrackRowInner({
         <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
           {trackName}
         </span>
-        <div className="flex gap-1 ml-auto">
+        <div className="flex gap-1 ml-auto items-center">
           <TrackToggle
             variant="mute"
             active={isMuted}
@@ -75,6 +75,12 @@ function TrackRowInner({
             trackName={trackName}
             size="lg"
             onToggle={handleSolo}
+          />
+          <Knob
+            value={gain}
+            onChange={handleGain}
+            trackName={trackName}
+            size={20}
           />
         </div>
       </div>

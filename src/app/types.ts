@@ -54,8 +54,8 @@ export interface TrackMixerState {
  * Complete serializable sequencer configuration.
  *
  * This is the single source of truth for all persistable
- * state. Transient state (isPlaying, isLoaded, showMixer,
- * stepRef) is excluded.
+ * state. Transient state (isPlaying, isLoaded, stepRef)
+ * is excluded.
  */
 export interface SequencerConfig {
   version: number;
