@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="16" fill="#0a0a0a"/>
+  <text x="64" y="64" text-anchor="middle"
+        dominant-baseline="central"
+        font-family="sans-serif" font-weight="800"
+        font-size="62" letter-spacing="-2"
+        fill="#ffffff">xox</text>
+</svg>
