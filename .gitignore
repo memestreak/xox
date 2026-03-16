@@ -49,3 +49,4 @@ scripts/parsed_patterns/
 # python
 __pycache__/
 *.egg-info/
+.superpowers/
