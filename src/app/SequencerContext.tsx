@@ -89,6 +89,7 @@ interface SequencerActions {
 
 interface SequencerMeta {
   stepRef: React.RefObject<number>;
+  totalStepsRef: React.RefObject<number>;
   config: SequencerConfig;
 }
 
@@ -578,7 +579,7 @@ export function SequencerProvider({
       setPatternLength,
       setTrackLength,
     },
-    meta: { stepRef, config },
+    meta: { stepRef, totalStepsRef, config },
   };
 
   return (

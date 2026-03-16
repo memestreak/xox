@@ -19,6 +19,7 @@ interface TrackRowProps {
   isFreeRun: boolean;
   gain: number;
   currentStep: number;
+  totalSteps: number;
   onToggleStep: (
     trackId: TrackId, stepIndex: number
   ) => void;
@@ -52,6 +53,7 @@ function TrackRowInner({
   isFreeRun,
   gain,
   currentStep,
+  totalSteps,
   onToggleStep,
   onToggleMute,
   onToggleSolo,
@@ -78,7 +80,8 @@ function TrackRowInner({
 
   const effectiveStep =
     currentStep >= 0
-      ? currentStep % trackLength
+      ? (isFreeRun ? totalSteps : currentStep)
+        % trackLength
       : -1;
 
   // ─── Track name popover ───────────────────────
