@@ -5,6 +5,7 @@ import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import TempoController from './TempoController';
 import SettingsPopover from './SettingsPopover';
+import GlobalControls from './GlobalControls';
 import { useSequencer } from './SequencerContext';
 
 /**
@@ -44,7 +45,8 @@ function TransportControlsInner() {
         </div>
       </div>
       {/* Row 2: Kit + Pattern */}
-      <div className="grid grid-cols-2 gap-2 lg:gap-4 pt-2 lg:pt-0">
+      <div className="grid grid-cols-3 gap-2 lg:gap-4 pt-2 lg:pt-0">
+        <GlobalControls />
         <div className="bg-neutral-900/50 p-2 lg:p-4 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
           <label
             htmlFor="kit-select"
