@@ -96,6 +96,29 @@ git worktree add .worktrees/issue-<N> -b issue-<N>-<desc>
 
 See `@skills/github-issues/SKILL.md` for the full workflow.
 
+## Deployment
+
+Deploys to Cloudflare Pages automatically on push to
+`main`. To verify a deployment succeeded:
+
+```bash
+gh api repos/memestreak/xox/commits/<SHA>/check-runs \
+  --jq '.check_runs[] | "\(.name) \(.status) \(.conclusion)"'
+```
+
+Dashboard:
+https://dash.cloudflare.com/24104e90cc6b2473822a3e91479614cb/pages/view/xox
+
+## iOS Audio
+
+iOS routes Web Audio through the "ambient" audio session
+by default, which obeys the hardware Silent Mode switch.
+The `unmute-ios-audio` library forces the "playback"
+category on user gesture, bypassing the mute switch. It
+must be dynamically imported (`import()`) because it
+accesses `window` at module scope, which breaks Next.js
+static export.
+
 ## Key Conventions
 
 - State management is local React state only (no external stores)
