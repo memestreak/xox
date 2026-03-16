@@ -67,6 +67,7 @@ interface SequencerState {
   currentPattern: Pattern;
   trackStates: Record<TrackId, TrackState>;
   isLoaded: boolean;
+  swing: number;
 }
 
 interface SequencerActions {
@@ -85,6 +86,8 @@ interface SequencerActions {
   setTrackLength: (
     trackId: TrackId, length: number
   ) => void;
+  clearAll: () => void;
+  setSwing: (value: number) => void;
 }
 
 interface SequencerMeta {
@@ -553,6 +556,37 @@ export function SequencerProvider({
     []
   );
 
+  const clearAll = useCallback(() => {
+    setConfig(prev => {
+      const newSteps = {} as Record<TrackId, string>;
+      const newTrackLengths = {} as Record<
+        TrackId, number
+      >;
+      for (const id of TRACK_IDS) {
+        newSteps[id] =
+          '0'.repeat(prev.patternLength);
+        newTrackLengths[id] = prev.patternLength;
+      }
+      return {
+        ...prev,
+        steps: newSteps,
+        trackLengths: newTrackLengths,
+        swing: 0,
+      };
+    });
+    setSelectedPatternId('custom');
+  }, []);
+
+  const setSwing = useCallback(
+    (value: number) => {
+      setConfig(prev => ({
+        ...prev,
+        swing: Math.max(0, Math.min(100, value)),
+      }));
+    },
+    []
+  );
+
   // ─── Context value ────────────────────────────────
 
   const value: SequencerContextValue = {
@@ -565,6 +599,7 @@ export function SequencerProvider({
       currentPattern,
       trackStates,
       isLoaded,
+      swing: config.swing,
     },
     actions: {
       togglePlay,
@@ -578,6 +613,8 @@ export function SequencerProvider({
       toggleFreeRun,
       setPatternLength,
       setTrackLength,
+      clearAll,
+      setSwing,
     },
     meta: { stepRef, totalStepsRef, config },
   };
