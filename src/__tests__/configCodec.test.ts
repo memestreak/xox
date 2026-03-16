@@ -62,12 +62,15 @@ describe('round-trip fidelity', () => {
     const config = defaultConfig();
     config.mixer.bd = {
       gain: 0.3, isMuted: true, isSolo: false,
+      freeRun: false,
     };
     config.mixer.sd = {
       gain: 0.7, isMuted: false, isSolo: true,
+      freeRun: true,
     };
     config.mixer.ch = {
       gain: 0, isMuted: true, isSolo: true,
+      freeRun: false,
     };
     const hash = await encodeConfig(config);
     const decoded = await decodeConfig(hash);
@@ -90,6 +93,33 @@ describe('round-trip fidelity', () => {
       const decoded = await decodeConfig(hash);
       expect(decoded).toEqual(config);
     }
+  });
+
+  it('config with custom lengths and freeRun', async () => {
+    const config = JSON.parse(
+      JSON.stringify(defaultConfig())
+    ) as SequencerConfig;
+    config.patternLength = 12;
+    for (const id of TRACK_IDS) {
+      config.trackLengths[id] = 12;
+      config.steps[id] =
+        config.steps[id].substring(0, 12);
+    }
+    config.trackLengths.bd = 5;
+    config.steps.bd = '10100';
+    config.trackLengths.sd = 8;
+    config.steps.sd = '10101010';
+    config.mixer.bd.freeRun = true;
+    config.mixer.ch.freeRun = true;
+    const hash = await encodeConfig(config);
+    const decoded = await decodeConfig(hash);
+    expect(decoded).toEqual(config);
+    expect(decoded.patternLength).toBe(12);
+    expect(decoded.trackLengths.bd).toBe(5);
+    expect(decoded.trackLengths.sd).toBe(8);
+    expect(decoded.mixer.bd.freeRun).toBe(true);
+    expect(decoded.mixer.ch.freeRun).toBe(true);
+    expect(decoded.mixer.sd.freeRun).toBe(false);
   });
 });
 
@@ -138,7 +168,7 @@ describe('defensive decoding', () => {
     const raw = { ...config, version: 999 };
     const hash = await encodeRaw(raw);
     const decoded = await decodeConfig(hash);
-    expect(decoded.version).toBe(1);
+    expect(decoded.version).toBe(2);
   });
 
   it('partial config (only kitId) fills defaults', async () => {
@@ -279,7 +309,7 @@ describe('validateSteps', () => {
     expect(decoded.steps.bd).toBe('1010101010101010');
   });
 
-  it('wrong length uses fallback', async () => {
+  it('short string is padded to track length', async () => {
     const config = defaultConfig();
     const raw = {
       ...config,
@@ -287,7 +317,8 @@ describe('validateSteps', () => {
     };
     const hash = await encodeRaw(raw);
     const decoded = await decodeConfig(hash);
-    expect(decoded.steps.bd).toBe(defaultConfig().steps.bd);
+    // 15-char string padded with '0' to 16
+    expect(decoded.steps.bd).toBe('1010101010101010');
   });
 
   it('non-binary chars use fallback', async () => {

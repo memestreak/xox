@@ -12,13 +12,12 @@ import { encodeConfig } from './configCodec';
 /**
  * Gear icon button with a dropdown popover for settings.
  *
- * Currently contains an Export action that encodes the
- * current config as a URL hash, copies the full URL to
- * clipboard, and updates the address bar. Designed to hold
- * additional settings in the future.
+ * Contains a pattern length selector and an Export action
+ * that encodes the current config as a URL hash, copies
+ * the full URL to clipboard, and updates the address bar.
  */
 export default function SettingsPopover() {
-  const { meta } = useSequencer();
+  const { state, actions, meta } = useSequencer();
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -30,18 +29,23 @@ export default function SettingsPopover() {
     const handleClick = (e: MouseEvent) => {
       if (
         popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node) &&
+        !popoverRef.current.contains(
+          e.target as Node
+        ) &&
         buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
+        !buttonRef.current.contains(
+          e.target as Node
+        )
       ) {
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClick);
+    document.addEventListener(
+      'mousedown', handleClick
+    );
     return () =>
       document.removeEventListener(
-        'mousedown',
-        handleClick
+        'mousedown', handleClick
       );
   }, [isOpen]);
 
@@ -53,7 +57,9 @@ export default function SettingsPopover() {
         window.location.pathname +
         '#' +
         hash;
-      window.history.replaceState(null, '', '#' + hash);
+      window.history.replaceState(
+        null, '', '#' + hash
+      );
       await navigator.clipboard.writeText(url);
       setFeedback('Copied!');
       setTimeout(() => setFeedback(''), 1500);
@@ -62,6 +68,15 @@ export default function SettingsPopover() {
       setTimeout(() => setFeedback(''), 1500);
     }
   }, [meta.config]);
+
+  const handlePatternLength = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      actions.setPatternLength(
+        parseInt(e.target.value, 10)
+      );
+    },
+    [actions]
+  );
 
   return (
     <div className="relative">
@@ -91,6 +106,29 @@ export default function SettingsPopover() {
           role="menu"
           className="absolute right-0 top-full mt-2 w-48 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl z-30 overflow-hidden"
         >
+          <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-800">
+            <label
+              htmlFor="pattern-length"
+              className="text-sm text-neutral-300"
+            >
+              Steps
+            </label>
+            <select
+              id="pattern-length"
+              value={state.patternLength}
+              onChange={handlePatternLength}
+              className="bg-neutral-800 text-neutral-200 text-sm rounded px-2 py-1 w-14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            >
+              {Array.from(
+                { length: 16 },
+                (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                )
+              )}
+            </select>
+          </div>
           <button
             role="menuitem"
             onClick={handleExport}

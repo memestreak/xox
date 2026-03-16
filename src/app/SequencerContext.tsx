@@ -14,6 +14,7 @@ import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import { audioEngine } from './AudioEngine';
 import { defaultConfig, decodeConfig } from './configCodec';
+import { TRACK_IDS } from './types';
 import type {
   Kit,
   Pattern,
@@ -55,11 +56,13 @@ const TRACK_NAMES: Record<TrackId, string> = {
   cb: 'Cowbell',
 };
 
-// ─── Interfaces (unchanged consumer API) ──────────────
+// ─── Interfaces ──────────────────────────────────────
 
 interface SequencerState {
   isPlaying: boolean;
   bpm: number;
+  patternLength: number;
+  trackLengths: Record<TrackId, number>;
   currentKit: Kit;
   currentPattern: Pattern;
   trackStates: Record<TrackId, TrackState>;
@@ -71,10 +74,17 @@ interface SequencerActions {
   setBpm: (bpm: number) => void;
   setKit: (kit: Kit) => void;
   setPattern: (pattern: Pattern) => void;
-  toggleStep: (trackId: TrackId, stepIndex: number) => void;
+  toggleStep: (
+    trackId: TrackId, stepIndex: number
+  ) => void;
   toggleMute: (trackId: TrackId) => void;
   toggleSolo: (trackId: TrackId) => void;
   setGain: (trackId: TrackId, value: number) => void;
+  toggleFreeRun: (trackId: TrackId) => void;
+  setPatternLength: (length: number) => void;
+  setTrackLength: (
+    trackId: TrackId, length: number
+  ) => void;
 }
 
 interface SequencerMeta {
@@ -159,6 +169,7 @@ export function SequencerProvider({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const stepRef = useRef<number>(-1);
+  const totalStepsRef = useRef<number>(0);
 
   // ─── Import config from URL hash on mount ─────────
   useEffect(() => {
@@ -215,6 +226,7 @@ export function SequencerProvider({
         gain: m.gain,
         isMuted: m.isMuted,
         isSolo: m.isSolo,
+        freeRun: m.freeRun,
       };
     }
     return result;
@@ -224,6 +236,7 @@ export function SequencerProvider({
 
   const trackStatesRef = useRef(trackStates);
   const patternRef = useRef(currentPattern);
+  const configRef = useRef(config);
 
   useEffect(() => {
     trackStatesRef.current = trackStates;
@@ -232,6 +245,10 @@ export function SequencerProvider({
   useEffect(() => {
     patternRef.current = currentPattern;
   }, [currentPattern]);
+
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
 
   // ─── Effects ──────────────────────────────────────
 
@@ -254,32 +271,56 @@ export function SequencerProvider({
     audioEngine.setBpm(config.bpm);
   }, [config.bpm]);
 
+  useEffect(() => {
+    audioEngine.setPatternLength(config.patternLength);
+  }, [config.patternLength]);
+
   // ─── Audio step callback ──────────────────────────
 
   const handleStep = useCallback(
     (step: number, time: number) => {
+      const total = totalStepsRef.current;
+      totalStepsRef.current = total + 1;
       stepRef.current = step;
 
       const states = trackStatesRef.current;
       const pattern = patternRef.current;
+      const cfg = configRef.current;
       const anySolo = Object.values(states).some(
         t => t.isSolo
       );
+
+      const trackStep = (
+        id: TrackId
+      ): number => {
+        const len = cfg.trackLengths[id];
+        return cfg.mixer[id].freeRun
+          ? total % len
+          : step % len;
+      };
+
       const isAccented =
-        pattern.steps.ac[step] === '1';
+        pattern.steps.ac[
+          trackStep('ac')
+        ] === '1';
 
       TRACKS.forEach(track => {
         const st = states[track.id];
         const audible = anySolo
           ? st.isSolo
           : !st.isMuted;
+        if (!audible) return;
+
+        const effectiveStep = trackStep(track.id);
         if (
-          audible &&
-          pattern.steps[track.id][step] === '1'
+          pattern.steps[track.id][effectiveStep] === '1'
         ) {
           const cubic = st.gain ** 3;
-          const gain = isAccented ? cubic * 1.5 : cubic;
-          audioEngine.playSound(track.id, time, gain);
+          const gain =
+            isAccented ? cubic * 1.5 : cubic;
+          audioEngine.playSound(
+            track.id, time, gain
+          );
         }
       });
     },
@@ -299,18 +340,30 @@ export function SequencerProvider({
       audioEngine.stop();
       setIsPlaying(false);
       stepRef.current = -1;
+      totalStepsRef.current = 0;
     } else {
-      audioEngine.start(config.bpm, handleStep);
+      totalStepsRef.current = 0;
+      audioEngine.start(
+        config.bpm,
+        handleStep,
+        config.patternLength
+      );
       setIsPlaying(true);
     }
-  }, [isPlaying, config.bpm, handleStep]);
+  }, [isPlaying, config.bpm, config.patternLength,
+    handleStep]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isLoaded) return;
       if (event.code !== 'Space') return;
-      const tag = (event.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const tag =
+        (event.target as HTMLElement)?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT'
+      ) return;
       event.preventDefault();
       togglePlay();
     };
@@ -331,16 +384,30 @@ export function SequencerProvider({
   }, []);
 
   const setPattern = useCallback((pattern: Pattern) => {
-    setConfig(prev => ({
-      ...prev,
-      steps: pattern.steps,
-    }));
+    setConfig(prev => {
+      const newSteps = { ...pattern.steps };
+      for (const id of TRACK_IDS) {
+        const cur = newSteps[id] ?? '';
+        const len = prev.trackLengths[id];
+        if (cur.length < len) {
+          newSteps[id] = cur.padEnd(len, '0');
+        } else if (cur.length > len) {
+          newSteps[id] = cur.substring(0, len);
+        }
+      }
+      return { ...prev, steps: newSteps };
+    });
     setSelectedPatternId(pattern.id);
   }, []);
 
   const toggleStep = useCallback(
     (trackId: TrackId, stepIndex: number) => {
       setConfig(prev => {
+        if (
+          stepIndex >= prev.trackLengths[trackId]
+        ) {
+          return prev;
+        }
         const cur = prev.steps[trackId];
         const bit =
           cur[stepIndex] === '1' ? '0' : '1';
@@ -358,31 +425,116 @@ export function SequencerProvider({
     []
   );
 
-  const toggleMute = useCallback((trackId: TrackId) => {
-    setConfig(prev => ({
-      ...prev,
-      mixer: {
-        ...prev.mixer,
-        [trackId]: {
-          ...prev.mixer[trackId],
-          isMuted: !prev.mixer[trackId].isMuted,
+  const toggleFreeRun = useCallback(
+    (trackId: TrackId) => {
+      setConfig(prev => ({
+        ...prev,
+        mixer: {
+          ...prev.mixer,
+          [trackId]: {
+            ...prev.mixer[trackId],
+            freeRun: !prev.mixer[trackId].freeRun,
+          },
         },
-      },
-    }));
-  }, []);
+      }));
+    },
+    []
+  );
 
-  const toggleSolo = useCallback((trackId: TrackId) => {
-    setConfig(prev => ({
-      ...prev,
-      mixer: {
-        ...prev.mixer,
-        [trackId]: {
-          ...prev.mixer[trackId],
-          isSolo: !prev.mixer[trackId].isSolo,
+  const setPatternLength = useCallback(
+    (length: number) => {
+      const clamped =
+        Math.max(1, Math.min(16, length));
+      setConfig(prev => {
+        const newTrackLengths = {
+          ...prev.trackLengths,
+        };
+        const newSteps = { ...prev.steps };
+        for (const id of TRACK_IDS) {
+          if (newTrackLengths[id] > clamped) {
+            newTrackLengths[id] = clamped;
+          }
+          const cur = newSteps[id];
+          if (cur.length < clamped) {
+            newSteps[id] = cur.padEnd(clamped, '0');
+          } else if (cur.length > clamped) {
+            newSteps[id] = cur.substring(0, clamped);
+          }
+        }
+        return {
+          ...prev,
+          patternLength: clamped,
+          trackLengths: newTrackLengths,
+          steps: newSteps,
+        };
+      });
+      setSelectedPatternId('custom');
+    },
+    []
+  );
+
+  const setTrackLength = useCallback(
+    (trackId: TrackId, length: number) => {
+      setConfig(prev => {
+        const clamped = Math.max(
+          1,
+          Math.min(prev.patternLength, length)
+        );
+        const cur = prev.steps[trackId];
+        let newSteps: string;
+        if (cur.length < clamped) {
+          newSteps = cur.padEnd(clamped, '0');
+        } else {
+          newSteps = cur.substring(0, clamped);
+        }
+        return {
+          ...prev,
+          trackLengths: {
+            ...prev.trackLengths,
+            [trackId]: clamped,
+          },
+          steps: {
+            ...prev.steps,
+            [trackId]: newSteps,
+          },
+        };
+      });
+      setSelectedPatternId('custom');
+    },
+    []
+  );
+
+  const toggleMute = useCallback(
+    (trackId: TrackId) => {
+      setConfig(prev => ({
+        ...prev,
+        mixer: {
+          ...prev.mixer,
+          [trackId]: {
+            ...prev.mixer[trackId],
+            isMuted: !prev.mixer[trackId].isMuted,
+          },
         },
-      },
-    }));
-  }, []);
+      }));
+    },
+    []
+  );
+
+  const toggleSolo = useCallback(
+    (trackId: TrackId) => {
+      setConfig(prev => ({
+        ...prev,
+        mixer: {
+          ...prev.mixer,
+          [trackId]: {
+            ...prev.mixer[trackId],
+            isSolo: !prev.mixer[trackId].isSolo,
+          },
+        },
+      }));
+    },
+    []
+  );
 
   const setGain = useCallback(
     (trackId: TrackId, value: number) => {
@@ -406,6 +558,8 @@ export function SequencerProvider({
     state: {
       isPlaying,
       bpm: config.bpm,
+      patternLength: config.patternLength,
+      trackLengths: config.trackLengths,
       currentKit,
       currentPattern,
       trackStates,
@@ -420,6 +574,9 @@ export function SequencerProvider({
       toggleMute,
       toggleSolo,
       setGain,
+      toggleFreeRun,
+      setPatternLength,
+      setTrackLength,
     },
     meta: { stepRef, config },
   };

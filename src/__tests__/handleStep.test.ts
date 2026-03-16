@@ -16,6 +16,7 @@ vi.mock('../app/AudioEngine', () => ({
     start: (...args: unknown[]) => mockStart(...args),
     stop: (...args: unknown[]) => mockStop(...args),
     setBpm: vi.fn(),
+    setPatternLength: vi.fn(),
     playSound: (...args: unknown[]) => mockPlaySound(...args),
     onStep: vi.fn(),
   },
