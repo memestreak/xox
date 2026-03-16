@@ -50,9 +50,10 @@ Internal layout (horizontal flex):
   tracking-widest text-neutral-500 mb-1 lg:mb-2 block
   font-bold`
 - Steps dropdown: same `<select>` styling as Kit/Pattern
-- Swing knob: reuses rotary knob pattern from TrackRow
-  gain controls, displays current percentage as a label
-  below the knob (e.g., "0%", "50%")
+- Swing knob: imports `Knob` from `src/app/Knob.tsx`
+  (already extracted, 0-1 normalized). Maps 0-1 to
+  0-100% for display. Shows percentage label below
+  (e.g., "0%", "50%").
 - CLR button: `bg-neutral-800 border border-neutral-700
   rounded` with uppercase text
 
@@ -71,6 +72,7 @@ Add `swing: number` field (0-100, default 0).
 **`clearAll()`**
 - Sets all 12 track step strings to
   `"0".repeat(trackLength)` per track
+- Resets `config.swing` to 0
 - Sets `selectedPatternId` to `'custom'`
 - No confirmation dialog — intentional for fast workflow
   (loading a pattern is a quick recovery path)
@@ -82,47 +84,80 @@ Add `swing: number` field (0-100, default 0).
 **`setPatternLength`** — already exists, no changes
 needed. Only the UI location moves.
 
+**Pattern load (`setPattern`)** — does NOT reset swing.
+Swing is a playback preference like BPM, preserved
+across pattern changes.
+
 ### SettingsPopover.tsx
 
 Remove the "Steps" pattern length selector and its
 separator. The popover retains the Export URL button
 and any future settings.
 
-## Audio Engine — Swing Timing
+## Swing Timing
+
+Aligns with the existing pattern engine spec
+(`docs/superpowers/specs/2026-03-15-pattern-engine-design.md`
+section 1c).
 
 Swing delays even-numbered sixteenth notes (zero-indexed
-odd steps: 1, 3, 5, 7, 9, 11, 13, 15).
+odd steps: 1, 3, 5, 7, 9, 11, 13, 15) based on
+**global step parity** — not per-track effectiveStep.
+This keeps swing musically consistent even for tracks
+with variable lengths or free-run mode.
+
+### Timing formula (in handleStep)
 
 ```
-delay = (swing / 100) * (secondsPerStep / 2)
+halfStepDuration = (60 / bpm) * 0.25 / 2
+if (globalStep % 2 === 1) {
+  offset = (swing / 100) * 0.7 * halfStepDuration
+  scheduledTime = time + offset
+}
 ```
 
-- At 0%: no delay (straight time)
-- At 50%: triplet feel
-- At 100%: even 16ths merge with next beat
+- The 0.7 multiplier caps effective swing at ~70% to
+  prevent off-beats from colliding with the next on-beat
+- At swing 0: no delay (straight time)
+- At swing 50: moderate shuffle
+- At swing 100: heavy shuffle (0.7 cap still applies)
+- Swing value stored as 0-100, read from
+  `configRef.current.swing` (no new refs needed)
 
-**Edge case — odd pattern lengths:** When the pattern
-length is odd, the last step may be an odd-indexed step
-with no "next beat" to merge into. Swing delay still
-applies normally — it shifts the step's timing within
-the pattern cycle. At extreme swing values this may
-produce a very short gap before the pattern loops, which
-is musically acceptable and consistent with how hardware
-sequencers handle this case.
+### Implementation location
 
-**Implementation in `AudioEngine.ts`:**
-- Add a `swing` property (0-100, default 0) with a
-  public setter `setSwing(value: number)`
-- In `advanceStep()`, after computing the base
-  `nextStepTime`, add the swing delay for odd-indexed
-  steps: `this.nextStepTime += delay`
-- SequencerContext sets `audioEngine.setSwing(value)`
-  via a `useEffect` watching `config.swing`, matching
-  the existing pattern for `setBpm()` and
-  `setPatternLength()`
+Swing is applied in `handleStep` (SequencerContext.tsx)
+as a per-sound timing offset passed to
+`audioEngine.playSound(trackId, scheduledTime, gain)`.
+**AudioEngine's `nextStepTime` stays uniform** — swing
+is not a clock modification.
 
-**No changes to `handleStep` signature.** Swing is
-purely a timing concern handled inside AudioEngine.
+No changes to AudioEngine.ts for swing. No changes to
+the `handleStep` callback signature.
+
+### Visual-audio desync
+
+The step highlight (running light) fires on the grid
+beat, not the swung audio time. This matches hardware
+drum machine behavior where LEDs track the grid and
+audio is offset. At moderate swing values the desync is
+imperceptible.
+
+### Free-run interaction
+
+Swing applies to all tracks uniformly based on global
+step parity. Free-run tracks receive the same timing
+offset as normal tracks. This is consistent with
+hardware behavior where swing is a clock-level feature.
+
+### Edge case — odd pattern lengths
+
+When pattern length is odd, the last step may be
+odd-indexed with no "next beat" to merge into. Swing
+delay still applies normally — it shifts the step's
+timing within the pattern cycle. At extreme swing
+values this may produce a short gap before the pattern
+loops, which is musically acceptable.
 
 ## Serialization — configCodec
 
@@ -138,18 +173,22 @@ purely a timing concern handled inside AudioEngine.
 
 - **SequencerContext.test.tsx:**
   - `clearAll` sets all track steps to zeros
+  - `clearAll` resets swing to 0
   - `clearAll` sets pattern to 'custom'
   - `setSwing` updates swing value
   - `setSwing` clamps to 0-100
+  - `setPattern` does not reset swing
+
+- **handleStep.test.ts:**
+  - Swing delay applied to odd-indexed steps
+  - No delay on even-indexed steps
+  - Zero swing produces no delay
+  - 0.7 cap prevents collision at max swing
+  - Swing offset scales with BPM
 
 - **configCodec.test.ts:**
   - Round-trip with swing field
   - Backward compat: old URLs decode with `swing: 0`
-
-- **audioEngine.test.ts:**
-  - Swing delay calculation for odd vs even steps
-  - Zero swing produces no delay
-  - Boundary values (0%, 50%, 100%)
 
 - **GlobalControls UI test:**
   - Renders steps dropdown, swing knob, clear button
@@ -160,19 +199,20 @@ purely a timing concern handled inside AudioEngine.
 ### Manual Verification
 
 1. Run dev server, confirm Global | Kit | Pattern layout
-2. Test Clear button wipes all tracks immediately
+2. Test Clear button wipes all tracks and resets swing
 3. Test swing knob audibly shifts timing at various %
 4. Test on mobile viewport — three columns stay compact
 5. Verify pattern length no longer in SettingsPopover
 6. Export URL, reload — swing value preserved
 7. Import old URL (no swing) — defaults to 0%
+8. Load a preset pattern — swing value persists
 
 ## Files to Modify
 
 - `src/app/types.ts` — add `swing` to SequencerConfig
 - `src/app/SequencerContext.tsx` — add `clearAll`,
-  `setSwing` actions; expose `swing` in state
-- `src/app/AudioEngine.ts` — swing delay in scheduling
+  `setSwing` actions; swing offset in `handleStep`;
+  expose `swing` in state
 - `src/app/TransportControls.tsx` — grid-cols-3, render
   GlobalControls
 - `src/app/SettingsPopover.tsx` — remove Steps selector
@@ -181,3 +221,7 @@ purely a timing concern handled inside AudioEngine.
 - **New:** `src/app/GlobalControls.tsx`
 - **New:** `src/__tests__/GlobalControls.test.tsx`
 - Update existing test files for new state/codec fields
+
+**Not modified:** `src/app/AudioEngine.ts` — swing is
+handled entirely in handleStep, AudioEngine clock stays
+uniform.
