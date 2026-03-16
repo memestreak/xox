@@ -71,11 +71,17 @@ Add `swing: number` field (0-100, default 0).
 
 **`clearAll()`**
 - Sets all 12 track step strings to
-  `"0".repeat(trackLength)` per track
+  `"0".repeat(patternLength)` (uniform length)
+- Resets all `trackLengths` to `patternLength`
 - Resets `config.swing` to 0
 - Sets `selectedPatternId` to `'custom'`
 - No confirmation dialog — intentional for fast workflow
   (loading a pattern is a quick recovery path)
+- Rationale for resetting swing: Clear is a "blank
+  canvas" action, distinct from loading a pattern.
+  BPM and pattern length are preserved because they
+  define the time grid itself; swing and track lengths
+  are compositional choices that get wiped.
 
 **`setSwing(value: number)`**
 - Clamps to 0-100
@@ -164,8 +170,9 @@ loops, which is musically acceptable.
 - `swing` is included in `SequencerConfig` serialization
 - Backward compatibility: when decoding URLs without a
   `swing` field, default to 0
-- No codec version bump needed — the codec already
-  handles missing fields gracefully via defaults
+- No codec version bump needed — codebase is already at
+  CONFIG_VERSION 2 (from variable track lengths). The
+  codec handles missing fields via defaults.
 
 ## Testing
 
@@ -174,6 +181,7 @@ loops, which is musically acceptable.
 - **SequencerContext.test.tsx:**
   - `clearAll` sets all track steps to zeros
   - `clearAll` resets swing to 0
+  - `clearAll` resets all track lengths to patternLength
   - `clearAll` sets pattern to 'custom'
   - `setSwing` updates swing value
   - `setSwing` clamps to 0-100
@@ -199,7 +207,7 @@ loops, which is musically acceptable.
 ### Manual Verification
 
 1. Run dev server, confirm Global | Kit | Pattern layout
-2. Test Clear button wipes all tracks and resets swing
+2. Test Clear wipes steps, resets swing and track lengths
 3. Test swing knob audibly shifts timing at various %
 4. Test on mobile viewport — three columns stay compact
 5. Verify pattern length no longer in SettingsPopover
