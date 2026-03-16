@@ -32,9 +32,8 @@ magick -size 180x180 xc:'#0a0a0a' \
   -font "$FONT" -pointsize 88 \
   -fill white -gravity center \
   -kerning -2 -annotate 0 "xox" \
-  -colorspace sRGB -type TrueColor -depth 8 \
-  "$OUT/apple-touch-icon.png"
+  "$ROOT/public/apple-touch-icon.png"
 
 echo "Generated:"
 echo "  $OUT/favicon.ico (16x16 + 32x32)"
-echo "  $OUT/apple-touch-icon.png (180x180)"
+echo "  $ROOT/public/apple-touch-icon.png (180x180)"
