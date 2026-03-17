@@ -462,3 +462,126 @@ describe('handleStep swing timing', () => {
     }
   });
 });
+
+// -------------------------------------------------
+// trig conditions in handleStep
+// -------------------------------------------------
+describe('trig conditions in handleStep', () => {
+  beforeEach(() => {
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+    mockStop.mockClear();
+  });
+
+  it('step with probability condition can be suppressed',
+    async () => {
+      const { result } = renderSequencer();
+
+      // Clear all, then activate bd step 0
+      await act(async () => {
+        result.current.actions.clearAll();
+      });
+      await act(async () => {
+        result.current.actions.toggleStep('bd', 0);
+      });
+
+      // Set probability 50 on bd step 0
+      await act(async () => {
+        result.current.actions.setTrigCondition(
+          'bd', 0, { type: 'probability', value: 50 }
+        );
+      });
+
+      // Mock Math.random to return 0.99 (> 0.50)
+      const randomSpy = vi.spyOn(Math, 'random')
+        .mockReturnValue(0.99);
+
+      mockPlaySound.mockClear();
+      mockStart.mockClear();
+
+      await act(async () => {
+        result.current.actions.togglePlay();
+      });
+
+      const onStep = mockStart.mock.calls[0][1] as (
+        step: number, time: number
+      ) => void;
+
+      await waitFor(() => {
+        expect(
+          result.current.state.isPlaying
+        ).toBe(true);
+      });
+      mockPlaySound.mockClear();
+
+      onStep(0, 0.0);
+
+      expect(mockPlaySound).not.toHaveBeenCalled();
+      randomSpy.mockRestore();
+    }
+  );
+
+  it('step without condition always fires',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.clearAll();
+      });
+      await act(async () => {
+        result.current.actions.toggleStep('bd', 0);
+      });
+
+      mockPlaySound.mockClear();
+      mockStart.mockClear();
+
+      await act(async () => {
+        result.current.actions.togglePlay();
+      });
+
+      const onStep = mockStart.mock.calls[0][1] as (
+        step: number, time: number
+      ) => void;
+
+      await waitFor(() => {
+        expect(
+          result.current.state.isPlaying
+        ).toBe(true);
+      });
+      mockPlaySound.mockClear();
+
+      onStep(0, 0.0);
+
+      expect(mockPlaySound).toHaveBeenCalledTimes(1);
+      expect(mockPlaySound.mock.calls[0][0]).toBe('bd');
+    }
+  );
+
+  it('clearTrigCondition removes condition',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.setTrigCondition(
+          'bd', 0, { type: 'probability', value: 50 }
+        );
+      });
+
+      expect(
+        result.current.meta.config
+          .trigConditions.bd?.[0]
+      ).toEqual({ type: 'probability', value: 50 });
+
+      await act(async () => {
+        result.current.actions.clearTrigCondition(
+          'bd', 0
+        );
+      });
+
+      expect(
+        result.current.meta.config
+          .trigConditions.bd?.[0]
+      ).toBeUndefined();
+    }
+  );
+});
