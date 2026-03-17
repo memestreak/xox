@@ -6,10 +6,11 @@ import type {
   SequencerConfig,
   TrackId,
   TrackMixerState,
+  TrigCondition,
 } from './types';
 import { TRACK_IDS } from './types';
 
-const CONFIG_VERSION = 2;
+const CONFIG_VERSION = 3;
 const DEFAULT_KIT_ID = '808';
 const BPM_MIN = 20;
 const BPM_MAX = 300;
@@ -43,6 +44,7 @@ export function defaultConfig(): SequencerConfig {
     steps: firstPattern.steps as Record<TrackId, string>,
     mixer,
     swing: 0,
+    trigConditions: {},
   };
 }
 
@@ -160,6 +162,9 @@ function validateConfig(
     obj.mixer, defaults.mixer
   );
   const swing = validateSwing(obj.swing);
+  const trigConditions = validateTrigConditions(
+    obj.trigConditions, trackLengths
+  );
 
   return {
     version: CONFIG_VERSION,
@@ -170,6 +175,7 @@ function validateConfig(
     steps,
     mixer,
     swing,
+    trigConditions,
   };
 }
 
@@ -284,6 +290,93 @@ function normalizeSteps(
       result[id] = cur.substring(0, len);
     }
   }
+  return result;
+}
+
+const PROB_MIN = 1;
+const PROB_MAX = 99;
+const CYCLE_B_MIN = 2;
+const CYCLE_B_MAX = 8;
+
+/**
+ * Validate a single trig condition object.
+ * Returns null if the condition is invalid and should be dropped.
+ */
+function validateSingleCondition(
+  raw: unknown
+): TrigCondition | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+
+  if (obj.type === 'probability') {
+    if (
+      typeof obj.value !== 'number' ||
+      !isFinite(obj.value)
+    ) return null;
+    return {
+      type: 'probability',
+      value: Math.max(
+        PROB_MIN, Math.min(PROB_MAX, Math.round(obj.value))
+      ),
+    };
+  }
+
+  if (obj.type === 'cycle') {
+    if (
+      typeof obj.a !== 'number' || !isFinite(obj.a) ||
+      typeof obj.b !== 'number' || !isFinite(obj.b)
+    ) return null;
+    const rawB = Math.round(obj.b);
+    if (rawB < CYCLE_B_MIN) return null;
+    const b = Math.min(CYCLE_B_MAX, rawB);
+    const a = Math.max(1, Math.min(b, Math.round(obj.a)));
+    return { type: 'cycle', a, b };
+  }
+
+  return null;
+}
+
+/**
+ * Validate trigConditions map. Drops entries with invalid
+ * step indices (>= trackLength) or invalid condition objects.
+ */
+function validateTrigConditions(
+  value: unknown,
+  trackLengths: Record<TrackId, number>
+): SequencerConfig['trigConditions'] {
+  if (value === null || typeof value !== 'object') return {};
+  const obj = value as Record<string, unknown>;
+  const result: SequencerConfig['trigConditions'] = {};
+
+  for (const id of TRACK_IDS) {
+    const trackEntry = obj[id];
+    if (
+      trackEntry === null ||
+      typeof trackEntry !== 'object'
+    ) continue;
+
+    const trackLength = trackLengths[id];
+    const stepMap = trackEntry as Record<string, unknown>;
+    const validSteps: Record<number, TrigCondition> = {};
+
+    for (const key of Object.keys(stepMap)) {
+      const stepIndex = Number(key);
+      if (
+        !Number.isInteger(stepIndex) ||
+        stepIndex < 0 ||
+        stepIndex >= trackLength
+      ) continue;
+      const cond = validateSingleCondition(stepMap[key]);
+      if (cond !== null) {
+        validSteps[stepIndex] = cond;
+      }
+    }
+
+    if (Object.keys(validSteps).length > 0) {
+      result[id] = validSteps;
+    }
+  }
+
   return result;
 }
 

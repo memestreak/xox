@@ -13,12 +13,25 @@ export interface Kit {
 }
 
 /**
+ * A trig condition controlling when a step fires.
+ *
+ * - probability: fires randomly with the given percentage (1-99)
+ * - cycle: fires on step `a` of every `b` repetitions (1/b to b/b)
+ */
+export type TrigCondition =
+  | { type: 'probability'; value: number }
+  | { type: 'cycle'; a: number; b: number };
+
+/**
  * Represents a pattern with variable-length step strings.
  */
 export interface Pattern {
   id: string;
   name: string;
   steps: Record<TrackId, string>;
+  trigConditions?: Partial<
+    Record<TrackId, Record<number, TrigCondition>>
+  >;
 }
 
 /**
@@ -68,4 +81,7 @@ export interface SequencerConfig {
   steps: Record<TrackId, string>;
   mixer: Record<TrackId, TrackMixerState>;
   swing: number;
+  trigConditions: Partial<
+    Record<TrackId, Record<number, TrigCondition>>
+  >;
 }

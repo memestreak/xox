@@ -10,6 +10,27 @@ import type {
 import { TRACK_IDS } from '../app/types';
 
 /**
+ * Helper: encode a raw object bypassing validation,
+ * for testing backward-compat decoding of old formats.
+ */
+async function encodeRaw(obj: unknown): Promise<string> {
+  const json = JSON.stringify(obj);
+  const stream = new Blob([json]).stream()
+    .pipeThrough(new CompressionStream('deflate-raw'));
+  const bytes = new Uint8Array(
+    await new Response(stream).arrayBuffer()
+  );
+  let binary = '';
+  for (const b of bytes) {
+    binary += String.fromCharCode(b);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+/**
  * Golden-file tests protect against silent changes to the
  * serialization format. If any of these fail, existing
  * shared URLs in the wild would break.
@@ -36,7 +57,7 @@ function goldenConfigV1Decoded(): SequencerConfig {
     trackLengths[id] = 16;
   }
   return {
-    version: 2,
+    version: 3,
     kitId: 'electro',
     bpm: 140,
     patternLength: 16,
@@ -44,6 +65,44 @@ function goldenConfigV1Decoded(): SequencerConfig {
     steps,
     mixer,
     swing: 0,
+    trigConditions: {},
+  };
+}
+
+/**
+ * What a v2 golden config decodes to in the v3 app:
+ * same fields plus trigConditions: {}, version=3.
+ */
+function goldenConfigV2Decoded(): SequencerConfig {
+  const steps = {} as Record<TrackId, string>;
+  const mixer = {} as Record<TrackId, {
+    gain: number; isMuted: boolean; isSolo: boolean;
+    freeRun: boolean;
+  }>;
+  const trackLengths = {} as Record<TrackId, number>;
+  for (const id of TRACK_IDS) {
+    steps[id] = '101010101010';
+    mixer[id] = {
+      gain: 0.8, isMuted: false, isSolo: false,
+      freeRun: false,
+    };
+    trackLengths[id] = 12;
+  }
+  trackLengths.bd = 8;
+  steps.bd = '10101010';
+  trackLengths.sd = 5;
+  steps.sd = '10100';
+  mixer.bd.freeRun = true;
+  return {
+    version: 3,
+    kitId: 'electro',
+    bpm: 140,
+    patternLength: 12,
+    trackLengths,
+    steps,
+    mixer,
+    swing: 0,
+    trigConditions: {},
   };
 }
 
@@ -71,7 +130,7 @@ function goldenConfigV2(): SequencerConfig {
   steps.sd = '10100';
   mixer.bd.freeRun = true;
   return {
-    version: 2,
+    version: 3,
     kitId: 'electro',
     bpm: 140,
     patternLength: 12,
@@ -79,6 +138,7 @@ function goldenConfigV2(): SequencerConfig {
     steps,
     mixer,
     swing: 0,
+    trigConditions: {},
   };
 }
 
@@ -100,6 +160,28 @@ describe('golden-file tests', () => {
   it('v1 hash decodes with defaults filled in', async () => {
     const decoded = await decodeConfig(GOLDEN_HASH_V1);
     expect(decoded).toEqual(goldenConfigV1Decoded());
+  });
+
+  it('v2 hash decodes with trigConditions defaulted', async () => {
+    // Encode a v2-era config (no trigConditions field) and
+    // verify it decodes cleanly with trigConditions: {}
+    // and version bumped to 3.
+    const v2Config = {
+      version: 2,
+      kitId: 'electro',
+      bpm: 140,
+      patternLength: 12,
+      trackLengths: goldenConfigV2Decoded().trackLengths,
+      steps: goldenConfigV2Decoded().steps,
+      mixer: goldenConfigV2Decoded().mixer,
+      swing: 0,
+      // no trigConditions field
+    };
+    const hash = await encodeRaw(v2Config);
+    const decoded = await decodeConfig(hash);
+    expect(decoded).toEqual(goldenConfigV2Decoded());
+    expect(decoded.version).toBe(3);
+    expect(decoded.trigConditions).toEqual({});
   });
 
   it('v2 config round-trips identically', async () => {

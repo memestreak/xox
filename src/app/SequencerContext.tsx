@@ -14,11 +14,13 @@ import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import { audioEngine } from './AudioEngine';
 import { defaultConfig, decodeConfig } from './configCodec';
+import { evaluateCondition } from './trigConditions';
 import { TRACK_IDS } from './types';
 import type {
   Kit,
   Pattern,
   SequencerConfig,
+  TrigCondition,
   TrackId,
   TrackState,
 } from './types';
@@ -88,6 +90,15 @@ interface SequencerActions {
   ) => void;
   clearAll: () => void;
   setSwing: (value: number) => void;
+  setTrigCondition: (
+    trackId: TrackId,
+    stepIndex: number,
+    condition: TrigCondition
+  ) => void;
+  clearTrigCondition: (
+    trackId: TrackId,
+    stepIndex: number
+  ) => void;
 }
 
 interface SequencerMeta {
@@ -241,6 +252,9 @@ export function SequencerProvider({
   const trackStatesRef = useRef(trackStates);
   const patternRef = useRef(currentPattern);
   const configRef = useRef(config);
+  const cycleCountRef = useRef<Record<TrackId, number>>(
+    {} as Record<TrackId, number>
+  );
 
   useEffect(() => {
     trackStatesRef.current = trackStates;
@@ -303,6 +317,15 @@ export function SequencerProvider({
         t => t.isSolo
       );
 
+      // Increment cycle count at cycle boundaries
+      for (const id of TRACK_IDS) {
+        const len = cfg.trackLengths[id];
+        if (total > 0 && total % len === 0) {
+          cycleCountRef.current[id] =
+            (cycleCountRef.current[id] ?? 0) + 1;
+        }
+      }
+
       const trackStep = (
         id: TrackId
       ): number => {
@@ -312,10 +335,18 @@ export function SequencerProvider({
           : step % len;
       };
 
-      const isAccented =
-        pattern.steps.ac[
-          trackStep('ac')
-        ] === '1';
+      const accentStep = trackStep('ac');
+      const accentActive =
+        pattern.steps.ac[accentStep] === '1';
+      let isAccented = false;
+      if (accentActive) {
+        const accentCond =
+          cfg.trigConditions?.ac?.[accentStep];
+        isAccented = evaluateCondition(accentCond, {
+          cycleCount:
+            cycleCountRef.current.ac ?? 0,
+        });
+      }
 
       TRACKS.forEach(track => {
         const st = states[track.id];
@@ -326,8 +357,22 @@ export function SequencerProvider({
 
         const effectiveStep = trackStep(track.id);
         if (
-          pattern.steps[track.id][effectiveStep] === '1'
+          pattern.steps[track.id][effectiveStep]
+            === '1'
         ) {
+          const cond =
+            cfg.trigConditions
+              ?.[track.id]?.[effectiveStep];
+          const shouldFire = evaluateCondition(
+            cond,
+            {
+              cycleCount:
+                cycleCountRef.current[track.id]
+                  ?? 0,
+            }
+          );
+          if (!shouldFire) return;
+
           const cubic = st.gain ** 3;
           const gain =
             isAccented ? cubic * 1.5 : cubic;
@@ -348,14 +393,22 @@ export function SequencerProvider({
 
   // ─── Actions ──────────────────────────────────────
 
+  const initCycleCounts = useCallback(() => {
+    const counts = {} as Record<TrackId, number>;
+    for (const id of TRACK_IDS) { counts[id] = 0; }
+    cycleCountRef.current = counts;
+  }, []);
+
   const togglePlay = useCallback(() => {
     if (isPlaying) {
       audioEngine.stop();
       setIsPlaying(false);
       stepRef.current = -1;
       totalStepsRef.current = 0;
+      initCycleCounts();
     } else {
       totalStepsRef.current = 0;
+      initCycleCounts();
       audioEngine.start(
         config.bpm,
         handleStep,
@@ -364,7 +417,7 @@ export function SequencerProvider({
       setIsPlaying(true);
     }
   }, [isPlaying, config.bpm, config.patternLength,
-    handleStep]);
+    handleStep, initCycleCounts]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -408,7 +461,12 @@ export function SequencerProvider({
           newSteps[id] = cur.substring(0, len);
         }
       }
-      return { ...prev, steps: newSteps };
+      return {
+        ...prev,
+        steps: newSteps,
+        trigConditions:
+          pattern.trigConditions ?? {},
+      };
     });
     setSelectedPatternId(pattern.id);
   }, []);
@@ -463,6 +521,9 @@ export function SequencerProvider({
           ...prev.trackLengths,
         };
         const newSteps = { ...prev.steps };
+        const newTrigConds = {
+          ...prev.trigConditions,
+        };
         for (const id of TRACK_IDS) {
           if (newTrackLengths[id] > clamped) {
             newTrackLengths[id] = clamped;
@@ -478,12 +539,27 @@ export function SequencerProvider({
           } else if (cur.length > len) {
             newSteps[id] = cur.substring(0, len);
           }
+          // Prune conditions beyond new length
+          const trackConds = newTrigConds[id];
+          if (trackConds) {
+            const pruned: Record<
+              number, TrigCondition
+            > = {};
+            for (const [k, v] of
+              Object.entries(trackConds)) {
+              if (Number(k) < len) {
+                pruned[Number(k)] = v;
+              }
+            }
+            newTrigConds[id] = pruned;
+          }
         }
         return {
           ...prev,
           patternLength: clamped,
           trackLengths: newTrackLengths,
           steps: newSteps,
+          trigConditions: newTrigConds,
         };
       });
       setSelectedPatternId('custom');
@@ -505,6 +581,26 @@ export function SequencerProvider({
         } else {
           newSteps = cur.substring(0, clamped);
         }
+        // Prune conditions beyond new length
+        const trackConds =
+          prev.trigConditions[trackId];
+        let newTrigConditions =
+          prev.trigConditions;
+        if (trackConds) {
+          const pruned: Record<
+            number, TrigCondition
+          > = {};
+          for (const [k, v] of
+            Object.entries(trackConds)) {
+            if (Number(k) < clamped) {
+              pruned[Number(k)] = v;
+            }
+          }
+          newTrigConditions = {
+            ...prev.trigConditions,
+            [trackId]: pruned,
+          };
+        }
         return {
           ...prev,
           trackLengths: {
@@ -515,6 +611,7 @@ export function SequencerProvider({
             ...prev.steps,
             [trackId]: newSteps,
           },
+          trigConditions: newTrigConditions,
         };
       });
       setSelectedPatternId('custom');
@@ -534,6 +631,7 @@ export function SequencerProvider({
           },
         },
       }));
+      cycleCountRef.current[trackId] = 0;
     },
     []
   );
@@ -550,6 +648,7 @@ export function SequencerProvider({
           },
         },
       }));
+      cycleCountRef.current[trackId] = 0;
     },
     []
   );
@@ -586,6 +685,7 @@ export function SequencerProvider({
         steps: newSteps,
         trackLengths: newTrackLengths,
         swing: 0,
+        trigConditions: {},
       };
     });
     setSelectedPatternId('custom');
@@ -597,6 +697,45 @@ export function SequencerProvider({
         ...prev,
         swing: Math.max(0, Math.min(100, value)),
       }));
+    },
+    []
+  );
+
+  const setTrigCondition = useCallback(
+    (
+      trackId: TrackId,
+      stepIndex: number,
+      condition: TrigCondition
+    ) => {
+      setConfig(prev => ({
+        ...prev,
+        trigConditions: {
+          ...prev.trigConditions,
+          [trackId]: {
+            ...prev.trigConditions[trackId],
+            [stepIndex]: condition,
+          },
+        },
+      }));
+    },
+    []
+  );
+
+  const clearTrigCondition = useCallback(
+    (trackId: TrackId, stepIndex: number) => {
+      setConfig(prev => {
+        const trackConds = {
+          ...prev.trigConditions[trackId],
+        };
+        delete trackConds[stepIndex];
+        return {
+          ...prev,
+          trigConditions: {
+            ...prev.trigConditions,
+            [trackId]: trackConds,
+          },
+        };
+      });
     },
     []
   );
@@ -629,6 +768,8 @@ export function SequencerProvider({
       setTrackLength,
       clearAll,
       setSwing,
+      setTrigCondition,
+      clearTrigCondition,
     },
     meta: { stepRef, totalStepsRef, config },
   };
