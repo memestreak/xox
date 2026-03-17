@@ -394,24 +394,24 @@ describe('validateTrigConditions', () => {
   it('valid probability condition round-trips', async () => {
     const config = defaultConfig();
     config.trigConditions = {
-      bd: { 0: { type: 'probability', value: 50 } },
+      bd: { 0: { probability: 50 } },
     };
     const hash = await encodeConfig(config);
     const decoded = await decodeConfig(hash);
     expect(decoded.trigConditions).toEqual({
-      bd: { 0: { type: 'probability', value: 50 } },
+      bd: { 0: { probability: 50 } },
     });
   });
 
   it('valid cycle condition round-trips', async () => {
     const config = defaultConfig();
     config.trigConditions = {
-      sd: { 2: { type: 'cycle', a: 1, b: 4 } },
+      sd: { 2: { cycle: { a: 1, b: 4 } } },
     };
     const hash = await encodeConfig(config);
     const decoded = await decodeConfig(hash);
     expect(decoded.trigConditions).toEqual({
-      sd: { 2: { type: 'cycle', a: 1, b: 4 } },
+      sd: { 2: { cycle: { a: 1, b: 4 } } },
     });
   });
 
@@ -436,20 +436,20 @@ describe('validateTrigConditions', () => {
         bd: {
           0: { type: 'probability', value: 0 },
           1: { type: 'probability', value: 100 },
-          2: { type: 'probability', value: 50 },
+          2: { probability: 50 },
         },
       },
     };
     const hash = await encodeRaw(raw);
     const decoded = await decodeConfig(hash);
     expect(decoded.trigConditions.bd?.[0]).toEqual(
-      { type: 'probability', value: 1 }
+      { probability: 1 }
     );
     expect(decoded.trigConditions.bd?.[1]).toEqual(
-      { type: 'probability', value: 99 }
+      { probability: 99 }
     );
     expect(decoded.trigConditions.bd?.[2]).toEqual(
-      { type: 'probability', value: 50 }
+      { probability: 50 }
     );
   });
 
@@ -464,7 +464,7 @@ describe('validateTrigConditions', () => {
     const hash = await encodeRaw(raw);
     const decoded = await decodeConfig(hash);
     expect(decoded.trigConditions.bd?.[0]).toEqual(
-      { type: 'cycle', a: 1, b: 8 }
+      { cycle: { a: 1, b: 8 } }
     );
   });
 
@@ -492,7 +492,7 @@ describe('validateTrigConditions', () => {
     const hash = await encodeRaw(raw);
     const decoded = await decodeConfig(hash);
     expect(decoded.trigConditions.bd?.[0]).toEqual(
-      { type: 'cycle', a: 3, b: 3 }
+      { cycle: { a: 3, b: 3 } }
     );
   });
 
@@ -502,7 +502,7 @@ describe('validateTrigConditions', () => {
     const raw = {
       ...config,
       trigConditions: {
-        bd: { 16: { type: 'probability', value: 50 } },
+        bd: { 16: { probability: 50 } },
       },
     };
     const hash = await encodeRaw(raw);

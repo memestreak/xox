@@ -3,7 +3,7 @@
 import {
   memo, useCallback, useEffect, useRef, useState,
 } from 'react';
-import { TrackId } from './types';
+import type { StepConditions, TrackId } from './types';
 import TrackToggle from './TrackToggle';
 import StepButton from './StepButton';
 import Knob from './Knob';
@@ -32,6 +32,12 @@ interface TrackRowProps {
     trackId: TrackId, length: number
   ) => void;
   onToggleFreeRun: (trackId: TrackId) => void;
+  trigConditions?: Record<number, StepConditions>;
+  onOpenPopover?: (
+    trackId: TrackId,
+    stepIndex: number,
+    rect: { top: number; left: number }
+  ) => void;
 }
 
 /**
@@ -60,6 +66,8 @@ function TrackRowInner({
   onSetGain,
   onSetTrackLength,
   onToggleFreeRun,
+  trigConditions,
+  onOpenPopover,
 }: TrackRowProps) {
   const handleMute = useCallback(
     () => onToggleMute(trackId),
@@ -93,12 +101,12 @@ function TrackRowInner({
     if (!menuOpen) return;
     const handleClick = (e: MouseEvent) => {
       if (
-        menuRef.current &&
-        !menuRef.current.contains(
+        menuRef.current
+        && !menuRef.current.contains(
           e.target as Node
-        ) &&
-        nameRef.current &&
-        !nameRef.current.contains(
+        )
+        && nameRef.current
+        && !nameRef.current.contains(
           e.target as Node
         )
       ) {
@@ -276,14 +284,16 @@ function TrackRowInner({
               { length: 16 },
               (_, i) => {
                 const disabled =
-                  i >= trackLength || i >= patternLength;
+                  i >= trackLength
+                  || i >= patternLength;
                 return (
                   <StepButton
                     key={i}
                     trackName={trackName}
                     stepIndex={i}
                     isActive={
-                      !disabled && steps[i] === '1'
+                      !disabled
+                      && steps[i] === '1'
                     }
                     isCurrent={
                       !disabled
@@ -293,6 +303,19 @@ function TrackRowInner({
                     isDisabled={disabled}
                     onToggle={
                       () => onToggleStep(trackId, i)
+                    }
+                    conditions={
+                      trigConditions?.[i]
+                    }
+                    onOpenPopover={
+                      onOpenPopover
+                        ? (rect: {
+                            top: number;
+                            left: number;
+                          }) => onOpenPopover(
+                            trackId, i, rect
+                          )
+                        : undefined
                     }
                   />
                 );
