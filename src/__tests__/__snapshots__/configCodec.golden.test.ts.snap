@@ -108,6 +108,7 @@ exports[`golden-file tests > defaultConfig() snapshot 1`] = `
     "rs": 16,
     "sd": 16,
   },
-  "version": 2,
+  "trigConditions": {},
+  "version": 3,
 }
 `;

@@ -168,7 +168,7 @@ describe('defensive decoding', () => {
     const raw = { ...config, version: 999 };
     const hash = await encodeRaw(raw);
     const decoded = await decodeConfig(hash);
-    expect(decoded.version).toBe(2);
+    expect(decoded.version).toBe(3);
   });
 
   it('partial config (only kitId) fills defaults', async () => {
@@ -375,6 +375,146 @@ describe('swing serialization', () => {
       ...defaultConfig(), swing: 'high',
     });
     expect((await decodeConfig(hash)).swing).toBe(0);
+  });
+});
+
+// -------------------------------------------------------
+// D. TrigCondition validation
+// -------------------------------------------------------
+describe('validateTrigConditions', () => {
+  it('missing trigConditions defaults to empty', async () => {
+    const config = defaultConfig();
+    const { trigConditions, ...noTc } = config;
+    void trigConditions; // intentionally omitted
+    const hash = await encodeRaw(noTc);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions).toEqual({});
+  });
+
+  it('valid probability condition round-trips', async () => {
+    const config = defaultConfig();
+    config.trigConditions = {
+      bd: { 0: { type: 'probability', value: 50 } },
+    };
+    const hash = await encodeConfig(config);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions).toEqual({
+      bd: { 0: { type: 'probability', value: 50 } },
+    });
+  });
+
+  it('valid cycle condition round-trips', async () => {
+    const config = defaultConfig();
+    config.trigConditions = {
+      sd: { 2: { type: 'cycle', a: 1, b: 4 } },
+    };
+    const hash = await encodeConfig(config);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions).toEqual({
+      sd: { 2: { type: 'cycle', a: 1, b: 4 } },
+    });
+  });
+
+  it('invalid type is dropped', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      trigConditions: {
+        bd: { 0: { type: 'random', value: 50 } },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions).toEqual({});
+  });
+
+  it('probability value clamped to 1-99', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      trigConditions: {
+        bd: {
+          0: { type: 'probability', value: 0 },
+          1: { type: 'probability', value: 100 },
+          2: { type: 'probability', value: 50 },
+        },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions.bd?.[0]).toEqual(
+      { type: 'probability', value: 1 }
+    );
+    expect(decoded.trigConditions.bd?.[1]).toEqual(
+      { type: 'probability', value: 99 }
+    );
+    expect(decoded.trigConditions.bd?.[2]).toEqual(
+      { type: 'probability', value: 50 }
+    );
+  });
+
+  it('cycle b clamped to max 8', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      trigConditions: {
+        bd: { 0: { type: 'cycle', a: 1, b: 16 } },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions.bd?.[0]).toEqual(
+      { type: 'cycle', a: 1, b: 8 }
+    );
+  });
+
+  it('cycle b=1 is dropped', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      trigConditions: {
+        bd: { 0: { type: 'cycle', a: 1, b: 1 } },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions).toEqual({});
+  });
+
+  it('cycle a>b is clamped to a=b', async () => {
+    const config = defaultConfig();
+    const raw = {
+      ...config,
+      trigConditions: {
+        bd: { 0: { type: 'cycle', a: 5, b: 3 } },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions.bd?.[0]).toEqual(
+      { type: 'cycle', a: 3, b: 3 }
+    );
+  });
+
+  it('step index beyond track length is dropped', async () => {
+    const config = defaultConfig();
+    // Default track length is 16, step 16 is out of bounds
+    const raw = {
+      ...config,
+      trigConditions: {
+        bd: { 16: { type: 'probability', value: 50 } },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions).toEqual({});
+  });
+
+  it('non-object trigConditions defaults to empty', async () => {
+    const raw = { ...defaultConfig(), trigConditions: 'bad' };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions).toEqual({});
   });
 });
 
