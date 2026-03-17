@@ -270,7 +270,11 @@ function TrackRowInner({
         <div className="flex-1 relative">
           <div
             ref={gridRef}
-            className="grid grid-cols-8 lg:grid-cols-16 gap-[3px] lg:gap-1.5"
+            className="grid gap-[3px] lg:gap-1.5"
+            style={{
+              gridTemplateColumns:
+                `repeat(${patternLength}, minmax(0, 1fr))`,
+            }}
           >
             {Array.from(
               { length: patternLength },

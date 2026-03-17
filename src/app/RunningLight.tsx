@@ -19,7 +19,13 @@ function RunningLightInner({
   return (
     <div className="flex gap-4 items-center pt-2">
       <div className="hidden lg:block w-48" />
-      <div className="flex-1 grid grid-cols-8 lg:grid-cols-16 gap-[3px] lg:gap-1.5">
+      <div
+        className="flex-1 grid gap-[3px] lg:gap-1.5"
+        style={{
+          gridTemplateColumns:
+            `repeat(${patternLength}, minmax(0, 1fr))`,
+        }}
+      >
         {Array.from(
           { length: patternLength },
           (_, i) => (
