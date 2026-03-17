@@ -3,6 +3,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useSequencer } from '../app/SequencerContext';
 import { TRACK_IDS } from '../app/types';
 import type { TrackId } from '../app/types';
+import patternsData from '../app/data/patterns.json';
+import type { Pattern } from '../app/types';
 import { TestWrapper } from './helpers/sequencer-wrapper';
 
 // Mock AudioEngine -- capture the onStep callback via start()
@@ -582,6 +584,217 @@ describe('trig conditions in handleStep', () => {
         result.current.meta.config
           .trigConditions.bd?.[0]
       ).toBeUndefined();
+    }
+  );
+
+  it('shortening track prunes conditions beyond length',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.setTrigCondition(
+          'bd', 15, { type: 'probability', value: 75 }
+        );
+      });
+      await act(async () => {
+        result.current.actions.setTrackLength('bd', 8);
+      });
+
+      expect(
+        result.current.meta.config
+          .trigConditions.bd?.[15]
+      ).toBeUndefined();
+    }
+  );
+
+  it('shortening track preserves conditions within length',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.setTrigCondition(
+          'bd', 3, { type: 'probability', value: 75 }
+        );
+      });
+      await act(async () => {
+        result.current.actions.setTrackLength('bd', 8);
+      });
+
+      expect(
+        result.current.meta.config
+          .trigConditions.bd?.[3]
+      ).toEqual({ type: 'probability', value: 75 });
+    }
+  );
+
+  it('shortening pattern length prunes conditions',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.setTrigCondition(
+          'bd', 15, { type: 'probability', value: 75 }
+        );
+      });
+      await act(async () => {
+        result.current.actions.setPatternLength(8);
+      });
+
+      expect(
+        result.current.meta.config
+          .trigConditions.bd?.[15]
+      ).toBeUndefined();
+    }
+  );
+
+  it('clearAll resets trigConditions',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.setTrigCondition(
+          'bd', 0, { type: 'probability', value: 50 }
+        );
+      });
+      await act(async () => {
+        result.current.actions.clearAll();
+      });
+
+      expect(
+        result.current.meta.config.trigConditions
+      ).toEqual({});
+    }
+  );
+
+  it('loading preset clears conditions',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.setTrigCondition(
+          'bd', 0, { type: 'probability', value: 50 }
+        );
+      });
+      await act(async () => {
+        result.current.actions.setPattern(
+          patternsData.patterns[0] as Pattern
+        );
+      });
+
+      expect(
+        result.current.meta.config.trigConditions
+      ).toEqual({});
+    }
+  );
+
+  it('toggling step off preserves condition',
+    async () => {
+      const { result } = renderSequencer();
+
+      // Turn step 0 of bd on
+      await act(async () => {
+        const cur =
+          result.current.meta.config.steps.bd;
+        if (cur[0] === '0') {
+          result.current.actions.toggleStep('bd', 0);
+        }
+      });
+
+      // Set a condition
+      await act(async () => {
+        result.current.actions.setTrigCondition(
+          'bd', 0,
+          { type: 'probability', value: 50 }
+        );
+      });
+
+      // Toggle step off
+      await act(async () => {
+        result.current.actions.toggleStep('bd', 0);
+      });
+
+      // Condition should persist
+      expect(
+        result.current.meta.config
+          .trigConditions.bd?.[0]
+      ).toEqual({ type: 'probability', value: 50 });
+
+      // Toggle step back on
+      await act(async () => {
+        result.current.actions.toggleStep('bd', 0);
+      });
+
+      // Condition should still be there
+      expect(
+        result.current.meta.config
+          .trigConditions.bd?.[0]
+      ).toEqual({ type: 'probability', value: 50 });
+    }
+  );
+
+  it('mute resets cycle count for that track',
+    async () => {
+      const { result } = renderSequencer();
+
+      // Start clean, activate bd step 0
+      await act(async () => {
+        result.current.actions.clearAll();
+      });
+      await act(async () => {
+        result.current.actions.toggleStep('bd', 0);
+      });
+
+      // Set cycle 2:2: fires when cycleCount % 2 === 1
+      await act(async () => {
+        result.current.actions.setTrigCondition(
+          'bd', 0,
+          { type: 'cycle', a: 2, b: 2 }
+        );
+      });
+
+      mockPlaySound.mockClear();
+      mockStart.mockClear();
+
+      await act(async () => {
+        result.current.actions.togglePlay();
+      });
+
+      const onStep = mockStart.mock.calls[0][1] as (
+        step: number, time: number
+      ) => void;
+
+      await waitFor(() => {
+        expect(
+          result.current.state.isPlaying
+        ).toBe(true);
+      });
+      mockPlaySound.mockClear();
+
+      // Play 17 steps: cycle increments at total=16,
+      // so cycleCount=1 after 17 calls.
+      // total=17 after these calls (not a multiple of 16).
+      for (let s = 0; s < 17; s++) {
+        onStep(s % 16, 0.0);
+      }
+
+      // Mute then unmute bd — each call resets
+      // cycleCountRef[bd] to 0
+      await act(async () => {
+        result.current.actions.toggleMute('bd');
+      });
+      await act(async () => {
+        result.current.actions.toggleMute('bd');
+      });
+
+      mockPlaySound.mockClear();
+
+      // totalStepsRef is now 17; 17 % 16 !== 0, so no
+      // cycle increment fires. cycleCount stays at 0.
+      // cycle 2:2 requires cycleCount % 2 === 1, so
+      // bd step 0 should NOT fire.
+      onStep(0, 0.0);
+
+      expect(mockPlaySound).not.toHaveBeenCalled();
     }
   );
 });

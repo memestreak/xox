@@ -494,4 +494,34 @@ describe('URL hash import', () => {
     expect(result.current.meta.config.kitId).toBe('808');
     expect(result.current.meta.config.bpm).toBe(300);
   });
+
+  it('v3 hash with trigConditions sets conditions in state',
+    async () => {
+      const config = defaultConfig();
+      config.trigConditions = {
+        bd: { 0: { type: 'probability', value: 50 } },
+        sd: { 3: { type: 'cycle', a: 1, b: 4 } },
+      };
+      const hash = await encodeConfig(config);
+      window.location.hash = hash;
+
+      const { result } = renderSequencer();
+      await waitFor(() => {
+        expect(
+          result.current.meta.config
+            .trigConditions.bd?.[0]
+        ).toBeDefined();
+      });
+      expect(
+        result.current.meta.config.trigConditions.bd![0]
+      ).toEqual(
+        { type: 'probability', value: 50 }
+      );
+      expect(
+        result.current.meta.config.trigConditions.sd![3]
+      ).toEqual(
+        { type: 'cycle', a: 1, b: 4 }
+      );
+    }
+  );
 });
