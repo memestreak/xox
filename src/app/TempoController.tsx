@@ -12,6 +12,7 @@ interface TempoControllerProps {
 
 export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
   const tapBufferRef = useRef<number[]>([]);
+  const tapBtnRef = useRef<HTMLButtonElement>(null);
 
   const handleTap = useCallback(() => {
     const now = performance.now();
@@ -38,7 +39,16 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
       const rounded = Math.round(clamped * 2) / 2;
       setBpm(rounded);
     }
+
   }, [setBpm]);
+
+  const flashTap = useCallback(() => {
+    const btn = tapBtnRef.current;
+    if (!btn) return;
+    btn.classList.remove('tap-flash');
+    void btn.offsetWidth;
+    btn.classList.add('tap-flash');
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -53,29 +63,31 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
   }, [handleTap]);
 
   return (
-    <div className="flex items-center gap-1">
-      <div className="flex items-center gap-1 lg:flex-col lg:items-stretch">
-        <label htmlFor="bpm-input" className="text-[10px] uppercase tracking-widest text-neutral-500 lg:mb-1 font-bold">BPM</label>
-        <input
-          id="bpm-input"
-          name="bpm"
-          type="number"
-          inputMode="numeric"
-          autoComplete="off"
-          value={bpm}
-          min={MIN_BPM}
-          max={MAX_BPM}
-          onChange={(e) => setBpm(Math.max(MIN_BPM, Math.min(MAX_BPM, Number(e.target.value) || MIN_BPM)))}
-          className="bg-neutral-900 border border-neutral-800 rounded px-2 py-1 w-14 lg:w-20 text-orange-500 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:border-orange-500 transition-colors"
-        />
-      </div>
+    <div className="relative flex items-center">
+      <label htmlFor="bpm-input" className="sr-only">BPM</label>
+      <input
+        id="bpm-input"
+        name="bpm"
+        type="number"
+        inputMode="numeric"
+        autoComplete="off"
+        value={bpm}
+        min={MIN_BPM}
+        max={MAX_BPM}
+        onChange={(e) => setBpm(Math.max(MIN_BPM, Math.min(MAX_BPM, Number(e.target.value) || MIN_BPM)))}
+        className="bg-neutral-900 border border-neutral-800 rounded pl-2 pr-10 py-1 w-28 text-orange-500 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:border-orange-500 transition-colors"
+      />
       <button
+        ref={tapBtnRef}
         type="button"
         aria-label="Tap tempo"
-        onClick={handleTap}
-        className="self-end bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-neutral-400 active:text-orange-500 active:border-orange-500 transition-colors min-w-[32px] min-h-[32px]"
+        onMouseDown={() => { handleTap(); flashTap(); }}
+        onTouchStart={() => { handleTap(); flashTap(); }}
+        onClick={(e) => e.preventDefault()}
+        className="group/tap absolute inset-y-0 right-0 px-2 flex items-center text-[10px] uppercase tracking-widest font-bold cursor-pointer transition-colors"
       >
-        Tap
+        <span className="text-neutral-500 group-hover/tap:hidden">BPM</span>
+        <span className="text-neutral-400 hidden group-hover/tap:inline">TAP</span>
       </button>
     </div>
   );

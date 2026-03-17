@@ -79,6 +79,21 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   box-shadow: 0 0 0 3px #f97316;
 }
 
+@keyframes tap-pulse {
+  0% {
+    background-color: rgb(234 88 12 / 0.4);
+    color: #f97316;
+  }
+  100% {
+    background-color: transparent;
+    color: '';
+  }
+}
+
+.tap-flash {
+  animation: tap-pulse 200ms ease-out;
+}
+
 @supports (padding-top: env(safe-area-inset-top)) {
   .safe-area-top {
     padding-top: env(safe-area-inset-top);

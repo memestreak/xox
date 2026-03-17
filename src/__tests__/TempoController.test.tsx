@@ -78,7 +78,7 @@ describe('TempoController tap tempo', () => {
     render(
       <TempoController bpm={120} setBpm={setBpm} />
     );
-    fireEvent.click(
+    fireEvent.mouseDown(
       screen.getByRole('button', { name: 'Tap tempo' })
     );
     expect(setBpm).not.toHaveBeenCalled();
@@ -95,8 +95,8 @@ describe('TempoController tap tempo', () => {
     perfSpy
       .mockReturnValueOnce(1000)
       .mockReturnValueOnce(1500);
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    fireEvent.mouseDown(btn);
+    fireEvent.mouseDown(btn);
     expect(setBpm).toHaveBeenCalledWith(120);
   });
 
@@ -114,10 +114,10 @@ describe('TempoController tap tempo', () => {
       .mockReturnValueOnce(1400)
       .mockReturnValueOnce(1900)
       .mockReturnValueOnce(2500);
-    fireEvent.click(btn);
-    fireEvent.click(btn);
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    fireEvent.mouseDown(btn);
+    fireEvent.mouseDown(btn);
+    fireEvent.mouseDown(btn);
+    fireEvent.mouseDown(btn);
     expect(setBpm).toHaveBeenLastCalledWith(120);
   });
 
@@ -133,8 +133,8 @@ describe('TempoController tap tempo', () => {
     perfSpy
       .mockReturnValueOnce(1000)
       .mockReturnValueOnce(1470);
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    fireEvent.mouseDown(btn);
+    fireEvent.mouseDown(btn);
     expect(setBpm).toHaveBeenCalledWith(127.5);
   });
 
@@ -151,12 +151,12 @@ describe('TempoController tap tempo', () => {
       .mockReturnValueOnce(1500)
       // Third tap after 2s gap — buffer resets
       .mockReturnValueOnce(4000);
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    fireEvent.mouseDown(btn);
+    fireEvent.mouseDown(btn);
     expect(setBpm).toHaveBeenCalledWith(120);
     setBpm.mockClear();
     // This tap resets the buffer — single entry, no setBpm
-    fireEvent.click(btn);
+    fireEvent.mouseDown(btn);
     expect(setBpm).not.toHaveBeenCalled();
   });
 
@@ -172,8 +172,8 @@ describe('TempoController tap tempo', () => {
     const btn = screen.getByRole('button', {
       name: 'Tap tempo',
     });
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    fireEvent.mouseDown(btn);
+    fireEvent.mouseDown(btn);
     expect(setBpm).toHaveBeenCalledWith(300);
   });
 
@@ -189,8 +189,8 @@ describe('TempoController tap tempo', () => {
     perfSpy
       .mockReturnValueOnce(1000)
       .mockReturnValueOnce(2999);
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    fireEvent.mouseDown(btn);
+    fireEvent.mouseDown(btn);
     expect(setBpm).toHaveBeenCalledWith(30);
   });
 
