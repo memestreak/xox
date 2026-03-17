@@ -31,15 +31,19 @@ export default function StepGrid() {
 
   useEffect(() => {
     let raf: number;
-    let prev = -1;
+    let prevStep = -1;
+    let prevTotal = 0;
 
     const tick = () => {
-      const cur = stepRef.current;
-      if (cur !== prev) {
-        prev = cur;
-        setDisplayStep(cur);
+      const curStep = stepRef.current;
+      const curTotal = totalStepsRef.current;
+      if (curStep !== prevStep
+        || curTotal !== prevTotal) {
+        prevStep = curStep;
+        prevTotal = curTotal;
+        setDisplayStep(curStep);
         setDisplayTotal(
-          Math.max(0, totalStepsRef.current - 1)
+          Math.max(0, curTotal - 1)
         );
       }
       raf = requestAnimationFrame(tick);
