@@ -499,8 +499,8 @@ describe('URL hash import', () => {
     async () => {
       const config = defaultConfig();
       config.trigConditions = {
-        bd: { 0: { type: 'probability', value: 50 } },
-        sd: { 3: { type: 'cycle', a: 1, b: 4 } },
+        bd: { 0: { probability: 50 } },
+        sd: { 3: { cycle: { a: 1, b: 4 } } },
       };
       const hash = await encodeConfig(config);
       window.location.hash = hash;
@@ -515,12 +515,12 @@ describe('URL hash import', () => {
       expect(
         result.current.meta.config.trigConditions.bd![0]
       ).toEqual(
-        { type: 'probability', value: 50 }
+        { probability: 50 }
       );
       expect(
         result.current.meta.config.trigConditions.sd![3]
       ).toEqual(
-        { type: 'cycle', a: 1, b: 4 }
+        { cycle: { a: 1, b: 4 } }
       );
     }
   );

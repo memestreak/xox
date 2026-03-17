@@ -490,7 +490,7 @@ describe('trig conditions in handleStep', () => {
       // Set probability 50 on bd step 0
       await act(async () => {
         result.current.actions.setTrigCondition(
-          'bd', 0, { type: 'probability', value: 50 }
+          'bd', 0, { probability: 50 }
         );
       });
 
@@ -565,14 +565,14 @@ describe('trig conditions in handleStep', () => {
 
       await act(async () => {
         result.current.actions.setTrigCondition(
-          'bd', 0, { type: 'probability', value: 50 }
+          'bd', 0, { probability: 50 }
         );
       });
 
       expect(
         result.current.meta.config
           .trigConditions.bd?.[0]
-      ).toEqual({ type: 'probability', value: 50 });
+      ).toEqual({ probability: 50 });
 
       await act(async () => {
         result.current.actions.clearTrigCondition(
@@ -593,7 +593,7 @@ describe('trig conditions in handleStep', () => {
 
       await act(async () => {
         result.current.actions.setTrigCondition(
-          'bd', 15, { type: 'probability', value: 75 }
+          'bd', 15, { probability: 75 }
         );
       });
       await act(async () => {
@@ -613,7 +613,7 @@ describe('trig conditions in handleStep', () => {
 
       await act(async () => {
         result.current.actions.setTrigCondition(
-          'bd', 3, { type: 'probability', value: 75 }
+          'bd', 3, { probability: 75 }
         );
       });
       await act(async () => {
@@ -623,7 +623,7 @@ describe('trig conditions in handleStep', () => {
       expect(
         result.current.meta.config
           .trigConditions.bd?.[3]
-      ).toEqual({ type: 'probability', value: 75 });
+      ).toEqual({ probability: 75 });
     }
   );
 
@@ -633,7 +633,7 @@ describe('trig conditions in handleStep', () => {
 
       await act(async () => {
         result.current.actions.setTrigCondition(
-          'bd', 15, { type: 'probability', value: 75 }
+          'bd', 15, { probability: 75 }
         );
       });
       await act(async () => {
@@ -653,7 +653,7 @@ describe('trig conditions in handleStep', () => {
 
       await act(async () => {
         result.current.actions.setTrigCondition(
-          'bd', 0, { type: 'probability', value: 50 }
+          'bd', 0, { probability: 50 }
         );
       });
       await act(async () => {
@@ -672,7 +672,7 @@ describe('trig conditions in handleStep', () => {
 
       await act(async () => {
         result.current.actions.setTrigCondition(
-          'bd', 0, { type: 'probability', value: 50 }
+          'bd', 0, { probability: 50 }
         );
       });
       await act(async () => {
@@ -704,7 +704,7 @@ describe('trig conditions in handleStep', () => {
       await act(async () => {
         result.current.actions.setTrigCondition(
           'bd', 0,
-          { type: 'probability', value: 50 }
+          { probability: 50 }
         );
       });
 
@@ -717,7 +717,7 @@ describe('trig conditions in handleStep', () => {
       expect(
         result.current.meta.config
           .trigConditions.bd?.[0]
-      ).toEqual({ type: 'probability', value: 50 });
+      ).toEqual({ probability: 50 });
 
       // Toggle step back on
       await act(async () => {
@@ -728,7 +728,7 @@ describe('trig conditions in handleStep', () => {
       expect(
         result.current.meta.config
           .trigConditions.bd?.[0]
-      ).toEqual({ type: 'probability', value: 50 });
+      ).toEqual({ probability: 50 });
     }
   );
 
@@ -748,7 +748,7 @@ describe('trig conditions in handleStep', () => {
       await act(async () => {
         result.current.actions.setTrigCondition(
           'bd', 0,
-          { type: 'cycle', a: 2, b: 2 }
+          { cycle: { a: 2, b: 2 } }
         );
       });
 

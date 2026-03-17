@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { TRACKS, useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
 import RunningLight from './RunningLight';
+import TrigConditionPopover
+  from './TrigConditionPopover';
+import type { TrackId } from './types';
 
 /**
  * The main sequencer grid section containing all track
@@ -21,11 +24,17 @@ export default function StepGrid() {
     toggleStep, toggleMute, toggleSolo,
     setGain, setTrackLength, toggleFreeRun,
   } = actions;
-  const { stepRef, totalStepsRef } = meta;
+  const { stepRef, totalStepsRef, config } = meta;
 
-  // Local state driven by rAF, isolated from the context
-  // provider so only StepGrid and its children re-render
-  // on step ticks.
+  const [openPopover, setOpenPopover] = useState<{
+    trackId: TrackId;
+    stepIndex: number;
+    anchorRect: { top: number; left: number };
+  } | null>(null);
+
+  // Local state driven by rAF, isolated from the
+  // context provider so only StepGrid and its children
+  // re-render on step ticks.
   const [displayStep, setDisplayStep] = useState(-1);
   const [displayTotal, setDisplayTotal] = useState(0);
 
@@ -37,8 +46,10 @@ export default function StepGrid() {
     const tick = () => {
       const curStep = stepRef.current;
       const curTotal = totalStepsRef.current;
-      if (curStep !== prevStep
-        || curTotal !== prevTotal) {
+      if (
+        curStep !== prevStep
+        || curTotal !== prevTotal
+      ) {
         prevStep = curStep;
         prevTotal = curTotal;
         setDisplayStep(curStep);
@@ -77,8 +88,31 @@ export default function StepGrid() {
           onSetGain={setGain}
           onSetTrackLength={setTrackLength}
           onToggleFreeRun={toggleFreeRun}
+          trigConditions={
+            config.trigConditions[track.id]
+          }
+          onOpenPopover={(
+            trackId: TrackId,
+            stepIndex: number,
+            rect: { top: number; left: number }
+          ) => setOpenPopover({
+            trackId, stepIndex, anchorRect: rect,
+          })}
         />
       ))}
+      {openPopover !== null ? (
+        <TrigConditionPopover
+          trackId={openPopover.trackId}
+          stepIndex={openPopover.stepIndex}
+          conditions={
+            config.trigConditions[
+              openPopover.trackId
+            ]?.[openPopover.stepIndex]
+          }
+          anchorRect={openPopover.anchorRect}
+          onClose={() => setOpenPopover(null)}
+        />
+      ) : null}
       <RunningLight
         currentStep={displayStep}
         patternLength={patternLength}

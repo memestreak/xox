@@ -20,7 +20,7 @@ import type {
   Kit,
   Pattern,
   SequencerConfig,
-  TrigCondition,
+  StepConditions,
   TrackId,
   TrackState,
 } from './types';
@@ -93,7 +93,7 @@ interface SequencerActions {
   setTrigCondition: (
     trackId: TrackId,
     stepIndex: number,
-    condition: TrigCondition
+    conditions: StepConditions
   ) => void;
   clearTrigCondition: (
     trackId: TrackId,
@@ -543,7 +543,7 @@ export function SequencerProvider({
           const trackConds = newTrigConds[id];
           if (trackConds) {
             const pruned: Record<
-              number, TrigCondition
+              number, StepConditions
             > = {};
             for (const [k, v] of
               Object.entries(trackConds)) {
@@ -588,7 +588,7 @@ export function SequencerProvider({
           prev.trigConditions;
         if (trackConds) {
           const pruned: Record<
-            number, TrigCondition
+            number, StepConditions
           > = {};
           for (const [k, v] of
             Object.entries(trackConds)) {
@@ -705,7 +705,7 @@ export function SequencerProvider({
     (
       trackId: TrackId,
       stepIndex: number,
-      condition: TrigCondition
+      conditions: StepConditions
     ) => {
       setConfig(prev => ({
         ...prev,
@@ -713,7 +713,7 @@ export function SequencerProvider({
           ...prev.trigConditions,
           [trackId]: {
             ...prev.trigConditions[trackId],
-            [stepIndex]: condition,
+            [stepIndex]: conditions,
           },
         },
       }));
@@ -728,12 +728,17 @@ export function SequencerProvider({
           ...prev.trigConditions[trackId],
         };
         delete trackConds[stepIndex];
+        const newTrigConditions = {
+          ...prev.trigConditions,
+        };
+        if (Object.keys(trackConds).length === 0) {
+          delete newTrigConditions[trackId];
+        } else {
+          newTrigConditions[trackId] = trackConds;
+        }
         return {
           ...prev,
-          trigConditions: {
-            ...prev.trigConditions,
-            [trackId]: trackConds,
-          },
+          trigConditions: newTrigConditions,
         };
       });
     },

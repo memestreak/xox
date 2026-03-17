@@ -4,9 +4,9 @@ import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import type {
   SequencerConfig,
+  StepConditions,
   TrackId,
   TrackMixerState,
-  TrigCondition,
 } from './types';
 import { TRACK_IDS } from './types';
 
@@ -299,74 +299,121 @@ const CYCLE_B_MIN = 2;
 const CYCLE_B_MAX = 8;
 
 /**
- * Validate a single trig condition object.
- * Returns null if the condition is invalid and should be dropped.
+ * Validate a single StepConditions object.
+ * Returns null if the entry has no valid fields.
  */
 function validateSingleCondition(
   raw: unknown
-): TrigCondition | null {
-  if (raw === null || typeof raw !== 'object') return null;
+): StepConditions | null {
+  if (raw === null || typeof raw !== 'object') {
+    return null;
+  }
   const obj = raw as Record<string, unknown>;
+  const sc: StepConditions = {};
 
+  // Legacy discriminated-union format (type field)
   if (obj.type === 'probability') {
     if (
-      typeof obj.value !== 'number' ||
-      !isFinite(obj.value)
-    ) return null;
-    return {
-      type: 'probability',
-      value: Math.max(
-        PROB_MIN, Math.min(PROB_MAX, Math.round(obj.value))
-      ),
-    };
-  }
-
-  if (obj.type === 'cycle') {
+      typeof obj.value === 'number'
+      && isFinite(obj.value)
+    ) {
+      sc.probability = Math.max(
+        PROB_MIN,
+        Math.min(PROB_MAX, Math.round(obj.value))
+      );
+    }
+  } else if (obj.type === 'cycle') {
     if (
-      typeof obj.a !== 'number' || !isFinite(obj.a) ||
-      typeof obj.b !== 'number' || !isFinite(obj.b)
-    ) return null;
-    const rawB = Math.round(obj.b);
-    if (rawB < CYCLE_B_MIN) return null;
-    const b = Math.min(CYCLE_B_MAX, rawB);
-    const a = Math.max(1, Math.min(b, Math.round(obj.a)));
-    return { type: 'cycle', a, b };
+      typeof obj.a === 'number' && isFinite(obj.a)
+      && typeof obj.b === 'number' && isFinite(obj.b)
+    ) {
+      const rawB = Math.round(obj.b);
+      if (rawB >= CYCLE_B_MIN) {
+        const b = Math.min(CYCLE_B_MAX, rawB);
+        const a = Math.max(
+          1, Math.min(b, Math.round(obj.a))
+        );
+        sc.cycle = { a, b };
+      }
+    }
+  } else {
+    // New composite format
+    if (
+      typeof obj.probability === 'number'
+      && isFinite(obj.probability)
+    ) {
+      sc.probability = Math.max(
+        PROB_MIN,
+        Math.min(
+          PROB_MAX, Math.round(obj.probability)
+        )
+      );
+    }
+    const cyc = obj.cycle;
+    if (
+      cyc !== null && cyc !== undefined
+      && typeof cyc === 'object'
+    ) {
+      const c = cyc as Record<string, unknown>;
+      if (
+        typeof c.a === 'number' && isFinite(c.a)
+        && typeof c.b === 'number' && isFinite(c.b)
+      ) {
+        const rawB = Math.round(c.b);
+        if (rawB >= CYCLE_B_MIN) {
+          const b = Math.min(CYCLE_B_MAX, rawB);
+          const a = Math.max(
+            1, Math.min(b, Math.round(c.a))
+          );
+          sc.cycle = { a, b };
+        }
+      }
+    }
   }
 
-  return null;
+  if (Object.keys(sc).length === 0) return null;
+  return sc;
 }
 
 /**
- * Validate trigConditions map. Drops entries with invalid
- * step indices (>= trackLength) or invalid condition objects.
+ * Validate trigConditions map. Drops entries with
+ * invalid step indices (>= trackLength) or invalid
+ * condition objects.
  */
 function validateTrigConditions(
   value: unknown,
   trackLengths: Record<TrackId, number>
 ): SequencerConfig['trigConditions'] {
-  if (value === null || typeof value !== 'object') return {};
+  if (
+    value === null || typeof value !== 'object'
+  ) return {};
   const obj = value as Record<string, unknown>;
   const result: SequencerConfig['trigConditions'] = {};
 
   for (const id of TRACK_IDS) {
     const trackEntry = obj[id];
     if (
-      trackEntry === null ||
-      typeof trackEntry !== 'object'
+      trackEntry === null
+      || typeof trackEntry !== 'object'
     ) continue;
 
     const trackLength = trackLengths[id];
-    const stepMap = trackEntry as Record<string, unknown>;
-    const validSteps: Record<number, TrigCondition> = {};
+    const stepMap =
+      trackEntry as Record<string, unknown>;
+    const validSteps: Record<
+      number, StepConditions
+    > = {};
 
     for (const key of Object.keys(stepMap)) {
       const stepIndex = Number(key);
       if (
-        !Number.isInteger(stepIndex) ||
-        stepIndex < 0 ||
-        stepIndex >= trackLength
+        !Number.isInteger(stepIndex)
+        || stepIndex < 0
+        || stepIndex >= trackLength
       ) continue;
-      const cond = validateSingleCondition(stepMap[key]);
+      const cond = validateSingleCondition(
+        stepMap[key]
+      );
       if (cond !== null) {
         validSteps[stepIndex] = cond;
       }
