@@ -248,6 +248,174 @@ describe('pattern state machine', () => {
 });
 
 // -------------------------------------------------------
+// E. setPatternLength track length behavior
+// -------------------------------------------------------
+describe('setPatternLength track lengths', () => {
+  it('shrinking clamps tracks exceeding new length', () => {
+    const { result } = renderSequencer();
+    // Default: all tracks at 16
+    act(() => {
+      result.current.actions.setPatternLength(8);
+    });
+    for (const id of TRACK_IDS) {
+      expect(
+        result.current.meta.config.trackLengths[id]
+      ).toBe(8);
+    }
+  });
+
+  it('shrinking preserves shorter track step strings', () => {
+    const { result } = renderSequencer();
+    // Set bd to custom length 6
+    act(() => {
+      result.current.actions.setTrackLength('bd', 6);
+    });
+    expect(
+      result.current.meta.config.steps.bd.length
+    ).toBe(6);
+    // Shrink pattern from 16 to 10
+    act(() => {
+      result.current.actions.setPatternLength(10);
+    });
+    // bd should still have length 6 and 6-char step string
+    expect(
+      result.current.meta.config.trackLengths.bd
+    ).toBe(6);
+    expect(
+      result.current.meta.config.steps.bd.length
+    ).toBe(6);
+  });
+
+  it('growing expands tracks that were at old max', () => {
+    const { result } = renderSequencer();
+    // Shrink to 8 (all tracks follow to 8)
+    act(() => {
+      result.current.actions.setPatternLength(8);
+    });
+    // Set bd to a custom shorter length
+    act(() => {
+      result.current.actions.setTrackLength('bd', 5);
+    });
+    // Grow back to 12 — tracks at 8 (old max) should
+    // expand to 12, but bd at 5 should stay at 5
+    act(() => {
+      result.current.actions.setPatternLength(12);
+    });
+    expect(
+      result.current.meta.config.trackLengths.bd
+    ).toBe(5);
+    expect(
+      result.current.meta.config.trackLengths.sd
+    ).toBe(12);
+    expect(
+      result.current.meta.config.trackLengths.ch
+    ).toBe(12);
+  });
+});
+
+// -------------------------------------------------------
+// F. clearAll and setSwing actions
+// -------------------------------------------------------
+describe('clearAll', () => {
+  it('sets all track steps to zeros', () => {
+    const { result } = renderSequencer();
+    // First set some steps active
+    act(() => {
+      result.current.actions.toggleStep('bd', 0);
+      result.current.actions.toggleStep('sd', 4);
+    });
+    act(() => {
+      result.current.actions.clearAll();
+    });
+    for (const id of TRACK_IDS) {
+      const steps = result.current.meta.config.steps[id];
+      expect(steps).toMatch(/^0+$/);
+    }
+  });
+
+  it('resets swing to 0', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setSwing(50);
+    });
+    expect(result.current.meta.config.swing).toBe(50);
+    act(() => {
+      result.current.actions.clearAll();
+    });
+    expect(result.current.meta.config.swing).toBe(0);
+  });
+
+  it('resets all track lengths to patternLength', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setTrackLength('bd', 5);
+      result.current.actions.setTrackLength('sd', 8);
+    });
+    act(() => {
+      result.current.actions.clearAll();
+    });
+    const pl = result.current.state.patternLength;
+    for (const id of TRACK_IDS) {
+      expect(
+        result.current.meta.config.trackLengths[id]
+      ).toBe(pl);
+    }
+  });
+
+  it('sets pattern to custom', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.clearAll();
+    });
+    expect(
+      result.current.state.currentPattern.id
+    ).toBe('custom');
+  });
+});
+
+describe('setSwing', () => {
+  it('updates swing value', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setSwing(75);
+    });
+    expect(result.current.meta.config.swing).toBe(75);
+  });
+
+  it('clamps below 0', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setSwing(-10);
+    });
+    expect(result.current.meta.config.swing).toBe(0);
+  });
+
+  it('clamps above 100', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setSwing(150);
+    });
+    expect(result.current.meta.config.swing).toBe(100);
+  });
+
+  it('setPattern does not reset swing', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setSwing(60);
+    });
+    const preset = patternsData.patterns[1];
+    act(() => {
+      result.current.actions.setPattern({
+        id: preset.id,
+        name: preset.name,
+        steps: preset.steps as Record<TrackId, string>,
+      });
+    });
+    expect(result.current.meta.config.swing).toBe(60);
+  });
+});
+
+// -------------------------------------------------------
 // D. URL hash import
 // -------------------------------------------------------
 describe('URL hash import', () => {

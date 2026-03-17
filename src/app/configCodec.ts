@@ -42,6 +42,7 @@ export function defaultConfig(): SequencerConfig {
     trackLengths,
     steps: firstPattern.steps as Record<TrackId, string>,
     mixer,
+    swing: 0,
   };
 }
 
@@ -158,6 +159,7 @@ function validateConfig(
   const mixer = validateMixer(
     obj.mixer, defaults.mixer
   );
+  const swing = validateSwing(obj.swing);
 
   return {
     version: CONFIG_VERSION,
@@ -167,6 +169,7 @@ function validateConfig(
     trackLengths,
     steps,
     mixer,
+    swing,
   };
 }
 
@@ -194,6 +197,20 @@ function validatePatternLength(value: unknown): number {
   return Math.max(
     PATTERN_LENGTH_MIN,
     Math.min(PATTERN_LENGTH_MAX, Math.round(value))
+  );
+}
+
+const SWING_MIN = 0;
+const SWING_MAX = 100;
+const DEFAULT_SWING = 0;
+
+function validateSwing(value: unknown): number {
+  if (typeof value !== 'number' || !isFinite(value)) {
+    return DEFAULT_SWING;
+  }
+  return Math.max(
+    SWING_MIN,
+    Math.min(SWING_MAX, Math.round(value))
   );
 }
 

@@ -210,7 +210,7 @@ function TrackRowInner({
   }, []);
 
   const handlePct =
-    (trackLength / patternLength) * 100;
+    (trackLength / 16) * 100;
 
   return (
     <div>
@@ -273,9 +273,10 @@ function TrackRowInner({
             className="grid grid-cols-8 lg:grid-cols-16 gap-[3px] lg:gap-1.5"
           >
             {Array.from(
-              { length: patternLength },
+              { length: 16 },
               (_, i) => {
-                const disabled = i >= trackLength;
+                const disabled =
+                  i >= trackLength || i >= patternLength;
                 return (
                   <StepButton
                     key={i}

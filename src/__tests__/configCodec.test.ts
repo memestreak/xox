@@ -340,6 +340,44 @@ describe('validateSteps', () => {
   });
 });
 
+describe('swing serialization', () => {
+  it('config with swing round-trips', async () => {
+    const config = makeConfig({ swing: 50 });
+    const hash = await encodeConfig(config);
+    const decoded = await decodeConfig(hash);
+    expect(decoded).toEqual(config);
+    expect(decoded.swing).toBe(50);
+  });
+
+  it('missing swing defaults to 0', async () => {
+    const config = defaultConfig();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { swing: _swing, ...noSwing } = config;
+    const hash = await encodeRaw(noSwing);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.swing).toBe(0);
+  });
+
+  it('swing clamped to 0-100', async () => {
+    const below = await encodeRaw({
+      ...defaultConfig(), swing: -10,
+    });
+    expect((await decodeConfig(below)).swing).toBe(0);
+
+    const above = await encodeRaw({
+      ...defaultConfig(), swing: 200,
+    });
+    expect((await decodeConfig(above)).swing).toBe(100);
+  });
+
+  it('non-number swing defaults to 0', async () => {
+    const hash = await encodeRaw({
+      ...defaultConfig(), swing: 'high',
+    });
+    expect((await decodeConfig(hash)).swing).toBe(0);
+  });
+});
+
 describe('validateMixer', () => {
   it('negative gain clamped to 0', async () => {
     const config = defaultConfig();

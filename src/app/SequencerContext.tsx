@@ -67,6 +67,7 @@ interface SequencerState {
   currentPattern: Pattern;
   trackStates: Record<TrackId, TrackState>;
   isLoaded: boolean;
+  swing: number;
 }
 
 interface SequencerActions {
@@ -85,6 +86,8 @@ interface SequencerActions {
   setTrackLength: (
     trackId: TrackId, length: number
   ) => void;
+  clearAll: () => void;
+  setSwing: (value: number) => void;
 }
 
 interface SequencerMeta {
@@ -287,6 +290,15 @@ export function SequencerProvider({
       const states = trackStatesRef.current;
       const pattern = patternRef.current;
       const cfg = configRef.current;
+
+      // Swing: offset odd steps forward in time
+      const halfStep =
+        (60 / cfg.bpm) * 0.25 / 2;
+      const swingOffset = step % 2 === 1
+        ? (cfg.swing / 100) * 0.7 * halfStep
+        : 0;
+      const scheduledTime = time + swingOffset;
+
       const anySolo = Object.values(states).some(
         t => t.isSolo
       );
@@ -320,7 +332,7 @@ export function SequencerProvider({
           const gain =
             isAccented ? cubic * 1.5 : cubic;
           audioEngine.playSound(
-            track.id, time, gain
+            track.id, scheduledTime, gain
           );
         }
       });
@@ -454,12 +466,17 @@ export function SequencerProvider({
         for (const id of TRACK_IDS) {
           if (newTrackLengths[id] > clamped) {
             newTrackLengths[id] = clamped;
+          } else if (
+            newTrackLengths[id] === prev.patternLength
+          ) {
+            newTrackLengths[id] = clamped;
           }
+          const len = newTrackLengths[id];
           const cur = newSteps[id];
-          if (cur.length < clamped) {
-            newSteps[id] = cur.padEnd(clamped, '0');
-          } else if (cur.length > clamped) {
-            newSteps[id] = cur.substring(0, clamped);
+          if (cur.length < len) {
+            newSteps[id] = cur.padEnd(len, '0');
+          } else if (cur.length > len) {
+            newSteps[id] = cur.substring(0, len);
           }
         }
         return {
@@ -553,6 +570,37 @@ export function SequencerProvider({
     []
   );
 
+  const clearAll = useCallback(() => {
+    setConfig(prev => {
+      const newSteps = {} as Record<TrackId, string>;
+      const newTrackLengths = {} as Record<
+        TrackId, number
+      >;
+      for (const id of TRACK_IDS) {
+        newSteps[id] =
+          '0'.repeat(prev.patternLength);
+        newTrackLengths[id] = prev.patternLength;
+      }
+      return {
+        ...prev,
+        steps: newSteps,
+        trackLengths: newTrackLengths,
+        swing: 0,
+      };
+    });
+    setSelectedPatternId('custom');
+  }, []);
+
+  const setSwing = useCallback(
+    (value: number) => {
+      setConfig(prev => ({
+        ...prev,
+        swing: Math.max(0, Math.min(100, value)),
+      }));
+    },
+    []
+  );
+
   // ─── Context value ────────────────────────────────
 
   const value: SequencerContextValue = {
@@ -565,6 +613,7 @@ export function SequencerProvider({
       currentPattern,
       trackStates,
       isLoaded,
+      swing: config.swing,
     },
     actions: {
       togglePlay,
@@ -578,6 +627,8 @@ export function SequencerProvider({
       toggleFreeRun,
       setPatternLength,
       setTrackLength,
+      clearAll,
+      setSwing,
     },
     meta: { stepRef, totalStepsRef, config },
   };

@@ -93,6 +93,7 @@ exports[`golden-file tests > defaultConfig() snapshot 1`] = `
     "rs": "0001001000001000",
     "sd": "0000000000000000",
   },
+  "swing": 0,
   "trackLengths": {
     "ac": 16,
     "bd": 16,

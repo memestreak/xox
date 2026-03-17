@@ -67,4 +67,5 @@ export interface SequencerConfig {
   trackLengths: Record<TrackId, number>;
   steps: Record<TrackId, string>;
   mixer: Record<TrackId, TrackMixerState>;
+  swing: number;
 }

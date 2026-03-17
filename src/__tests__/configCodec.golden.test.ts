@@ -43,6 +43,7 @@ function goldenConfigV1Decoded(): SequencerConfig {
     trackLengths,
     steps,
     mixer,
+    swing: 0,
   };
 }
 
@@ -77,6 +78,7 @@ function goldenConfigV2(): SequencerConfig {
     trackLengths,
     steps,
     mixer,
+    swing: 0,
   };
 }
 
