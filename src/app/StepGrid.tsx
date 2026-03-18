@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import {
+  useEffect, useRef, useState,
+} from 'react';
+import type { RefObject } from 'react';
 import { TRACKS, useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
 import RunningLight from './RunningLight';
@@ -13,13 +16,19 @@ const TRACK_ORDER: TrackId[] = TRACKS.map(
   t => t.id
 );
 
+interface StepGridProps {
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
+}
+
 /**
  * The main sequencer grid section containing all track
  * rows and the running light indicator. Subscribes to
  * stepRef via requestAnimationFrame to update the visual
  * step highlight without causing full-tree re-renders.
  */
-export default function StepGrid() {
+export default function StepGrid({
+  scrollContainerRef,
+}: StepGridProps) {
   const { state, actions, meta } = useSequencer();
   const {
     currentPattern, trackStates,
@@ -132,6 +141,7 @@ export default function StepGrid() {
           }
           anchorRect={openPopover.anchorRect}
           onClose={() => setOpenPopover(null)}
+          scrollContainerRef={scrollContainerRef}
         />
       ) : null}
       <RunningLight
