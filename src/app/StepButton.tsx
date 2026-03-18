@@ -51,13 +51,14 @@ function StepButtonInner({
     },
     {
       threshold: 500,
-      cancelOnMovement: 25,
+      cancelOnMovement: 5,
     }
   );
 
   if (isDisabled) {
     return (
       <div
+        data-step={stepIndex}
         aria-label={
           `${trackName} step ${stepIndex + 1}`
           + ' (inactive)'
@@ -89,6 +90,7 @@ function StepButtonInner({
   return (
     <button
       ref={buttonRef}
+      data-step={stepIndex}
       {...longPress()}
       onClick={onToggle}
       onContextMenu={(e) => {

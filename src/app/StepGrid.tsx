@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TRACKS, useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
 import RunningLight from './RunningLight';
 import TrigConditionPopover
   from './TrigConditionPopover';
+import { useDragPaint } from './useDragPaint';
 import type { TrackId } from './types';
+
+const TRACK_ORDER: TrackId[] = TRACKS.map(
+  t => t.id
+);
 
 /**
  * The main sequencer grid section containing all track
@@ -21,10 +26,19 @@ export default function StepGrid() {
     patternLength, trackLengths,
   } = state;
   const {
-    toggleStep, toggleMute, toggleSolo,
+    toggleStep, setStep, toggleMute, toggleSolo,
     setGain, setTrackLength, toggleFreeRun,
   } = actions;
   const { stepRef, totalStepsRef, config } = meta;
+
+  const dragContainerRef = useRef<HTMLDivElement>(null);
+  const dragPaint = useDragPaint({
+    containerRef: dragContainerRef,
+    trackOrder: TRACK_ORDER,
+    trackLengths,
+    steps: currentPattern.steps,
+    onSetStep: setStep,
+  });
 
   const [openPopover, setOpenPopover] = useState<{
     trackId: TrackId;
@@ -66,40 +80,47 @@ export default function StepGrid() {
 
   return (
     <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-3 lg:p-6 rounded-xl lg:rounded-2xl border border-neutral-800/50">
-      {TRACKS.map(track => (
-        <TrackRow
-          key={track.id}
-          trackId={track.id}
-          trackName={track.name}
-          steps={currentPattern.steps[track.id]}
-          trackLength={trackLengths[track.id]}
-          patternLength={patternLength}
-          isMuted={trackStates[track.id].isMuted}
-          isSolo={trackStates[track.id].isSolo}
-          isFreeRun={
-            trackStates[track.id].freeRun
-          }
-          gain={trackStates[track.id].gain}
-          currentStep={displayStep}
-          totalSteps={displayTotal}
-          onToggleStep={toggleStep}
-          onToggleMute={toggleMute}
-          onToggleSolo={toggleSolo}
-          onSetGain={setGain}
-          onSetTrackLength={setTrackLength}
-          onToggleFreeRun={toggleFreeRun}
-          trigConditions={
-            config.trigConditions[track.id]
-          }
-          onOpenPopover={(
-            trackId: TrackId,
-            stepIndex: number,
-            rect: { top: number; left: number }
-          ) => setOpenPopover({
-            trackId, stepIndex, anchorRect: rect,
-          })}
-        />
-      ))}
+      <div
+        ref={dragContainerRef}
+        style={{ touchAction: 'none' }}
+        {...dragPaint}
+        className="space-y-2 lg:space-y-4"
+      >
+        {TRACKS.map(track => (
+          <TrackRow
+            key={track.id}
+            trackId={track.id}
+            trackName={track.name}
+            steps={currentPattern.steps[track.id]}
+            trackLength={trackLengths[track.id]}
+            patternLength={patternLength}
+            isMuted={trackStates[track.id].isMuted}
+            isSolo={trackStates[track.id].isSolo}
+            isFreeRun={
+              trackStates[track.id].freeRun
+            }
+            gain={trackStates[track.id].gain}
+            currentStep={displayStep}
+            totalSteps={displayTotal}
+            onToggleStep={toggleStep}
+            onToggleMute={toggleMute}
+            onToggleSolo={toggleSolo}
+            onSetGain={setGain}
+            onSetTrackLength={setTrackLength}
+            onToggleFreeRun={toggleFreeRun}
+            trigConditions={
+              config.trigConditions[track.id]
+            }
+            onOpenPopover={(
+              trackId: TrackId,
+              stepIndex: number,
+              rect: { top: number; left: number }
+            ) => setOpenPopover({
+              trackId, stepIndex, anchorRect: rect,
+            })}
+          />
+        ))}
+      </div>
       {openPopover !== null ? (
         <TrigConditionPopover
           trackId={openPopover.trackId}

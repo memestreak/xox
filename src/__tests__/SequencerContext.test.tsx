@@ -107,6 +107,59 @@ describe('action isolation', () => {
     expect(after.mixer).toEqual(before.mixer);
   });
 
+  it('setStep activates a step', () => {
+    const { result } = renderSequencer();
+    // Ensure bd step 5 is off first
+    act(() => {
+      result.current.actions.setStep('bd', 5, '0');
+    });
+    expect(
+      result.current.meta.config.steps.bd[5]
+    ).toBe('0');
+
+    act(() => {
+      result.current.actions.setStep('bd', 5, '1');
+    });
+    expect(
+      result.current.meta.config.steps.bd[5]
+    ).toBe('1');
+  });
+
+  it('setStep deactivates a step', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setStep('bd', 0, '1');
+    });
+    act(() => {
+      result.current.actions.setStep('bd', 0, '0');
+    });
+    expect(
+      result.current.meta.config.steps.bd[0]
+    ).toBe('0');
+  });
+
+  it('setStep is a no-op when value already matches', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setStep('bd', 0, '1');
+    });
+    const before = result.current.meta.config;
+    act(() => {
+      result.current.actions.setStep('bd', 0, '1');
+    });
+    // Same reference — no state change
+    expect(result.current.meta.config).toBe(before);
+  });
+
+  it('setStep is a no-op beyond track length', () => {
+    const { result } = renderSequencer();
+    const before = result.current.meta.config;
+    act(() => {
+      result.current.actions.setStep('bd', 99, '1');
+    });
+    expect(result.current.meta.config).toBe(before);
+  });
+
   it('toggleStep sets pattern to custom', () => {
     const { result } = renderSequencer();
     // Initially should be first preset
