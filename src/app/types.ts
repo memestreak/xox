@@ -23,6 +23,7 @@ export interface Kit {
 export interface StepConditions {
   probability?: number;
   cycle?: { a: number; b: number };
+  fill?: 'fill' | '!fill';
 }
 
 /**

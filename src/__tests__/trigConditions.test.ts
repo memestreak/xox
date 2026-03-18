@@ -13,10 +13,10 @@ describe('evaluateCondition', () => {
     it('always fires when condition is undefined',
       () => {
         expect(evaluateCondition(
-          undefined, { cycleCount: 0 }
+          undefined, { cycleCount: 0, fillActive: false }
         )).toBe(true);
         expect(evaluateCondition(
-          undefined, { cycleCount: 99 }
+          undefined, { cycleCount: 99, fillActive: false }
         )).toBe(true);
       }
     );
@@ -28,7 +28,7 @@ describe('evaluateCondition', () => {
         vi.spyOn(Math, 'random')
           .mockReturnValue(0.49);
         expect(evaluateCondition(
-          { probability: 50 }, { cycleCount: 0 }
+          { probability: 50 }, { cycleCount: 0, fillActive: false }
         )).toBe(true);
       }
     );
@@ -38,7 +38,7 @@ describe('evaluateCondition', () => {
         vi.spyOn(Math, 'random')
           .mockReturnValue(0.50);
         expect(evaluateCondition(
-          { probability: 50 }, { cycleCount: 0 }
+          { probability: 50 }, { cycleCount: 0, fillActive: false }
         )).toBe(false);
       }
     );
@@ -48,7 +48,7 @@ describe('evaluateCondition', () => {
         vi.spyOn(Math, 'random')
           .mockReturnValue(0.009);
         expect(evaluateCondition(
-          { probability: 1 }, { cycleCount: 0 }
+          { probability: 1 }, { cycleCount: 0, fillActive: false }
         )).toBe(true);
       }
     );
@@ -58,7 +58,7 @@ describe('evaluateCondition', () => {
         vi.spyOn(Math, 'random')
           .mockReturnValue(0.99);
         expect(evaluateCondition(
-          { probability: 99 }, { cycleCount: 0 }
+          { probability: 99 }, { cycleCount: 0, fillActive: false }
         )).toBe(false);
       }
     );
@@ -68,7 +68,7 @@ describe('evaluateCondition', () => {
     it('cycle 1:4 fires on cycle 0', () => {
       expect(evaluateCondition(
         { cycle: { a: 1, b: 4 } },
-        { cycleCount: 0 }
+        { cycleCount: 0, fillActive: false }
       )).toBe(true);
     });
 
@@ -76,13 +76,13 @@ describe('evaluateCondition', () => {
       () => {
         const cond = { cycle: { a: 1, b: 4 } };
         expect(evaluateCondition(
-          cond, { cycleCount: 1 }
+          cond, { cycleCount: 1, fillActive: false }
         )).toBe(false);
         expect(evaluateCondition(
-          cond, { cycleCount: 2 }
+          cond, { cycleCount: 2, fillActive: false }
         )).toBe(false);
         expect(evaluateCondition(
-          cond, { cycleCount: 3 }
+          cond, { cycleCount: 3, fillActive: false }
         )).toBe(false);
       }
     );
@@ -90,7 +90,7 @@ describe('evaluateCondition', () => {
     it('cycle 3:4 fires on cycle 2', () => {
       expect(evaluateCondition(
         { cycle: { a: 3, b: 4 } },
-        { cycleCount: 2 }
+        { cycleCount: 2, fillActive: false }
       )).toBe(true);
     });
 
@@ -98,19 +98,62 @@ describe('evaluateCondition', () => {
       () => {
         const cond = { cycle: { a: 2, b: 2 } };
         expect(evaluateCondition(
-          cond, { cycleCount: 0 }
+          cond, { cycleCount: 0, fillActive: false }
         )).toBe(false);
         expect(evaluateCondition(
-          cond, { cycleCount: 1 }
+          cond, { cycleCount: 1, fillActive: false }
         )).toBe(true);
         expect(evaluateCondition(
-          cond, { cycleCount: 2 }
+          cond, { cycleCount: 2, fillActive: false }
         )).toBe(false);
         expect(evaluateCondition(
-          cond, { cycleCount: 3 }
+          cond, { cycleCount: 3, fillActive: false }
         )).toBe(true);
       }
     );
+  });
+
+  describe('fill condition', () => {
+    it('FILL fires when fillActive=true', () => {
+      expect(evaluateCondition(
+        { fill: 'fill' },
+        { cycleCount: 0, fillActive: true }
+      )).toBe(true);
+    });
+
+    it('FILL suppressed when fillActive=false',
+      () => {
+        expect(evaluateCondition(
+          { fill: 'fill' },
+          { cycleCount: 0, fillActive: false }
+        )).toBe(false);
+      }
+    );
+
+    it('!FILL fires when fillActive=false', () => {
+      expect(evaluateCondition(
+        { fill: '!fill' },
+        { cycleCount: 0, fillActive: false }
+      )).toBe(true);
+    });
+
+    it('!FILL suppressed when fillActive=true',
+      () => {
+        expect(evaluateCondition(
+          { fill: '!fill' },
+          { cycleCount: 0, fillActive: true }
+        )).toBe(false);
+      }
+    );
+
+    it('undefined fill has no effect', () => {
+      expect(evaluateCondition(
+        {}, { cycleCount: 0, fillActive: true }
+      )).toBe(true);
+      expect(evaluateCondition(
+        {}, { cycleCount: 0, fillActive: false }
+      )).toBe(true);
+    });
   });
 
   describe('AND semantics', () => {
@@ -121,7 +164,7 @@ describe('evaluateCondition', () => {
       // cycle 0 => (0%2)+1=1 === a=1 => true
       expect(evaluateCondition(
         { probability: 50, cycle: { a: 1, b: 2 } },
-        { cycleCount: 0 }
+        { cycleCount: 0, fillActive: false }
       )).toBe(true);
     });
 
@@ -135,7 +178,7 @@ describe('evaluateCondition', () => {
             probability: 50,
             cycle: { a: 1, b: 2 },
           },
-          { cycleCount: 1 }
+          { cycleCount: 1, fillActive: false }
         )).toBe(false);
       }
     );
@@ -149,10 +192,34 @@ describe('evaluateCondition', () => {
             probability: 50,
             cycle: { a: 1, b: 2 },
           },
-          { cycleCount: 0 }
+          { cycleCount: 0, fillActive: false }
         )).toBe(false);
       }
     );
+
+    it('fill + probability: both must pass', () => {
+      vi.spyOn(Math, 'random')
+        .mockReturnValue(0.49);
+      expect(evaluateCondition(
+        { fill: 'fill', probability: 50 },
+        { cycleCount: 0, fillActive: true }
+      )).toBe(true);
+      expect(evaluateCondition(
+        { fill: 'fill', probability: 50 },
+        { cycleCount: 0, fillActive: false }
+      )).toBe(false);
+    });
+
+    it('fill + cycle: both must pass', () => {
+      expect(evaluateCondition(
+        { fill: 'fill', cycle: { a: 1, b: 2 } },
+        { cycleCount: 0, fillActive: true }
+      )).toBe(true);
+      expect(evaluateCondition(
+        { fill: 'fill', cycle: { a: 1, b: 2 } },
+        { cycleCount: 0, fillActive: false }
+      )).toBe(false);
+    });
   });
 });
 

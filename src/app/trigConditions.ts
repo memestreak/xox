@@ -6,6 +6,8 @@ import type { StepConditions } from './types';
 export interface ConditionContext {
   /** Current cycle count for this track (0-indexed). */
   cycleCount: number;
+  /** Whether the global fill button is active. */
+  fillActive: boolean;
 }
 
 /**
@@ -42,6 +44,12 @@ export function evaluateCondition(
     if ((ctx.cycleCount % b) + 1 !== a) {
       return false;
     }
+  }
+  if (conditions.fill === 'fill' && !ctx.fillActive) {
+    return false;
+  }
+  if (conditions.fill === '!fill' && ctx.fillActive) {
+    return false;
   }
   return true;
 }

@@ -6,6 +6,7 @@ import patternsData from './data/patterns.json';
 import TempoController from './TempoController';
 import SettingsPopover from './SettingsPopover';
 import GlobalControls from './GlobalControls';
+import FillButton from './FillButton';
 import { useSequencer } from './SequencerContext';
 
 /**
@@ -41,6 +42,7 @@ function TransportControlsInner() {
           >
             {isPlaying ? 'STOP' : 'PLAY'}
           </button>
+          <FillButton />
           <SettingsPopover />
         </div>
       </div>

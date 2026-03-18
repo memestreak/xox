@@ -469,6 +469,105 @@ describe('setSwing', () => {
 });
 
 // -------------------------------------------------------
+// G. Fill state
+// -------------------------------------------------------
+describe('fill state', () => {
+  it('initial fill state is off', () => {
+    const { result } = renderSequencer();
+    expect(
+      result.current.state.isFillActive
+    ).toBe(false);
+    expect(
+      result.current.state.fillMode
+    ).toBe('off');
+  });
+
+  it('toggleFillLatch toggles fill active', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.toggleFillLatch();
+    });
+    expect(
+      result.current.state.isFillActive
+    ).toBe(true);
+    expect(
+      result.current.state.fillMode
+    ).toBe('latched');
+    act(() => {
+      result.current.actions.toggleFillLatch();
+    });
+    expect(
+      result.current.state.isFillActive
+    ).toBe(false);
+    expect(
+      result.current.state.fillMode
+    ).toBe('off');
+  });
+
+  it('setFillHeld(true) activates fill', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setFillHeld(true);
+    });
+    expect(
+      result.current.state.isFillActive
+    ).toBe(true);
+    expect(
+      result.current.state.fillMode
+    ).toBe('momentary');
+  });
+
+  it('setFillHeld(false) clears latch too', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.toggleFillLatch();
+    });
+    expect(
+      result.current.state.isFillActive
+    ).toBe(true);
+    act(() => {
+      result.current.actions.setFillHeld(false);
+    });
+    expect(
+      result.current.state.isFillActive
+    ).toBe(false);
+  });
+
+  it('clearAll resets fill state', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.toggleFillLatch();
+    });
+    expect(
+      result.current.state.isFillActive
+    ).toBe(true);
+    act(() => {
+      result.current.actions.clearAll();
+    });
+    expect(
+      result.current.state.isFillActive
+    ).toBe(false);
+    expect(
+      result.current.state.fillMode
+    ).toBe('off');
+  });
+
+  it('fill state not in config (transient)', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.toggleFillLatch();
+    });
+    const config = result.current.meta.config;
+    expect(
+      'isFillActive' in config
+    ).toBe(false);
+    expect(
+      'fillMode' in config
+    ).toBe(false);
+  });
+});
+
+// -------------------------------------------------------
 // D. URL hash import
 // -------------------------------------------------------
 describe('URL hash import', () => {
