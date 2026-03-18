@@ -278,6 +278,7 @@ function TrackRowInner({
         <div className="flex-1 relative">
           <div
             ref={gridRef}
+            data-track={trackId}
             className="grid grid-cols-8 lg:grid-cols-16 gap-[3px] lg:gap-1.5"
           >
             {Array.from(
