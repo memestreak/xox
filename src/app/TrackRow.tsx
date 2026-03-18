@@ -3,10 +3,110 @@
 import {
   memo, useCallback, useEffect, useRef, useState,
 } from 'react';
+import {
+  LongPressEventType, useLongPress,
+} from 'use-long-press';
 import type { StepConditions, TrackId } from './types';
 import TrackToggle from './TrackToggle';
 import StepButton from './StepButton';
 import Knob from './Knob';
+
+interface TrackNameButtonProps {
+  size: 'sm' | 'lg';
+  trackName: string;
+  isFreeRun: boolean;
+  onToggleFreeRun: () => void;
+}
+
+/**
+ * Track name button with optional popover menu.
+ * The popover (with free-run toggle) only renders
+ * at 'lg' size. Owns its own menu state and refs.
+ */
+function TrackNameButtonInner({
+  size,
+  trackName,
+  isFreeRun,
+  onToggleFreeRun,
+}: TrackNameButtonProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        menuRef.current
+        && !menuRef.current.contains(
+          e.target as Node
+        )
+        && nameRef.current
+        && !nameRef.current.contains(
+          e.target as Node
+        )
+      ) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener(
+      'mousedown', handleClick
+    );
+    return () =>
+      document.removeEventListener(
+        'mousedown', handleClick
+      );
+  }, [menuOpen]);
+
+  return (
+    <div className="relative">
+      <button
+        ref={size === 'lg' ? nameRef : undefined}
+        onClick={() => setMenuOpen(v => !v)}
+        className={
+          (size === 'sm'
+            ? 'text-[10px]'
+            : 'w-16 truncate text-xs text-left')
+          + ' font-bold uppercase tracking-wider'
+          + ' rounded px-1 py-0.5 transition-colors'
+          + (isFreeRun
+            ? ' text-orange-400 bg-orange-400/10'
+            : ' text-neutral-400'
+              + ' hover:text-neutral-200'
+              + ' hover:bg-neutral-800/50')
+        }
+      >
+        {trackName}
+      </button>
+      {menuOpen && size === 'lg' && (
+        <div
+          ref={menuRef}
+          className="absolute left-0 top-full mt-1 w-36 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl z-30 overflow-hidden"
+        >
+          <button
+            onClick={() => {
+              onToggleFreeRun();
+              setMenuOpen(false);
+            }}
+            className="w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800 transition-colors flex items-center justify-between"
+          >
+            <span>Free-run</span>
+            <span
+              className={
+                'inline-block w-2 h-2 rounded-full '
+                + (isFreeRun
+                  ? 'bg-orange-400'
+                  : 'bg-neutral-600')
+              }
+            />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const TrackNameButton = memo(TrackNameButtonInner);
 
 interface TrackRowProps {
   trackId: TrackId;
@@ -86,95 +186,29 @@ function TrackRowInner({
     [onToggleFreeRun, trackId]
   );
 
+  // ─── Drag handle state ─────────────────────────
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const endBarLongPress = useLongPress(
+    () => {
+      navigator.vibrate?.(10);
+      handleFreeRun();
+    },
+    {
+      detect: LongPressEventType.Touch,
+      threshold: 500,
+      cancelOnMovement: 1,
+    }
+  );
+
   const effectiveStep =
     currentStep >= 0
       ? (isFreeRun ? totalSteps : currentStep)
         % trackLength
       : -1;
 
-  // ─── Track name popover ───────────────────────
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const nameRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (
-        menuRef.current
-        && !menuRef.current.contains(
-          e.target as Node
-        )
-        && nameRef.current
-        && !nameRef.current.contains(
-          e.target as Node
-        )
-      ) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener(
-      'mousedown', handleClick
-    );
-    return () =>
-      document.removeEventListener(
-        'mousedown', handleClick
-      );
-  }, [menuOpen]);
-
-  const trackNameButton = (
-    size: 'sm' | 'lg'
-  ) => (
-    <div className="relative">
-      <button
-        ref={size === 'lg' ? nameRef : undefined}
-        onClick={() => setMenuOpen(v => !v)}
-        className={
-          (size === 'sm'
-            ? 'text-[10px]'
-            : 'w-16 truncate text-xs text-left')
-          + ' font-bold uppercase tracking-wider'
-          + ' rounded px-1 py-0.5 transition-colors'
-          + (isFreeRun
-            ? ' text-orange-400 bg-orange-400/10'
-            : ' text-neutral-400'
-              + ' hover:text-neutral-200'
-              + ' hover:bg-neutral-800/50')
-        }
-      >
-        {trackName}
-      </button>
-      {menuOpen && size === 'lg' && (
-        <div
-          ref={menuRef}
-          className="absolute left-0 top-full mt-1 w-36 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl z-30 overflow-hidden"
-        >
-          <button
-            onClick={() => {
-              handleFreeRun();
-              setMenuOpen(false);
-            }}
-            className="w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800 transition-colors flex items-center justify-between"
-          >
-            <span>Free-run</span>
-            <span
-              className={
-                'inline-block w-2 h-2 rounded-full '
-                + (isFreeRun
-                  ? 'bg-orange-400'
-                  : 'bg-neutral-600')
-              }
-            />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-
   // ─── Drag handle logic ──────────────────────────
-  const gridRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
   const lengthFromPointer = useCallback(
     (clientX: number): number => {
       const grid = gridRef.current;
@@ -192,13 +226,19 @@ function TrackRowInner({
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
+      if (e.button !== 0) return;
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        handleFreeRun();
+        return;
+      }
       e.preventDefault();
       (e.target as HTMLElement).setPointerCapture(
         e.pointerId
       );
       setIsDragging(true);
     },
-    []
+    [handleFreeRun]
   );
 
   const handlePointerMove = useCallback(
@@ -224,7 +264,12 @@ function TrackRowInner({
     <div>
       {/* Mobile: track name + M/S above grid */}
       <div className="flex items-center gap-2 mb-1 lg:hidden">
-        {trackNameButton('sm')}
+        <TrackNameButton
+          size="sm"
+          trackName={trackName}
+          isFreeRun={isFreeRun}
+          onToggleFreeRun={handleFreeRun}
+        />
         <div className="flex gap-1 ml-auto items-center">
           <TrackToggle
             variant="mute"
@@ -252,7 +297,12 @@ function TrackRowInner({
       <div className="flex gap-4 items-center">
         {/* Desktop: sidebar */}
         <div className="hidden lg:flex w-48 items-center gap-2">
-          {trackNameButton('lg')}
+          <TrackNameButton
+            size="lg"
+            trackName={trackName}
+            isFreeRun={isFreeRun}
+            onToggleFreeRun={handleFreeRun}
+          />
           <TrackToggle
             variant="mute"
             active={isMuted}
@@ -290,6 +340,7 @@ function TrackRowInner({
                 return (
                   <StepButton
                     key={i}
+                    trackId={trackId}
                     trackName={trackName}
                     stepIndex={i}
                     isActive={
@@ -302,22 +353,11 @@ function TrackRowInner({
                     }
                     isBeat={i % 4 === 0}
                     isDisabled={disabled}
-                    onToggle={
-                      () => onToggleStep(trackId, i)
-                    }
+                    onToggle={onToggleStep}
                     conditions={
                       trigConditions?.[i]
                     }
-                    onOpenPopover={
-                      onOpenPopover
-                        ? (rect: {
-                            top: number;
-                            left: number;
-                          }) => onOpenPopover(
-                            trackId, i, rect
-                          )
-                        : undefined
-                    }
+                    onOpenPopover={onOpenPopover}
                   />
                 );
               }
@@ -336,21 +376,57 @@ function TrackRowInner({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
+            {...endBarLongPress()}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              if (!isDragging) handleFreeRun();
+            }}
             style={{
               left: `${handlePct}%`,
               touchAction: 'none',
             }}
             className={
-              'absolute top-0 h-full w-1.5'
-              + ' -translate-x-1/2 cursor-col-resize'
-              + ' rounded-full z-20'
+              'absolute top-0 h-full w-4'
+              + ' -translate-x-1/2 z-20'
               + (isDragging
-                ? ' bg-neutral-300'
-                : ' bg-neutral-500/60'
-                  + ' hover:bg-neutral-300')
-              + ' transition-colors'
+                ? ' cursor-col-resize'
+                : ' cursor-default')
+              + ' before:absolute before:inset-y-0'
+              + ' before:left-1/2'
+              + ' before:-translate-x-1/2'
+              + ' before:w-1.5 before:rounded-full'
+              + ' before:transition-colors'
+              + (isDragging
+                ? ' before:bg-neutral-300'
+                : ' before:bg-neutral-500/60'
+                  + ' hover:before:bg-neutral-300')
             }
           />
+
+          {/* Free-run indicator */}
+          {isFreeRun && (
+            <span
+              aria-label="free run"
+              style={{
+                left: `${handlePct}%`,
+                fontFamily: 'var(--font-orbitron)',
+              }}
+              className={
+                'absolute top-1/2 -translate-x-1/2'
+                + ' -translate-y-1/2 z-30'
+                + ' pointer-events-none select-none'
+                + ' flex items-center'
+                + ' justify-center'
+                + ' w-3.5 h-3.5 rounded-full'
+                + ' bg-orange-500'
+                + ' text-[10px] font-bold'
+                + ' text-white'
+                + ' shadow-[0_0_6px_rgba(251,146,60,0.6)]'
+              }
+            >
+              F
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -1,19 +1,24 @@
 "use client";
 
-import { memo, useRef } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import { useLongPress } from 'use-long-press';
-import type { StepConditions } from './types';
+import type { StepConditions, TrackId } from './types';
 
 interface StepButtonProps {
+  trackId: TrackId;
   trackName: string;
   stepIndex: number;
   isActive: boolean;
   isCurrent: boolean;
   isBeat: boolean;
   isDisabled: boolean;
-  onToggle: () => void;
+  onToggle: (
+    trackId: TrackId, stepIndex: number
+  ) => void;
   conditions?: StepConditions;
   onOpenPopover?: (
+    trackId: TrackId,
+    stepIndex: number,
     rect: { top: number; left: number }
   ) => void;
 }
@@ -25,6 +30,7 @@ interface StepButtonProps {
  * and non-interactive.
  */
 function StepButtonInner({
+  trackId,
   trackName,
   stepIndex,
   isActive,
@@ -37,17 +43,28 @@ function StepButtonInner({
 }: StepButtonProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  const openPopover = useCallback(
+    (clientY?: number, clientX?: number) => {
+      if (!isActive || !onOpenPopover) return;
+      const el = buttonRef.current;
+      const r = el?.getBoundingClientRect();
+      onOpenPopover(trackId, stepIndex, {
+        top: (r?.bottom ?? clientY ?? 0) + 4,
+        left: r?.left ?? clientX ?? 0,
+      });
+    },
+    [isActive, onOpenPopover, trackId, stepIndex]
+  );
+
+  const handleToggle = useCallback(
+    () => onToggle(trackId, stepIndex),
+    [onToggle, trackId, stepIndex]
+  );
+
   const longPress = useLongPress(
     () => {
-      if (isActive && onOpenPopover) {
-        navigator.vibrate?.(10);
-        const el = buttonRef.current;
-        const r = el?.getBoundingClientRect();
-        onOpenPopover({
-          top: (r?.bottom ?? 0) + 4,
-          left: r?.left ?? 0,
-        });
-      }
+      navigator.vibrate?.(10);
+      openPopover();
     },
     {
       threshold: 500,
@@ -92,17 +109,17 @@ function StepButtonInner({
       ref={buttonRef}
       data-step={stepIndex}
       {...longPress()}
-      onClick={onToggle}
+      onClick={(e) => {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          openPopover(e.clientY, e.clientX);
+          return;
+        }
+        handleToggle();
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
-        if (isActive && onOpenPopover) {
-          const el = buttonRef.current;
-          const r = el?.getBoundingClientRect();
-          onOpenPopover({
-            top: (r?.bottom ?? e.clientY) + 4,
-            left: r?.left ?? e.clientX,
-          });
-        }
+        openPopover(e.clientY, e.clientX);
       }}
       aria-label={
         `${trackName} step ${stepIndex + 1}`

@@ -4,6 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import StepButton from '../app/StepButton';
 
 const base = {
+  trackId: 'bd' as const,
   trackName: 'Kick',
   stepIndex: 0,
   isActive: true,
