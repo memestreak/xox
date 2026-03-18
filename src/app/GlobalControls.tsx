@@ -27,15 +27,18 @@ function GlobalControlsInner() {
     [actions]
   );
 
+  const handleReset = useCallback(() => {
+    actions.clearAll();
+    actions.setPatternLength(16);
+    actions.setSwing(0);
+  }, [actions]);
+
   return (
     <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
-      <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
-        Global
-      </span>
-      <div className="flex items-center gap-2 lg:gap-3">
+      <div className="flex items-end gap-2 lg:gap-3">
         {/* Steps dropdown */}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[7px] lg:text-[8px] uppercase tracking-wider text-neutral-600">
+        <div>
+          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold text-center">
             Steps
           </span>
           <select
@@ -56,32 +59,28 @@ function GlobalControlsInner() {
         </div>
 
         {/* Swing knob */}
-        <div className="flex flex-col items-center gap-0.5">
-          <span className="text-[7px] lg:text-[8px] uppercase tracking-wider text-neutral-600">
+        <div className="text-center">
+          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
             Swing
           </span>
           <Knob
             value={state.swing / 100}
             onChange={handleSwing}
-            size={20}
+            size={32}
+            centerLabel={`${state.swing}%`}
+            defaultValue={0}
           />
-          <span className="text-[7px] lg:text-[8px] text-neutral-600">
-            {state.swing}%
-          </span>
         </div>
 
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Clear button */}
+        {/* Reset button */}
         <button
-          onClick={actions.clearAll}
-          className="bg-neutral-800 border border-neutral-700 rounded px-1.5 lg:px-2 py-1 text-[9px] lg:text-[10px] uppercase tracking-wider font-bold text-neutral-400 hover:text-neutral-200 hover:border-neutral-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+          onClick={handleReset}
+          className="h-8 bg-neutral-800 border border-neutral-700 rounded px-1.5 lg:px-2 text-[9px] lg:text-[10px] uppercase tracking-wider font-bold text-neutral-400 hover:text-red-400 hover:border-red-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
         >
-          <span className="hidden lg:inline">
-            Clr
-          </span>
-          <span className="lg:hidden">C</span>
+          Reset
         </button>
       </div>
     </div>

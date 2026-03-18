@@ -7,6 +7,8 @@ interface KnobProps {
   onChange: (v: number) => void;
   trackName?: string;
   size?: number;
+  centerLabel?: string;
+  defaultValue?: number;
 }
 
 function describeArc(
@@ -48,6 +50,8 @@ function KnobInner({
   onChange,
   trackName,
   size = DEFAULT_SIZE,
+  centerLabel,
+  defaultValue,
 }: KnobProps) {
   const dragRef = useRef<{
     startY: number;
@@ -141,6 +145,19 @@ function KnobInner({
     [onChange]
   );
 
+  const resetToDefault = useCallback(
+    (e: React.MouseEvent) => {
+      if (
+        defaultValue !== undefined
+        && (e.detail >= 2 || e.metaKey)
+      ) {
+        e.preventDefault();
+        onChange(defaultValue);
+      }
+    },
+    [defaultValue, onChange]
+  );
+
   const label = trackName
     ? `Volume ${trackName}`
     : 'Volume';
@@ -158,6 +175,7 @@ function KnobInner({
         aria-label={label}
         className="cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-full"
         style={{ touchAction: 'manipulation' }}
+        onClick={resetToDefault}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={release}
@@ -188,6 +206,20 @@ function KnobInner({
           r={2}
           fill="#f97316"
         />
+        {centerLabel && (
+          <text
+            x={cx}
+            y={cy}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="#a3a3a3"
+            fontSize={size * 0.3}
+            fontWeight="bold"
+            className="pointer-events-none select-none"
+          >
+            {centerLabel}
+          </text>
+        )}
       </svg>
       <div className="absolute bottom-full mb-1 hidden group-hover:block px-1.5 py-0.5 text-[10px] font-bold bg-neutral-800 text-neutral-200 rounded whitespace-nowrap">
         {Math.round(value * 100)}%
