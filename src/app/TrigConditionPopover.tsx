@@ -3,6 +3,7 @@
 import {
   useState, useRef, useEffect, useCallback,
 } from 'react';
+import type { RefObject } from 'react';
 import { useSequencer } from './SequencerContext';
 import { CYCLE_OPTIONS } from './trigConditions';
 import ProbabilitySlider from './ProbabilitySlider';
@@ -14,6 +15,7 @@ interface TrigConditionPopoverProps {
   conditions?: StepConditions;
   anchorRect?: { top: number; left: number };
   onClose: () => void;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -33,6 +35,7 @@ export default function TrigConditionPopover({
   conditions,
   anchorRect,
   onClose,
+  scrollContainerRef,
 }: TrigConditionPopoverProps) {
   const { actions } = useSequencer();
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -127,6 +130,19 @@ export default function TrigConditionPopover({
         'keydown', handleKeyDown
       );
   }, [onClose]);
+
+  useEffect(() => {
+    if (!anchorRect || !scrollContainerRef?.current) {
+      return;
+    }
+    const el = scrollContainerRef.current;
+    el.addEventListener('scroll', onClose, {
+      once: true,
+    });
+    return () => el.removeEventListener(
+      'scroll', onClose
+    );
+  }, [anchorRect, onClose, scrollContainerRef]);
 
   return (
     <div

@@ -23,7 +23,7 @@ function TransportControlsInner() {
   } = actions;
 
   return (
-    <header className="sticky top-0 z-20 bg-neutral-950 safe-area-top safe-area-x border-b border-neutral-800 pb-3 lg:pb-6 lg:static space-y-2 lg:space-y-8">
+    <header className="bg-neutral-950 safe-area-top safe-area-x border-b border-neutral-800 pb-3 lg:pb-4 space-y-2 lg:space-y-4">
       {/* Row 1: Logo + BPM + Play */}
       <div className="flex justify-between items-center lg:items-end">
         <h1 className="text-2xl lg:text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">
@@ -47,10 +47,10 @@ function TransportControlsInner() {
       {/* Row 2: Kit + Pattern */}
       <div className="grid grid-cols-3 gap-2 lg:gap-4 pt-2 lg:pt-0">
         <GlobalControls />
-        <div className="bg-neutral-900/50 p-2 lg:p-4 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
+        <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
           <label
             htmlFor="kit-select"
-            className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 lg:mb-2 block font-bold"
+            className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold"
           >
             Drum Kit
           </label>
@@ -72,10 +72,10 @@ function TransportControlsInner() {
             ))}
           </select>
         </div>
-        <div className="bg-neutral-900/50 p-2 lg:p-4 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
+        <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
           <label
             htmlFor="pattern-select"
-            className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 lg:mb-2 block font-bold"
+            className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold"
           >
             Pattern
           </label>

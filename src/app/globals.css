@@ -94,6 +94,14 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   animation: tap-pulse 200ms ease-out;
 }
 
+/* Track scroll region — hide scrollbar, keep scroll */
+.track-scroll-region {
+  scrollbar-width: none;
+}
+.track-scroll-region::-webkit-scrollbar {
+  display: none;
+}
+
 @supports (padding-top: env(safe-area-inset-top)) {
   .safe-area-top {
     padding-top: env(safe-area-inset-top);
