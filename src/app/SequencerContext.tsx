@@ -70,6 +70,8 @@ interface SequencerState {
   trackStates: Record<TrackId, TrackState>;
   isLoaded: boolean;
   swing: number;
+  isFillActive: boolean;
+  fillMode: 'off' | 'latched' | 'momentary';
 }
 
 interface SequencerActions {
@@ -90,6 +92,8 @@ interface SequencerActions {
   ) => void;
   clearAll: () => void;
   setSwing: (value: number) => void;
+  toggleFillLatch: () => void;
+  setFillHeld: (held: boolean) => void;
   setStep: (
     trackId: TrackId,
     stepIndex: number,
@@ -190,6 +194,16 @@ export function SequencerProvider({
   const [isLoaded, setIsLoaded] = useState(false);
   const stepRef = useRef<number>(-1);
   const totalStepsRef = useRef<number>(0);
+
+  // ─── Fill state ──────────────────────────────────
+  const [isLatched, setIsLatched] = useState(false);
+  const [isHeld, setIsHeld] = useState(false);
+  const fillActiveRef = useRef(false);
+  const isFillActive = isLatched || isHeld;
+  const fillMode: 'off' | 'latched' | 'momentary' =
+    isHeld ? 'momentary'
+      : isLatched ? 'latched'
+        : 'off';
 
   // ─── Import config from URL hash on mount ─────────
   useEffect(() => {
@@ -350,6 +364,7 @@ export function SequencerProvider({
         isAccented = evaluateCondition(accentCond, {
           cycleCount:
             cycleCountRef.current.ac ?? 0,
+          fillActive: fillActiveRef.current,
         });
       }
 
@@ -374,6 +389,7 @@ export function SequencerProvider({
               cycleCount:
                 cycleCountRef.current[track.id]
                   ?? 0,
+              fillActive: fillActiveRef.current,
             }
           );
           if (!shouldFire) return;
@@ -727,6 +743,9 @@ export function SequencerProvider({
         trigConditions: {},
       };
     });
+    setIsLatched(false);
+    setIsHeld(false);
+    fillActiveRef.current = false;
     setSelectedPatternId('custom');
   }, []);
 
@@ -739,6 +758,67 @@ export function SequencerProvider({
     },
     []
   );
+
+  const toggleFillLatch = useCallback(() => {
+    setIsLatched(prev => {
+      const next = !prev;
+      fillActiveRef.current = next || isHeld;
+      return next;
+    });
+  }, [isHeld]);
+
+  const setFillHeld = useCallback(
+    (held: boolean) => {
+      setIsHeld(held);
+      if (!held) {
+        setIsLatched(false);
+        fillActiveRef.current = false;
+      } else {
+        fillActiveRef.current = true;
+      }
+    },
+    []
+  );
+
+  // ─── Fill keyboard shortcut (f key) ─────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyF' || e.repeat) return;
+      const tag =
+        (e.target as HTMLElement)?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT'
+      ) return;
+      e.preventDefault();
+      if (e.metaKey || e.ctrlKey) {
+        toggleFillLatch();
+      } else {
+        setFillHeld(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyF') return;
+      setFillHeld(false);
+    };
+
+    document.addEventListener(
+      'keydown', handleKeyDown
+    );
+    document.addEventListener(
+      'keyup', handleKeyUp
+    );
+    return () => {
+      document.removeEventListener(
+        'keydown', handleKeyDown
+      );
+      document.removeEventListener(
+        'keyup', handleKeyUp
+      );
+    };
+  }, [toggleFillLatch, setFillHeld]);
 
   const setTrigCondition = useCallback(
     (
@@ -797,6 +877,8 @@ export function SequencerProvider({
       trackStates,
       isLoaded,
       swing: config.swing,
+      isFillActive,
+      fillMode,
     },
     actions: {
       togglePlay,
@@ -813,6 +895,8 @@ export function SequencerProvider({
       setTrackLength,
       clearAll,
       setSwing,
+      toggleFillLatch,
+      setFillHeld,
       setTrigCondition,
       clearTrigCondition,
     },

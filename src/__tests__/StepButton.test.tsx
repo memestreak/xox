@@ -66,6 +66,48 @@ describe('StepButton indicators', () => {
     expect(container.textContent).toContain('1:3');
   });
 
+  it('F badge for fill:fill on active step', () => {
+    const { container } = render(
+      <StepButton
+        {...base}
+        conditions={{ fill: 'fill' }}
+      />
+    );
+    const badge = container.querySelector(
+      '[data-testid="fill-badge"]'
+    );
+    expect(badge).toBeTruthy();
+    expect(badge?.textContent).toBe('F');
+  });
+
+  it('!F badge for fill:!fill on active step',
+    () => {
+      const { container } = render(
+        <StepButton
+          {...base}
+          conditions={{ fill: '!fill' }}
+        />
+      );
+      const badge = container.querySelector(
+        '[data-testid="fill-badge"]'
+      );
+      expect(badge).toBeTruthy();
+      expect(badge?.textContent).toBe('!F');
+    }
+  );
+
+  it('no fill badge when fill undefined', () => {
+    const { container } = render(
+      <StepButton
+        {...base}
+        conditions={{ probability: 50 }}
+      />
+    );
+    expect(container.querySelector(
+      '[data-testid="fill-badge"]'
+    )).toBeNull();
+  });
+
   it('no indicators on inactive step', () => {
     const { container } = render(
       <StepButton

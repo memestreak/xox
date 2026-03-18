@@ -117,6 +117,68 @@ describe('TrigConditionPopover', () => {
     vi.useRealTimers();
   });
 
+  it('fill section renders three options', () => {
+    render(<TrigConditionPopover {...base} />);
+    const radios = screen.getAllByRole('radio');
+    expect(radios).toHaveLength(3);
+    expect(radios[0].textContent).toBe('None');
+    expect(radios[1].textContent).toBe('FILL');
+    expect(radios[2].textContent).toBe('!FILL');
+  });
+
+  it('selecting FILL sets fill condition', () => {
+    render(<TrigConditionPopover {...base} />);
+    const fillBtn = screen.getByRole('radio', {
+      name: /^FILL$/,
+    });
+    fireEvent.click(fillBtn);
+    expect(mockSet).toHaveBeenCalledWith(
+      'bd', 3, { fill: 'fill' }
+    );
+  });
+
+  it('selecting !FILL sets fill condition', () => {
+    render(<TrigConditionPopover {...base} />);
+    const nfillBtn = screen.getByRole('radio', {
+      name: /^!FILL$/,
+    });
+    fireEvent.click(nfillBtn);
+    expect(mockSet).toHaveBeenCalledWith(
+      'bd', 3, { fill: '!fill' }
+    );
+  });
+
+  it('selecting None removes fill', () => {
+    render(
+      <TrigConditionPopover
+        {...base}
+        conditions={{ fill: 'fill' }}
+      />
+    );
+    const noneBtn = screen.getByRole('radio', {
+      name: /^None$/,
+    });
+    fireEvent.click(noneBtn);
+    expect(mockClear).toHaveBeenCalledWith(
+      'bd', 3
+    );
+  });
+
+  it('pre-populates fill from conditions', () => {
+    render(
+      <TrigConditionPopover
+        {...base}
+        conditions={{ fill: '!fill' }}
+      />
+    );
+    const nfillRadio = screen.getByRole('radio', {
+      name: /^!FILL$/,
+    });
+    expect(
+      nfillRadio.getAttribute('aria-checked')
+    ).toBe('true');
+  });
+
   it('pre-populates from existing conditions',
     () => {
       render(

@@ -154,6 +154,25 @@ function StepButtonInner({
             }}
           />
         ) : null}
+      {isActive && conditions?.fill
+        ? (
+          <span
+            data-testid="fill-badge"
+            className={
+              'absolute top-0 right-0.5'
+              + ' text-[8px] font-bold'
+              + ' leading-none'
+              + ' pointer-events-none'
+              + ' text-white'
+            }
+            style={{
+              fontFamily: 'var(--font-orbitron)',
+            }}
+          >
+            {conditions.fill === 'fill'
+              ? 'F' : '!F'}
+          </span>
+        ) : null}
       {isActive && conditions?.cycle != null
         && conditions.cycle.b >= 2
         ? (

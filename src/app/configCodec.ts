@@ -369,6 +369,11 @@ function validateSingleCondition(
         }
       }
     }
+    if (
+      obj.fill === 'fill' || obj.fill === '!fill'
+    ) {
+      sc.fill = obj.fill;
+    }
   }
 
   if (Object.keys(sc).length === 0) return null;

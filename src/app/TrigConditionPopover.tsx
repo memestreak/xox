@@ -48,9 +48,16 @@ export default function TrigConditionPopover({
       ? `${conditions.cycle.a}:${conditions.cycle.b}`
       : '1:1'
   );
+  const [fillValue, setFillValue] = useState<
+    'none' | 'fill' | '!fill'
+  >(conditions?.fill ?? 'none');
 
   const updateConditions = useCallback(
-    (prob: number, cycle: string) => {
+    (
+      prob: number,
+      cycle: string,
+      fill: 'none' | 'fill' | '!fill'
+    ) => {
       const sc: StepConditions = {};
       if (prob < 100) {
         sc.probability = prob;
@@ -60,6 +67,9 @@ export default function TrigConditionPopover({
       );
       if (option && option.b >= 2) {
         sc.cycle = { a: option.a, b: option.b };
+      }
+      if (fill !== 'none') {
+        sc.fill = fill;
       }
       if (Object.keys(sc).length === 0) {
         actions.clearTrigCondition(
@@ -77,18 +87,26 @@ export default function TrigConditionPopover({
   const handleProbChange = useCallback(
     (v: number) => {
       setProbability(v);
-      updateConditions(v, cycleValue);
+      updateConditions(v, cycleValue, fillValue);
     },
-    [updateConditions, cycleValue]
+    [updateConditions, cycleValue, fillValue]
   );
 
   const handleCycleChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const v = e.target.value;
       setCycleValue(v);
-      updateConditions(probability, v);
+      updateConditions(probability, v, fillValue);
     },
-    [updateConditions, probability]
+    [updateConditions, probability, fillValue]
+  );
+
+  const handleFillChange = useCallback(
+    (v: 'none' | 'fill' | '!fill') => {
+      setFillValue(v);
+      updateConditions(probability, cycleValue, v);
+    },
+    [updateConditions, probability, cycleValue]
   );
 
   useEffect(() => {
@@ -236,6 +254,55 @@ export default function TrigConditionPopover({
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="space-y-1">
+        <div className={
+          'text-[10px] uppercase tracking-wider'
+          + ' text-neutral-500'
+        }>
+          Fill
+        </div>
+        <div
+          className="flex gap-1"
+          role="radiogroup"
+          aria-label="Fill condition"
+        >
+          {([
+            ['none', 'None'],
+            ['fill', 'FILL'],
+            ['!fill', '!FILL'],
+          ] as const).map(([val, label]) => (
+            <button
+              key={val}
+              role="radio"
+              aria-checked={fillValue === val}
+              onClick={() => handleFillChange(val)}
+              className={
+                'flex-1 text-xs py-1 rounded'
+                + ' border transition-colors'
+                + (fillValue === val
+                  ? val === 'fill'
+                    ? ' bg-orange-600'
+                      + ' border-orange-500'
+                      + ' text-white'
+                    : val === '!fill'
+                      ? ' bg-neutral-700'
+                        + ' border-neutral-600'
+                        + ' text-neutral-200'
+                      : ' bg-neutral-800'
+                        + ' border-neutral-600'
+                        + ' text-neutral-200'
+                  : ' bg-neutral-900'
+                    + ' border-neutral-700'
+                    + ' text-neutral-400'
+                    + ' hover:bg-neutral-800')
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
     </div>

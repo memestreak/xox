@@ -95,11 +95,13 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 }
 
 /* Track scroll region — hide scrollbar, keep scroll */
-.track-scroll-region {
-  scrollbar-width: none;
-}
-.track-scroll-region::-webkit-scrollbar {
-  display: none;
+@layer base {
+  .track-scroll-region {
+    scrollbar-width: none;
+  }
+  .track-scroll-region::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @supports (padding-top: env(safe-area-inset-top)) {

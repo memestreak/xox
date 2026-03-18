@@ -518,6 +518,58 @@ describe('validateTrigConditions', () => {
   });
 });
 
+describe('fill condition validation', () => {
+  it('round-trips fill:fill', async () => {
+    const config = defaultConfig();
+    config.trigConditions = {
+      bd: { 0: { fill: 'fill' } },
+    };
+    const hash = await encodeConfig(config);
+    const decoded = await decodeConfig(hash);
+    expect(
+      decoded.trigConditions.bd?.[0]
+    ).toEqual({ fill: 'fill' });
+  });
+
+  it('round-trips fill:!fill', async () => {
+    const config = defaultConfig();
+    config.trigConditions = {
+      sd: { 4: { fill: '!fill' } },
+    };
+    const hash = await encodeConfig(config);
+    const decoded = await decodeConfig(hash);
+    expect(
+      decoded.trigConditions.sd?.[4]
+    ).toEqual({ fill: '!fill' });
+  });
+
+  it('invalid fill values stripped', async () => {
+    const raw = {
+      ...defaultConfig(),
+      trigConditions: {
+        bd: { 0: { fill: 'invalid' } },
+      },
+    };
+    const hash = await encodeRaw(raw);
+    const decoded = await decodeConfig(hash);
+    expect(decoded.trigConditions).toEqual({});
+  });
+
+  it('old configs without fill decode normally',
+    async () => {
+      const config = defaultConfig();
+      config.trigConditions = {
+        bd: { 0: { probability: 50 } },
+      };
+      const hash = await encodeConfig(config);
+      const decoded = await decodeConfig(hash);
+      expect(
+        decoded.trigConditions.bd?.[0]
+      ).toEqual({ probability: 50 });
+    }
+  );
+});
+
 describe('validateMixer', () => {
   it('negative gain clamped to 0', async () => {
     const config = defaultConfig();
