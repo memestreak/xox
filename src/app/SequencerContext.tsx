@@ -708,15 +708,21 @@ export function SequencerProvider({
       const newTrackLengths = {} as Record<
         TrackId, number
       >;
+      const newMixer = { ...prev.mixer };
       for (const id of TRACK_IDS) {
         newSteps[id] =
           '0'.repeat(prev.patternLength);
         newTrackLengths[id] = prev.patternLength;
+        newMixer[id] = {
+          ...newMixer[id],
+          freeRun: false,
+        };
       }
       return {
         ...prev,
         steps: newSteps,
         trackLengths: newTrackLengths,
+        mixer: newMixer,
         swing: 0,
         trigConditions: {},
       };
