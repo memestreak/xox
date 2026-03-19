@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { TrackId } from './types';
+import type { TrackId, TrackPattern } from './types';
 
 interface UseDragPaintOptions {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -14,6 +14,10 @@ interface UseDragPaintOptions {
     stepIndex: number,
     value: '0' | '1'
   ) => void;
+  patterns?: TrackPattern[];
+  onSetTrackSteps?: (trackId: TrackId, steps: string) => void;
+  longPressActiveRef?: RefObject<boolean>;
+  popoverOpenRef?: RefObject<boolean>;
 }
 
 interface CellHit {
@@ -30,9 +34,17 @@ interface DragState {
   paintValue: '0' | '1';
   lastTrackIdx: number;
   lastStep: number;
+  cyclingMode: boolean;
+  cycleTrackId: TrackId | null;
+  cycleStartStep: number;
+  cycleSnapshot: string;
+  cyclePatternIdx: number;
+  escapeHandler: ((e: KeyboardEvent) => void) | null;
 }
 
 const DRAG_THRESHOLD = 5;
+const CYCLE_THRESHOLD_TOUCH = 10;
+const CYCLE_PX_PER_STEP = 20;
 
 /**
  * Find the track and step under a point using
@@ -109,6 +121,10 @@ function* bresenham(
  * the drag fills. Fast drags interpolate using
  * Bresenham's line algorithm so no cells are skipped.
  *
+ * When shift is held (mouse) or longPressActiveRef is
+ * true (touch), vertical drag cycles through patterns
+ * instead of painting individual cells.
+ *
  * Returns pointer event handlers to spread on a
  * container div wrapping all track rows.
  */
@@ -118,6 +134,10 @@ export function useDragPaint({
   trackLengths,
   steps,
   onSetStep,
+  patterns = [],
+  onSetTrackSteps,
+  longPressActiveRef,
+  popoverOpenRef,
 }: UseDragPaintOptions) {
   const dragRef = useRef<DragState>({
     active: false,
@@ -128,6 +148,12 @@ export function useDragPaint({
     paintValue: '1',
     lastTrackIdx: -1,
     lastStep: -1,
+    cyclingMode: false,
+    cycleTrackId: null,
+    cycleStartStep: 0,
+    cycleSnapshot: '',
+    cyclePatternIdx: -1,
+    escapeHandler: null,
   });
 
   const stepsAtDown = useRef(steps);
@@ -198,6 +224,40 @@ export function useDragPaint({
     [trackIndex, paintOne]
   );
 
+  /**
+   * Apply a pattern at the given cycle index for a
+   * track starting at startStep. Returns the new
+   * steps string.
+   *
+   * - idx 0: return snapshot (no-op / current state)
+   * - idx 1: clear from startStep onward
+   * - idx 2+: apply pattern[idx-2] from startStep
+   */
+  const applyPatternAtIndex = useCallback(
+    (
+      trackId: TrackId,
+      startStep: number,
+      snapshot: string,
+      idx: number
+    ): string => {
+      const prefix = snapshot.substring(0, startStep);
+      const remaining = trackLengths[trackId] - startStep;
+
+      if (idx === 0) {
+        return snapshot;
+      }
+      if (idx === 1) {
+        return prefix + '0'.repeat(remaining);
+      }
+      const pattern = patterns[idx - 2];
+      const fill = pattern.steps
+        .substring(0, remaining)
+        .padEnd(remaining, '0');
+      return prefix + fill;
+    },
+    [trackLengths, patterns]
+  );
+
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (e.button !== 0) return;
@@ -220,12 +280,46 @@ export function useDragPaint({
       drag.pointerId = e.pointerId;
       drag.lastTrackIdx = -1;
       drag.lastStep = -1;
+      drag.escapeHandler = null;
 
+      // Determine if we should enter cycling mode
+      const isMouseShift =
+        e.pointerType === 'mouse' && e.shiftKey;
+      const isTouchLongPress =
+        e.pointerType !== 'mouse'
+        && (longPressActiveRef?.current === true);
+      const popoverOpen =
+        popoverOpenRef?.current === true;
+
+      if (
+        (isMouseShift || isTouchLongPress)
+        && !popoverOpen
+        && patterns.length > 0
+        && onSetTrackSteps
+      ) {
+        // Cycling mode
+        drag.cyclingMode = true;
+        drag.cycleTrackId = trackId;
+        drag.cycleStartStep = stepIndex;
+        drag.cycleSnapshot = stepsAtDown.current[trackId];
+        drag.cyclePatternIdx = -1;
+        return;
+      }
+
+      // Normal paint mode
+      drag.cyclingMode = false;
       drag.paintValue =
         stepsAtDown.current[trackId][stepIndex] === '1'
           ? '0' : '1';
     },
-    [trackLengths, steps]
+    [
+      trackLengths,
+      steps,
+      patterns,
+      onSetTrackSteps,
+      longPressActiveRef,
+      popoverOpenRef,
+    ]
   );
 
   const onPointerMove = useCallback(
@@ -237,6 +331,84 @@ export function useDragPaint({
       const container = containerRef.current;
       if (!container) return;
 
+      // Cycling mode branch
+      if (drag.cyclingMode) {
+        const dy = Math.abs(e.clientY - drag.startY);
+        const threshold =
+          e.pointerType !== 'mouse'
+            ? CYCLE_THRESHOLD_TOUCH
+            : DRAG_THRESHOLD;
+
+        if (!drag.dragged) {
+          if (dy < threshold) return;
+
+          drag.dragged = true;
+          try {
+            container.setPointerCapture(drag.pointerId);
+          } catch {
+            // Pointer may already be captured or lost
+          }
+
+          // Add Escape key listener to cancel cycling
+          const escHandler = (ev: KeyboardEvent) => {
+            if (ev.key !== 'Escape') return;
+            const d = dragRef.current;
+            if (
+              d.cyclingMode
+              && d.cycleTrackId
+              && onSetTrackSteps
+            ) {
+              onSetTrackSteps(
+                d.cycleTrackId, d.cycleSnapshot
+              );
+            }
+            document.removeEventListener(
+              'keydown', escHandler
+            );
+            d.escapeHandler = null;
+            d.active = false;
+            d.dragged = false;
+            d.cyclingMode = false;
+            d.cycleTrackId = null;
+            const cont = containerRef.current;
+            if (cont) {
+              try {
+                cont.releasePointerCapture(d.pointerId);
+              } catch {
+                // Already released
+              }
+            }
+          };
+          drag.escapeHandler = escHandler;
+          document.addEventListener('keydown', escHandler);
+        }
+
+        // Calculate which pattern position we're at
+        const totalPositions = patterns.length + 2;
+        const rawIdx = Math.floor(
+          dy / CYCLE_PX_PER_STEP
+        );
+        const idx = rawIdx % totalPositions;
+
+        if (
+          idx !== drag.cyclePatternIdx
+          && drag.cycleTrackId
+          && onSetTrackSteps
+        ) {
+          drag.cyclePatternIdx = idx;
+          const newSteps = applyPatternAtIndex(
+            drag.cycleTrackId,
+            drag.cycleStartStep,
+            drag.cycleSnapshot,
+            idx
+          );
+          onSetTrackSteps(drag.cycleTrackId, newSteps);
+        }
+
+        return;
+      }
+
+      // Normal paint mode
       if (!drag.dragged) {
         const dx = e.clientX - drag.startX;
         const dy = e.clientY - drag.startY;
@@ -266,7 +438,8 @@ export function useDragPaint({
       );
       if (hit) paintTo(hit, drag);
     },
-    [containerRef, paintTo]
+    [containerRef, paintTo, applyPatternAtIndex,
+      patterns, onSetTrackSteps]
   );
 
   const onPointerUp = useCallback(
@@ -275,6 +448,43 @@ export function useDragPaint({
       if (!drag.active) return;
       if (e.pointerId !== drag.pointerId) return;
 
+      // Cycling mode cleanup
+      if (drag.cyclingMode) {
+        if (drag.escapeHandler) {
+          document.removeEventListener(
+            'keydown', drag.escapeHandler
+          );
+          drag.escapeHandler = null;
+        }
+
+        const wasDragged = drag.dragged;
+        drag.active = false;
+        drag.dragged = false;
+        drag.cyclingMode = false;
+        drag.cycleTrackId = null;
+
+        const container = containerRef.current;
+        if (container) {
+          try {
+            container.releasePointerCapture(
+              drag.pointerId
+            );
+          } catch {
+            // Already released
+          }
+          if (wasDragged) {
+            container.addEventListener(
+              'click',
+              (evt) => evt.stopPropagation(),
+              { once: true, capture: true }
+            );
+          }
+        }
+
+        return;
+      }
+
+      // Normal paint mode cleanup
       const wasDragged = drag.dragged;
       drag.active = false;
       drag.dragged = false;

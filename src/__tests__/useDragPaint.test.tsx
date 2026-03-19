@@ -1,8 +1,8 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { useDragPaint } from '../app/useDragPaint';
-import type { TrackId } from '../app/types';
+import type { TrackId, TrackPattern } from '../app/types';
 import { TRACK_IDS } from '../app/types';
 
 /**
@@ -113,6 +113,14 @@ function makeDefaultLengths(): Record<TrackId, number> {
   const l = {} as Record<TrackId, number>;
   for (const id of TRACK_IDS) l[id] = 16;
   return l;
+}
+
+function makeDefaultPatterns(): TrackPattern[] {
+  return [
+    { id: 'p1', name: 'Pattern 1', steps: '1010101010101010' },
+    { id: 'p2', name: 'Pattern 2', steps: '1111000011110000' },
+    { id: 'p3', name: 'Pattern 3', steps: '1000100010001000' },
+  ];
 }
 
 describe('useDragPaint', () => {
@@ -514,5 +522,408 @@ describe('useDragPaint', () => {
         c[0] === 'bd' && c[1] === 1
     );
     expect(step1Calls).toHaveLength(1);
+  });
+
+  describe('pattern cycling mode', () => {
+    let onSetTrackSteps: ReturnType<typeof vi.fn>;
+    let longPressActiveRef: React.RefObject<boolean>;
+    let popoverOpenRef: React.RefObject<boolean>;
+    let patterns: TrackPattern[];
+
+    beforeEach(() => {
+      onSetTrackSteps = vi.fn();
+      longPressActiveRef = { current: false };
+      popoverOpenRef = { current: false };
+      patterns = makeDefaultPatterns();
+    });
+
+    function renderDragPaintWithCycling(
+      steps?: Record<TrackId, string>,
+      trackLengths?: Record<TrackId, number>,
+      patternOverride?: TrackPattern[]
+    ) {
+      return renderHook(() =>
+        useDragPaint({
+          containerRef,
+          trackOrder: tracks,
+          trackLengths:
+            trackLengths ?? makeDefaultLengths(),
+          steps: steps ?? makeDefaultSteps(),
+          onSetStep,
+          patterns: patternOverride ?? patterns,
+          onSetTrackSteps,
+          longPressActiveRef,
+          popoverOpenRef,
+        })
+      );
+    }
+
+    it(
+      'shift+drag enters cycling mode and applies pattern',
+      () => {
+        const { result } = renderDragPaintWithCycling();
+        const h = result.current;
+
+        // Click bd step 0 with shift
+        h.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          shiftKey: true,
+        }));
+        // Drag 45px down — floor(45/20) = 2, idx 2
+        // = patterns[0]
+        h.onPointerMove(makePointerEvent({
+          clientX: 10, clientY: 61,
+          shiftKey: true,
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 10, clientY: 61,
+        }));
+
+        expect(onSetTrackSteps).toHaveBeenCalled();
+      }
+    );
+
+    it(
+      'position 0 is current state (no-op on shift+click)',
+      () => {
+        const { result } = renderDragPaintWithCycling();
+        const h = result.current;
+
+        h.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          shiftKey: true,
+        }));
+        // No movement — pointer up without dragging
+        h.onPointerUp(makePointerEvent({
+          clientX: 10, clientY: 16,
+        }));
+
+        // No drag means no cycling ticks
+        expect(onSetTrackSteps).not.toHaveBeenCalled();
+        // And regular step painting should not happen
+        expect(onSetStep).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      'position 1 clears from click step onward',
+      () => {
+        const steps = makeDefaultSteps();
+        // bd has some ON steps
+        steps.bd = '1111111111111111';
+
+        const { result } = renderDragPaintWithCycling(
+          steps
+        );
+        const h = result.current;
+
+        // Click bd step 4 (x=4*40+10=170)
+        h.onPointerDown(makePointerEvent({
+          clientX: 170, clientY: 16,
+          shiftKey: true,
+        }));
+        // Drag 25px → floor(25/20) = 1, idx 1 = clear
+        h.onPointerMove(makePointerEvent({
+          clientX: 170, clientY: 41,
+          shiftKey: true,
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 170, clientY: 41,
+        }));
+
+        // idx 1 = clear from step 4 onward
+        // prefix = '1111', remaining = 12 zeros
+        expect(onSetTrackSteps).toHaveBeenCalledWith(
+          'bd',
+          '1111' + '000000000000'
+        );
+      }
+    );
+
+    it(
+      'absolute distance determines pattern index',
+      () => {
+        const { result } = renderDragPaintWithCycling();
+        const h = result.current;
+
+        // Drag down 25px
+        h.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          shiftKey: true,
+        }));
+        h.onPointerMove(makePointerEvent({
+          clientX: 10, clientY: 41,
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 10, clientY: 41,
+        }));
+
+        const callsDown = onSetTrackSteps.mock.calls
+          .map((c: [TrackId, string]) => c[1]);
+        onSetTrackSteps.mockClear();
+
+        // Drag up 25px (clientY goes from 16 to -9)
+        h.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          shiftKey: true,
+        }));
+        h.onPointerMove(makePointerEvent({
+          clientX: 10, clientY: -9,
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 10, clientY: -9,
+        }));
+
+        const callsUp = onSetTrackSteps.mock.calls
+          .map((c: [TrackId, string]) => c[1]);
+
+        // Both directions should produce same result
+        expect(callsDown).toEqual(callsUp);
+      }
+    );
+
+    it(
+      'wraps around after last pattern',
+      () => {
+        // 3 patterns → 5 total positions (0,1,2,3,4)
+        // After position 4 (pattern[2]), wraps to 0
+        // floor(100/20) = 5 positions → 5 % 5 = 0
+        const steps = makeDefaultSteps();
+        steps.bd = '1010101010101010';
+
+        const { result: r2 } =
+          renderDragPaintWithCycling(steps);
+        const h2 = r2.current;
+
+        // 100px → floor(100/20) = 5, 5 % 5 = 0
+        // position 0 = snapshot (no change)
+        h2.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          shiftKey: true,
+        }));
+        h2.onPointerMove(makePointerEvent({
+          clientX: 10, clientY: 116,
+        }));
+        h2.onPointerUp(makePointerEvent({
+          clientX: 10, clientY: 116,
+        }));
+
+        // The last call should be position 0 (snapshot)
+        const lastCall =
+          onSetTrackSteps.mock.calls[
+            onSetTrackSteps.mock.calls.length - 1
+          ];
+        expect(lastCall[1]).toBe('1010101010101010');
+      }
+    );
+
+    it(
+      'escape cancels and restores original steps',
+      () => {
+        const steps = makeDefaultSteps();
+        steps.bd = '1010101010101010';
+        const snapshot = steps.bd;
+
+        const { result } = renderDragPaintWithCycling(
+          steps
+        );
+        const h = result.current;
+
+        h.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          shiftKey: true,
+        }));
+        // Drag enough to start cycling
+        h.onPointerMove(makePointerEvent({
+          clientX: 10, clientY: 41,
+        }));
+
+        onSetTrackSteps.mockClear();
+
+        // Press Escape
+        act(() => {
+          document.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape' })
+          );
+        });
+
+        // Should restore snapshot
+        expect(onSetTrackSteps).toHaveBeenCalledWith(
+          'bd', snapshot
+        );
+      }
+    );
+
+    it(
+      'click-aligned: pattern starts at click step',
+      () => {
+        const { result } = renderDragPaintWithCycling();
+        const h = result.current;
+
+        // Click bd step 4 (x = 4*40+10 = 170)
+        // pattern[0] = '1010101010101010'
+        // prefix = '0000' (4 steps)
+        // remaining = 12 steps from pattern[0]:
+        //   '101010101010'
+        h.onPointerDown(makePointerEvent({
+          clientX: 170, clientY: 16,
+          shiftKey: true,
+        }));
+        // Drag 45px → floor(45/20) = 2, idx 2 = pattern[0]
+        h.onPointerMove(makePointerEvent({
+          clientX: 170, clientY: 61,
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 170, clientY: 61,
+        }));
+
+        expect(onSetTrackSteps).toHaveBeenCalledWith(
+          'bd',
+          '0000' + '101010101010'
+        );
+      }
+    );
+
+    it(
+      'respects track length when applying pattern',
+      () => {
+        const lengths = makeDefaultLengths();
+        lengths.bd = 8;
+
+        const { result } = renderDragPaintWithCycling(
+          undefined, lengths
+        );
+        const h = result.current;
+
+        // Click bd step 2 (x = 2*40+10 = 90)
+        // remaining = 8 - 2 = 6 steps
+        // pattern[0] = '1010101010101010'
+        // substring(0, 6) = '101010'
+        h.onPointerDown(makePointerEvent({
+          clientX: 90, clientY: 16,
+          shiftKey: true,
+        }));
+        // Drag 45px → idx 2 = pattern[0]
+        h.onPointerMove(makePointerEvent({
+          clientX: 90, clientY: 61,
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 90, clientY: 61,
+        }));
+
+        expect(onSetTrackSteps).toHaveBeenCalledWith(
+          'bd',
+          '00' + '101010'
+        );
+      }
+    );
+
+    it(
+      'blocked when popover is open',
+      () => {
+        popoverOpenRef = { current: true };
+
+        const { result } = renderDragPaintWithCycling();
+        const h = result.current;
+
+        h.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          shiftKey: true,
+        }));
+        h.onPointerMove(makePointerEvent({
+          clientX: 10, clientY: 61,
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 10, clientY: 61,
+        }));
+
+        expect(onSetTrackSteps).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      'touch: long-press ref triggers cycling mode',
+      () => {
+        longPressActiveRef = { current: true };
+
+        const { result } = renderDragPaintWithCycling();
+        const h = result.current;
+
+        // Touch down
+        h.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          pointerType: 'touch',
+        }));
+        // Drag > 10px (touch threshold)
+        h.onPointerMove(makePointerEvent({
+          clientX: 10, clientY: 47,
+          pointerType: 'touch',
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 10, clientY: 47,
+          pointerType: 'touch',
+        }));
+
+        expect(onSetTrackSteps).toHaveBeenCalled();
+        // Should NOT have called normal step painter
+        expect(onSetStep).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      'touch: without long-press ref, normal paint',
+      () => {
+        // longPressActiveRef remains false
+        const { result } = renderDragPaintWithCycling();
+        const h = result.current;
+
+        h.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          pointerType: 'touch',
+        }));
+        // Normal horizontal drag
+        h.onPointerMove(makePointerEvent({
+          clientX: 50, clientY: 16,
+          pointerType: 'touch',
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 50, clientY: 16,
+          pointerType: 'touch',
+        }));
+
+        // Normal paint should fire, not cycling
+        expect(onSetStep).toHaveBeenCalledWith(
+          'bd', 0, '1'
+        );
+        expect(onSetTrackSteps).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      'cycling: adds click suppression after drag',
+      () => {
+        const { result } = renderDragPaintWithCycling();
+        const h = result.current;
+
+        h.onPointerDown(makePointerEvent({
+          clientX: 10, clientY: 16,
+          shiftKey: true,
+        }));
+        h.onPointerMove(makePointerEvent({
+          clientX: 10, clientY: 41,
+        }));
+        h.onPointerUp(makePointerEvent({
+          clientX: 10, clientY: 41,
+        }));
+
+        expect(
+          container.addEventListener
+        ).toHaveBeenCalledWith(
+          'click',
+          expect.any(Function),
+          { once: true, capture: true }
+        );
+      }
+    );
   });
 });
