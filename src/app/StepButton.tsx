@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useRef } from 'react';
+import type { RefObject } from 'react';
 import { useLongPress } from 'use-long-press';
 import type { StepConditions, TrackId } from './types';
 
@@ -21,6 +22,7 @@ interface StepButtonProps {
     stepIndex: number,
     rect: { top: number; left: number }
   ) => void;
+  longPressActiveRef?: RefObject<boolean>;
 }
 
 /**
@@ -40,6 +42,7 @@ function StepButtonInner({
   onToggle,
   conditions,
   onOpenPopover,
+  longPressActiveRef,
 }: StepButtonProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -64,6 +67,9 @@ function StepButtonInner({
   const longPress = useLongPress(
     () => {
       navigator.vibrate?.(10);
+      if (longPressActiveRef) {
+        longPressActiveRef.current = true;
+      }
       openPopover();
     },
     {
@@ -71,6 +77,12 @@ function StepButtonInner({
       cancelOnMovement: 5,
     }
   );
+
+  const handlePointerUp = useCallback(() => {
+    if (longPressActiveRef) {
+      longPressActiveRef.current = false;
+    }
+  }, [longPressActiveRef]);
 
   if (isDisabled) {
     return (
@@ -104,11 +116,17 @@ function StepButtonInner({
       : 'bg-neutral-800/40 hover:bg-neutral-800';
   }
 
+  const longPressHandlers = longPress();
+
   return (
     <button
       ref={buttonRef}
       data-step={stepIndex}
-      {...longPress()}
+      {...longPressHandlers}
+      onPointerUp={(e) => {
+        longPressHandlers.onPointerUp?.(e);
+        handlePointerUp();
+      }}
       onClick={(e) => {
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
