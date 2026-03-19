@@ -55,9 +55,12 @@ Derived values:
 - `pageCount = Math.ceil(patternLength / 16)`
 - `pageOffset = currentPage * 16`
 
-Auto-follow runs in StepGrid's existing rAF loop. When
-`autoFollow` is true and playing, `currentPage` updates
-when `Math.floor(displayStep / 16) !== currentPage`.
+Auto-follow runs in StepGrid's existing rAF loop. The
+condition checks `stepRef.current` (the ref already read
+inside the tick function, not the `displayStep` state
+which would be stale in the closure): when `autoFollow`
+is true and playing, `currentPage` updates when
+`Math.floor(stepRef.current / 16) !== currentPage`.
 
 ### SequencerContext Change
 
@@ -124,8 +127,11 @@ the rAF closure always reads the current value without
 restarting the animation loop.
 
 `useDragPaint` receives a new `pageOffset` parameter.
-Step indices from pointer positions are offset by
-`pageOffset` before calling `onSetStep`.
+Step buttons keep page-local `data-step` values (0-15).
+`useDragPaint` adds `pageOffset` to get the global step
+index before calling `onSetStep`. The `paintOne` guard
+must also compare `stepIdx + pageOffset >= trackLength`
+(global index) instead of `stepIdx >= trackLength`.
 
 Passes `pageOffset` to TrackRow and RunningLight.
 
@@ -149,7 +155,8 @@ Steps dropdown range: `{ length: 16 }` → `{ length: 64 }`.
 
 **Reducing step count while on a later page:**
 `currentPage` clamps to `pageCount - 1` when
-`patternLength` changes.
+`patternLength` changes. This runs in a `useEffect` in
+`Sequencer` with `[patternLength]` dependency.
 
 **Per-track length + paging:**
 Track-level dimming works as today. On page 2+, a track
