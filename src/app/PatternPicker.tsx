@@ -120,12 +120,16 @@ export default function PatternPicker({
             onClick={handleClose}
           />
 
-          {/* Panel */}
+          {/* Panel — swallow Space so it doesn't activate
+               buttons (global Space toggles playback) */}
           <div
             ref={modalRef}
             role="dialog"
             aria-label="Pattern picker"
             tabIndex={-1}
+            onKeyDown={(e) => {
+              if (e.code === 'Space') e.preventDefault();
+            }}
             className="relative z-50 pointer-events-auto
               w-full max-w-[680px] mx-3
               flex flex-col max-h-[80vh]

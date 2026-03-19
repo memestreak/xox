@@ -451,7 +451,6 @@ export function SequencerProvider({
         tag === 'TEXTAREA' ||
         tag === 'SELECT'
       ) return;
-      if (target?.closest('[role="dialog"]')) return;
       event.preventDefault();
       togglePlay();
     };
