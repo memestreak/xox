@@ -36,18 +36,19 @@ export default function PatternPicker({
   const isCustom = currentPattern.id === 'custom';
   const displayName = isCustom ? 'Custom' : currentPattern.name;
 
-  // Effect 1: Auto-select category on open (skip if custom)
-  useEffect(() => {
-    if (!isOpen) return;
+  // Derive initial category when opening (avoids
+  // setState-in-effect lint violation)
+  const handleOpen = () => {
     if (isCustom) {
       setSelectedCategory(null);
-      return;
+    } else {
+      const cat = categories.find(g =>
+        g.patterns.some(p => p.id === currentPattern.id),
+      );
+      setSelectedCategory(cat?.category ?? null);
     }
-    const cat = categories.find(g =>
-      g.patterns.some(p => p.id === currentPattern.id),
-    );
-    setSelectedCategory(cat?.category ?? null);
-  }, [isOpen, isCustom, categories, currentPattern.id]);
+    setIsOpen(true);
+  };
 
   // Effect 2: Close on Escape
   useEffect(() => {
@@ -73,11 +74,6 @@ export default function PatternPicker({
     g.patterns.some(p => p.id === currentPattern.id),
   );
 
-  const selectedGroup = categories.find(
-    g => g.selectedCategory === selectedCategory ||
-      g.category === selectedCategory,
-  );
-
   const patternsToShow = selectedCategory
     ? (categories.find(g => g.category === selectedCategory)
         ?.patterns ?? [])
@@ -96,7 +92,7 @@ export default function PatternPicker({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen(prev => !prev)}
+        onClick={() => isOpen ? setIsOpen(false) : handleOpen()}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label="Pattern"
