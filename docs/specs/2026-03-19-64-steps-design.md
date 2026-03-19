@@ -61,8 +61,12 @@ when `Math.floor(displayStep / 16) !== currentPage`.
 
 ### SequencerContext Change
 
-One line: bump `setPatternLength` clamp from
-`Math.min(16, length)` to `Math.min(64, length)`.
+Bump `setPatternLength` clamp from `Math.min(16, length)`
+to `Math.min(64, length)`. The existing expansion logic
+in `setPatternLength` (lines 576-605) already handles
+step-string padding when track lengths grow — no further
+changes needed, but the expansion path must be tested
+with lengths beyond 16.
 
 ## UI Components
 
@@ -87,26 +91,55 @@ Always 16 buttons. Step indices passed to `onToggleStep`
 adjusted by `pageOffset`. Dimming adds:
 `pageOffset + i >= patternLength`.
 
-The drag handle for track length accounts for
-`pageOffset` — dragging on page 2 sets lengths in the
-17-32 range.
+**Drag handle with paging:**
+
+Visual position changes from `(trackLength / 16) * 100`
+to `clamp((trackLength - pageOffset) / 16, 0, 1) * 100`.
+When `trackLength <= pageOffset`, the handle is at 0%
+(pinned left). When `trackLength >= pageOffset + 16`, it
+is at 100% (pinned right / hidden).
+
+`lengthFromPointer` changes its divisor from
+`rect.width / patternLength` to `rect.width / 16` (page
+size), then adds `pageOffset` to the computed raw step:
+`Math.max(1, Math.min(patternLength, raw + pageOffset))`.
 
 ### RunningLight (modified)
 
 New prop: `pageOffset`. Dot at position `i` represents
-global step `pageOffset + i`.
+global step `pageOffset + i`. The highlight condition
+changes from `i === currentStep` to
+`pageOffset + i === currentStep`. The dimming condition
+changes from `i >= patternLength` to
+`pageOffset + i >= patternLength`.
 
 ### StepGrid (modified)
 
-Receives `currentPage`, `pageOffset`, `setPage` from
-parent. rAF loop checks page boundaries and calls
-`setPage` when auto-follow is active. Passes `pageOffset`
-to TrackRow and RunningLight.
+Receives `currentPage`, `pageOffset`, `autoFollow`,
+`setPage` from parent. The rAF loop checks page
+boundaries and calls `setPage` when auto-follow is
+active. `autoFollow` is mirrored to a `useRef` inside
+StepGrid (like `fillActiveRef` in SequencerContext) so
+the rAF closure always reads the current value without
+restarting the animation loop.
+
+`useDragPaint` receives a new `pageOffset` parameter.
+Step indices from pointer positions are offset by
+`pageOffset` before calling `onSetStep`.
+
+Passes `pageOffset` to TrackRow and RunningLight.
 
 ### TransportControls (modified)
 
-Pattern section grid column: `1fr` → `1.5fr`. Renders
-`PageIndicator` inline after the pattern button.
+Pattern section grid column: `1fr` → `1.5fr`.
+`PageIndicator` is rendered by `Sequencer` as a sibling
+passed into TransportControls (or the Pattern section
+directly), avoiding re-render of the memoized
+TransportControls on every page change. The exact
+threading (render prop, slot prop, or direct sibling)
+is an implementation detail — the key constraint is
+that page-state changes must not trigger a full
+TransportControls re-render.
 
 ### GlobalControls (modified)
 
