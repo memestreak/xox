@@ -8,6 +8,13 @@ import SettingsPopover from './SettingsPopover';
 import GlobalControls from './GlobalControls';
 import FillButton from './FillButton';
 import { useSequencer } from './SequencerContext';
+import PatternPicker from './PatternPicker';
+import { getCategorizedPatterns } from './patternUtils';
+import type { Pattern } from './types';
+
+const categories = getCategorizedPatterns(
+  patternsData.patterns as Pattern[]
+);
 
 /**
  * Header section with logo, BPM, play/stop, kit and
@@ -75,32 +82,14 @@ function TransportControlsInner() {
           </select>
         </div>
         <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
-          <label
-            htmlFor="pattern-select"
-            className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold"
-          >
+          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
             Pattern
-          </label>
-          <select
-            id="pattern-select"
-            value={currentPattern.id}
-            onChange={(e) => {
-              const pat = patternsData.patterns.find(
-                p => p.id === e.target.value
-              );
-              if (pat) setPattern(pat);
-            }}
-            className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors"
-          >
-            {currentPattern.id === 'custom' && (
-              <option value="custom">Custom</option>
-            )}
-            {patternsData.patterns.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          </span>
+          <PatternPicker
+            categories={categories}
+            currentPattern={currentPattern}
+            onSelect={setPattern}
+          />
         </div>
       </div>
     </header>

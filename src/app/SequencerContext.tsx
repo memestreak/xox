@@ -444,13 +444,14 @@ export function SequencerProvider({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isLoaded) return;
       if (event.code !== 'Space') return;
-      const tag =
-        (event.target as HTMLElement)?.tagName;
+      const target = event.target as HTMLElement;
+      const tag = target?.tagName;
       if (
         tag === 'INPUT' ||
         tag === 'TEXTAREA' ||
         tag === 'SELECT'
       ) return;
+      if (target?.closest('[role="dialog"]')) return;
       event.preventDefault();
       togglePlay();
     };
