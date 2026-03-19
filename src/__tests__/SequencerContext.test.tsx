@@ -175,6 +175,36 @@ describe('action isolation', () => {
     ).toBe('custom');
   });
 
+  it('setTrackSteps replaces full step string', () => {
+    const { result } = renderHook(
+      () => useSequencer(), { wrapper: TestWrapper }
+    );
+    act(() => {
+      result.current.actions.setTrackSteps(
+        'bd', '1010101010101010'
+      );
+    });
+    expect(
+      result.current.state.currentPattern.steps.bd
+    ).toBe('1010101010101010');
+  });
+
+  it('setTrackSteps sets selectedPatternId to custom',
+    () => {
+      const { result } = renderHook(
+        () => useSequencer(), { wrapper: TestWrapper }
+      );
+      act(() => {
+        result.current.actions.setTrackSteps(
+          'bd', '1010101010101010'
+        );
+      });
+      expect(
+        result.current.state.currentPattern.id
+      ).toBe('custom');
+    }
+  );
+
   it('setPattern copies steps and sets pattern ID', () => {
     const { result } = renderSequencer();
     const preset = patternsData.patterns[1];

@@ -100,6 +100,9 @@ interface SequencerActions {
     stepIndex: number,
     value: '0' | '1'
   ) => void;
+  setTrackSteps: (
+    trackId: TrackId, steps: string
+  ) => void;
   setTrigCondition: (
     trackId: TrackId,
     stepIndex: number,
@@ -546,6 +549,25 @@ export function SequencerProvider({
     []
   );
 
+  const setTrackSteps = useCallback(
+    (trackId: TrackId, newSteps: string) => {
+      setConfig(prev => {
+        if (newSteps === prev.steps[trackId]) {
+          return prev;
+        }
+        return {
+          ...prev,
+          steps: {
+            ...prev.steps,
+            [trackId]: newSteps,
+          },
+        };
+      });
+      setSelectedPatternId('custom');
+    },
+    []
+  );
+
   const toggleFreeRun = useCallback(
     (trackId: TrackId) => {
       setConfig(prev => ({
@@ -920,6 +942,7 @@ export function SequencerProvider({
       setPattern,
       toggleStep,
       setStep,
+      setTrackSteps,
       toggleMute,
       toggleSolo,
       setGain,
