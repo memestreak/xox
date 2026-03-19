@@ -91,6 +91,7 @@ interface SequencerActions {
     trackId: TrackId, length: number
   ) => void;
   clearAll: () => void;
+  clearTrack: (trackId: TrackId) => void;
   setSwing: (value: number) => void;
   toggleFillLatch: () => void;
   setFillHeld: (held: boolean) => void;
@@ -749,6 +750,38 @@ export function SequencerProvider({
     setSelectedPatternId('custom');
   }, []);
 
+  const clearTrack = useCallback(
+    (trackId: TrackId) => {
+      setConfig(prev => {
+        const newTrigConditions = {
+          ...prev.trigConditions,
+        };
+        delete newTrigConditions[trackId];
+        return {
+          ...prev,
+          steps: {
+            ...prev.steps,
+            [trackId]: '0'.repeat(prev.patternLength),
+          },
+          trackLengths: {
+            ...prev.trackLengths,
+            [trackId]: prev.patternLength,
+          },
+          mixer: {
+            ...prev.mixer,
+            [trackId]: {
+              ...prev.mixer[trackId],
+              freeRun: false,
+            },
+          },
+          trigConditions: newTrigConditions,
+        };
+      });
+      setSelectedPatternId('custom');
+    },
+    []
+  );
+
   const setSwing = useCallback(
     (value: number) => {
       setConfig(prev => ({
@@ -894,6 +927,7 @@ export function SequencerProvider({
       setPatternLength,
       setTrackLength,
       clearAll,
+      clearTrack,
       setSwing,
       toggleFillLatch,
       setFillHeld,

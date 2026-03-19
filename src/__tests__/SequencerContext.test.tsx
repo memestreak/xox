@@ -426,6 +426,123 @@ describe('clearAll', () => {
   });
 });
 
+// -------------------------------------------------------
+// F2. clearTrack
+// -------------------------------------------------------
+describe('clearTrack', () => {
+  it('clears steps to all zeros for target track only', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.toggleStep('bd', 0);
+      result.current.actions.toggleStep('bd', 4);
+      result.current.actions.toggleStep('sd', 2);
+    });
+    act(() => {
+      result.current.actions.clearTrack('bd');
+    });
+    const bdSteps =
+      result.current.meta.config.steps.bd;
+    expect(bdSteps).toMatch(/^0+$/);
+    // sd should still have its step active
+    expect(
+      result.current.meta.config.steps.sd[2]
+    ).toBe('1');
+  });
+
+  it('resets track length to patternLength', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setTrackLength('bd', 5);
+    });
+    expect(
+      result.current.meta.config.trackLengths.bd
+    ).toBe(5);
+    act(() => {
+      result.current.actions.clearTrack('bd');
+    });
+    expect(
+      result.current.meta.config.trackLengths.bd
+    ).toBe(result.current.state.patternLength);
+  });
+
+  it('removes trig conditions for target track only', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.toggleStep('bd', 0);
+      result.current.actions.toggleStep('sd', 0);
+      result.current.actions.setTrigCondition(
+        'bd', 0, { type: 'every', n: 2 }
+      );
+      result.current.actions.setTrigCondition(
+        'sd', 0, { type: 'every', n: 3 }
+      );
+    });
+    act(() => {
+      result.current.actions.clearTrack('bd');
+    });
+    expect(
+      result.current.meta.config.trigConditions.bd
+    ).toBeUndefined();
+    expect(
+      result.current.meta.config.trigConditions.sd
+    ).toBeDefined();
+  });
+
+  it('resets freeRun to false for target track', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.toggleFreeRun('bd');
+    });
+    expect(
+      result.current.meta.config.mixer.bd.freeRun
+    ).toBe(true);
+    act(() => {
+      result.current.actions.clearTrack('bd');
+    });
+    expect(
+      result.current.meta.config.mixer.bd.freeRun
+    ).toBe(false);
+  });
+
+  it('leaves other tracks untouched', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.toggleStep('sd', 2);
+      result.current.actions.setTrackLength('sd', 8);
+      result.current.actions.toggleFreeRun('sd');
+    });
+    const sdBefore = {
+      steps: result.current.meta.config.steps.sd,
+      length:
+        result.current.meta.config.trackLengths.sd,
+      freeRun:
+        result.current.meta.config.mixer.sd.freeRun,
+    };
+    act(() => {
+      result.current.actions.clearTrack('bd');
+    });
+    expect(
+      result.current.meta.config.steps.sd
+    ).toBe(sdBefore.steps);
+    expect(
+      result.current.meta.config.trackLengths.sd
+    ).toBe(sdBefore.length);
+    expect(
+      result.current.meta.config.mixer.sd.freeRun
+    ).toBe(sdBefore.freeRun);
+  });
+
+  it('sets selected pattern to custom', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.clearTrack('bd');
+    });
+    expect(
+      result.current.state.currentPattern.id
+    ).toBe('custom');
+  });
+});
+
 describe('setSwing', () => {
   it('updates swing value', () => {
     const { result } = renderSequencer();

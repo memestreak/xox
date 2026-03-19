@@ -16,6 +16,7 @@ interface TrackNameButtonProps {
   trackName: string;
   isFreeRun: boolean;
   onToggleFreeRun: () => void;
+  onClearTrack: () => void;
 }
 
 /**
@@ -28,6 +29,7 @@ function TrackNameButtonInner({
   trackName,
   isFreeRun,
   onToggleFreeRun,
+  onClearTrack,
 }: TrackNameButtonProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -62,7 +64,13 @@ function TrackNameButtonInner({
     <div className="relative">
       <button
         ref={size === 'lg' ? nameRef : undefined}
-        onClick={() => setMenuOpen(v => !v)}
+        onClick={(e: React.MouseEvent) => {
+          if (e.shiftKey) {
+            onClearTrack();
+            return;
+          }
+          setMenuOpen(v => !v);
+        }}
         className={
           (size === 'sm'
             ? 'text-[10px]'
@@ -132,6 +140,7 @@ interface TrackRowProps {
     trackId: TrackId, length: number
   ) => void;
   onToggleFreeRun: (trackId: TrackId) => void;
+  onClearTrack: (trackId: TrackId) => void;
   trigConditions?: Record<number, StepConditions>;
   onOpenPopover?: (
     trackId: TrackId,
@@ -166,6 +175,7 @@ function TrackRowInner({
   onSetGain,
   onSetTrackLength,
   onToggleFreeRun,
+  onClearTrack,
   trigConditions,
   onOpenPopover,
 }: TrackRowProps) {
@@ -184,6 +194,10 @@ function TrackRowInner({
   const handleFreeRun = useCallback(
     () => onToggleFreeRun(trackId),
     [onToggleFreeRun, trackId]
+  );
+  const handleClearTrack = useCallback(
+    () => onClearTrack(trackId),
+    [onClearTrack, trackId]
   );
 
   // ─── Drag handle state ─────────────────────────
@@ -269,6 +283,7 @@ function TrackRowInner({
           trackName={trackName}
           isFreeRun={isFreeRun}
           onToggleFreeRun={handleFreeRun}
+          onClearTrack={handleClearTrack}
         />
         <div className="flex gap-1 ml-auto items-center">
           <TrackToggle
@@ -302,6 +317,7 @@ function TrackRowInner({
             trackName={trackName}
             isFreeRun={isFreeRun}
             onToggleFreeRun={handleFreeRun}
+            onClearTrack={handleClearTrack}
           />
           <TrackToggle
             variant="mute"
