@@ -32,6 +32,7 @@ export interface StepConditions {
 export interface Pattern {
   id: string;
   name: string;
+  category?: string;
   steps: Record<TrackId, string>;
   trigConditions?: Partial<
     Record<TrackId, Record<number, StepConditions>>
