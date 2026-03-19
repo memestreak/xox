@@ -37,7 +37,8 @@ export default function PatternPicker({
   const displayName = isCustom ? 'Custom' : currentPattern.name;
 
   // Derive initial category when opening (avoids
-  // setState-in-effect lint violation)
+  // setState-in-effect lint violation). Focus modal
+  // directly in the handler (rerender-move-effect-to-event).
   const handleOpen = () => {
     if (isCustom) {
       setSelectedCategory(null);
@@ -48,26 +49,26 @@ export default function PatternPicker({
       setSelectedCategory(cat?.category ?? null);
     }
     setIsOpen(true);
+    // Focus modal after React commits the DOM update
+    requestAnimationFrame(() => {
+      modalRef.current?.focus();
+    });
   };
 
-  // Effect 2: Close on Escape
+  const handleClose = () => {
+    setIsOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape') handleClose();
     };
     document.addEventListener('keydown', handleKey);
     return () =>
       document.removeEventListener('keydown', handleKey);
-  }, [isOpen]);
-
-  // Effect 3: Focus modal on open, return focus on close
-  useEffect(() => {
-    if (isOpen) {
-      modalRef.current?.focus();
-    } else {
-      triggerRef.current?.focus();
-    }
   }, [isOpen]);
 
   const activeCategory = categories.find(g =>
@@ -92,7 +93,7 @@ export default function PatternPicker({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => isOpen ? setIsOpen(false) : handleOpen()}
+        onClick={() => isOpen ? handleClose() : handleOpen()}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label="Pattern"
@@ -116,7 +117,7 @@ export default function PatternPicker({
           <div
             data-testid="pattern-picker-backdrop"
             className="fixed inset-0 bg-black/60 pointer-events-auto"
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
           />
 
           {/* Panel */}
