@@ -104,9 +104,9 @@ function* bresenham(
 
 /**
  * Hook for click-drag painting/erasing of sequencer
- * steps across multiple tracks. Normal drag fills;
- * shift+drag erases. On touch, mode is inferred from
- * the first cell. Fast drags interpolate using
+ * steps across multiple tracks. Paint mode is inferred
+ * from the first cell: if ON, the drag erases; if OFF,
+ * the drag fills. Fast drags interpolate using
  * Bresenham's line algorithm so no cells are skipped.
  *
  * Returns pointer event handlers to spread on a
@@ -221,14 +221,9 @@ export function useDragPaint({
       drag.lastTrackIdx = -1;
       drag.lastStep = -1;
 
-      if (e.pointerType === 'mouse') {
-        drag.paintValue = e.shiftKey ? '0' : '1';
-      } else {
-        drag.paintValue =
-          stepsAtDown.current[trackId][stepIndex]
-            === '1'
-            ? '0' : '1';
-      }
+      drag.paintValue =
+        stepsAtDown.current[trackId][stepIndex] === '1'
+          ? '0' : '1';
     },
     [trackLengths, steps]
   );

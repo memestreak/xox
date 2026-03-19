@@ -212,7 +212,7 @@ describe('useDragPaint', () => {
     );
   });
 
-  it('shift+drag erases across tracks', () => {
+  it('drag starting on ON cell erases across tracks', () => {
     const steps = makeDefaultSteps();
     steps.bd = '1111111111111111';
     steps.sd = '1111111111111111';
@@ -221,14 +221,14 @@ describe('useDragPaint', () => {
     const h = result.current;
 
     h.onPointerDown(makePointerEvent({
-      clientX: 10, clientY: 16, shiftKey: true,
+      clientX: 10, clientY: 16,
     }));
     h.onPointerMove(makePointerEvent({
-      clientX: 50, clientY: 16, shiftKey: true,
+      clientX: 50, clientY: 16,
     }));
     // Move to sd row
     h.onPointerMove(makePointerEvent({
-      clientX: 50, clientY: 50, shiftKey: true,
+      clientX: 50, clientY: 50,
     }));
     h.onPointerUp(makePointerEvent({
       clientX: 50, clientY: 50,
@@ -239,6 +239,34 @@ describe('useDragPaint', () => {
     );
     expect(onSetStep).toHaveBeenCalledWith(
       'bd', 1, '0'
+    );
+    expect(onSetStep).toHaveBeenCalledWith(
+      'sd', 1, '0'
+    );
+  });
+
+  it('cross-track drag keeps paint mode from first cell', () => {
+    const steps = makeDefaultSteps();
+    steps.bd = '1111111111111111';
+    steps.sd = '0000000000000000';
+
+    const { result } = renderDragPaint(steps);
+    const h = result.current;
+
+    // Start on bd[0] (ON) → erase mode
+    h.onPointerDown(makePointerEvent({
+      clientX: 10, clientY: 16,
+    }));
+    // Drag to sd[1] (OFF, but paint mode is sticky)
+    h.onPointerMove(makePointerEvent({
+      clientX: 50, clientY: 50,
+    }));
+    h.onPointerUp(makePointerEvent({
+      clientX: 50, clientY: 50,
+    }));
+
+    expect(onSetStep).toHaveBeenCalledWith(
+      'bd', 0, '0'
     );
     expect(onSetStep).toHaveBeenCalledWith(
       'sd', 1, '0'
