@@ -124,7 +124,11 @@ function StepButtonInner({
       data-step={stepIndex}
       {...longPressHandlers}
       onPointerUp={(e) => {
-        longPressHandlers.onPointerUp?.(e);
+        if ('onPointerUp' in longPressHandlers) {
+          (longPressHandlers as {
+            onPointerUp: React.PointerEventHandler;
+          }).onPointerUp(e);
+        }
         handlePointerUp();
       }}
       onClick={(e) => {

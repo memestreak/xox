@@ -10,7 +10,11 @@ import RunningLight from './RunningLight';
 import TrigConditionPopover
   from './TrigConditionPopover';
 import { useDragPaint } from './useDragPaint';
-import type { TrackId } from './types';
+import type { TrackId, TrackPattern } from './types';
+import trackPatternData from './data/trackPatterns.json';
+
+const TRACK_PATTERNS: TrackPattern[] =
+  trackPatternData.patterns;
 
 const TRACK_ORDER: TrackId[] = TRACKS.map(
   t => t.id
@@ -35,11 +39,15 @@ export default function StepGrid({
     patternLength, trackLengths,
   } = state;
   const {
-    toggleStep, setStep, toggleMute, toggleSolo,
+    toggleStep, setStep, setTrackSteps,
+    toggleMute, toggleSolo,
     setGain, setTrackLength, toggleFreeRun,
     clearTrack,
   } = actions;
   const { stepRef, totalStepsRef, config } = meta;
+
+  const longPressActiveRef = useRef<boolean>(false);
+  const popoverOpenRef = useRef<boolean>(false);
 
   const dragContainerRef = useRef<HTMLDivElement>(null);
   const dragPaint = useDragPaint({
@@ -48,6 +56,10 @@ export default function StepGrid({
     trackLengths,
     steps: currentPattern.steps,
     onSetStep: setStep,
+    patterns: TRACK_PATTERNS,
+    onSetTrackSteps: setTrackSteps,
+    longPressActiveRef,
+    popoverOpenRef,
   });
 
   const [openPopover, setOpenPopover] = useState<{
@@ -55,6 +67,10 @@ export default function StepGrid({
     stepIndex: number;
     anchorRect: { top: number; left: number };
   } | null>(null);
+
+  useEffect(() => {
+    popoverOpenRef.current = openPopover !== null;
+  }, [openPopover]);
 
   // Local state driven by rAF, isolated from the
   // context provider so only StepGrid and its children
@@ -119,6 +135,7 @@ export default function StepGrid({
             onSetTrackLength={setTrackLength}
             onToggleFreeRun={toggleFreeRun}
             onClearTrack={clearTrack}
+            longPressActiveRef={longPressActiveRef}
             trigConditions={
               config.trigConditions[track.id]
             }

@@ -3,6 +3,7 @@
 import {
   memo, useCallback, useEffect, useRef, useState,
 } from 'react';
+import type { RefObject } from 'react';
 import {
   LongPressEventType, useLongPress,
 } from 'use-long-press';
@@ -147,6 +148,7 @@ interface TrackRowProps {
     stepIndex: number,
     rect: { top: number; left: number }
   ) => void;
+  longPressActiveRef?: RefObject<boolean>;
 }
 
 /**
@@ -178,6 +180,7 @@ function TrackRowInner({
   onClearTrack,
   trigConditions,
   onOpenPopover,
+  longPressActiveRef,
 }: TrackRowProps) {
   const handleMute = useCallback(
     () => onToggleMute(trackId),
@@ -374,6 +377,9 @@ function TrackRowInner({
                       trigConditions?.[i]
                     }
                     onOpenPopover={onOpenPopover}
+                    longPressActiveRef={
+                      longPressActiveRef
+                    }
                   />
                 );
               }
