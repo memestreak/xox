@@ -96,36 +96,22 @@ export default function PatternPicker({
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label="Pattern"
-        className="w-full flex items-center justify-between
-          bg-neutral-800 border border-neutral-700 rounded
-          p-1 lg:p-2 text-sm text-left
-          hover:border-neutral-600 transition-colors
+        className="w-full px-4 lg:px-8 py-2 rounded-full
+          font-bold text-sm lg:text-base truncate
+          bg-neutral-800 text-neutral-400
+          hover:text-neutral-200 hover:bg-neutral-700
+          transition-colors
           focus-visible:outline-none focus-visible:ring-2
-          focus-visible:ring-orange-500"
+          focus-visible:ring-orange-500
+          focus-visible:ring-offset-2
+          focus-visible:ring-offset-neutral-950"
       >
-        <span className="truncate">{displayName}</span>
-        <svg
-          className={`w-4 h-4 ml-1 shrink-0 text-neutral-400
-            transition-transform
-            ${isOpen ? 'rotate-180' : ''}`}
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fillRule="evenodd"
-            d="M5.23 7.21a.75.75 0 011.06.02L10
-              11.168l3.71-3.938a.75.75 0
-              111.08 1.04l-4.25 4.5a.75.75 0
-              01-1.08 0l-4.25-4.5a.75.75 0
-              01.02-1.06z"
-            clipRule="evenodd"
-          />
-        </svg>
+        {displayName}
       </button>
 
       {/* Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-40 pointer-events-none flex items-center justify-center">
+        <div className="fixed inset-0 z-40 pointer-events-none flex items-start justify-center pt-4 lg:pt-8">
           {/* Backdrop */}
           <div
             data-testid="pattern-picker-backdrop"
@@ -146,28 +132,6 @@ export default function PatternPicker({
               rounded-xl shadow-2xl
               focus-visible:outline-none"
           >
-            {/* Close button */}
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              aria-label="Close"
-              className="absolute top-3 right-3 p-1 z-10
-                text-neutral-500 hover:text-neutral-300
-                transition-colors"
-            >
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M6.28 5.22a.75.75 0 00-1.06
-                  1.06L8.94 10l-3.72 3.72a.75.75 0
-                  101.06 1.06L10 11.06l3.72 3.72a.75.75
-                  0 101.06-1.06L11.06 10l3.72-3.72a.75.75
-                  0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-              </svg>
-            </button>
-
             {/* Zone 1: Category pills (pinned) */}
             <div className="p-4 pb-3 flex flex-wrap gap-1.5">
               {categories.map(group => {
@@ -205,7 +169,7 @@ export default function PatternPicker({
             <div className="border-t border-neutral-800" />
 
             {/* Zone 2: Pattern grid (scrollable) */}
-            <div className="overflow-y-auto flex-1 p-4">
+            <div className="overflow-y-auto flex-1 p-4 hide-scrollbar">
               {selectedCategory && patternsToShow.length > 0
                 ? (
                   <div

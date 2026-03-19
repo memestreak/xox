@@ -110,20 +110,6 @@ describe('PatternPicker', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('closes on X button', async () => {
-      const user = userEvent.setup();
-      renderPicker();
-      await user.click(
-        screen.getByRole('button', { name: /pattern/i }),
-      );
-      await user.click(
-        screen.getByRole('button', { name: /close/i }),
-      );
-      expect(
-        screen.queryByRole('dialog'),
-      ).not.toBeInTheDocument();
-    });
-
     it('closes on backdrop click', async () => {
       const user = userEvent.setup();
       renderPicker();
@@ -310,6 +296,24 @@ describe('PatternPicker', () => {
       expect(
         screen.getByTestId('active-label'),
       ).toHaveTextContent('Custom');
+    });
+  });
+
+  describe('scrollbar', () => {
+    it('pattern grid has hide-scrollbar class', async () => {
+      const user = userEvent.setup();
+      renderPicker(funkPatterns[0]);
+      await user.click(
+        screen.getByRole('button', { name: /pattern/i }),
+      );
+      const option = screen.getByRole('option', {
+        name: 'Funk 1',
+      });
+      const scrollContainer =
+        option.closest('.overflow-y-auto');
+      expect(scrollContainer).toHaveClass(
+        'hide-scrollbar',
+      );
     });
   });
 });

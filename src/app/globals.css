@@ -94,8 +94,14 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   animation: tap-pulse 200ms ease-out;
 }
 
-/* Track scroll region — hide scrollbar, keep scroll */
+/* Hide scrollbar but keep scroll functionality */
 @layer base {
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
   .track-scroll-region {
     scrollbar-width: none;
   }
