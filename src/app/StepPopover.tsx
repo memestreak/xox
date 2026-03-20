@@ -7,12 +7,16 @@ import type { RefObject } from 'react';
 import { useSequencer } from './SequencerContext';
 import { CYCLE_OPTIONS } from './trigConditions';
 import ProbabilitySlider from './ProbabilitySlider';
-import type { StepConditions, TrackId } from './types';
+import RangeSlider from './RangeSlider';
+import type {
+  StepConditions, StepLocks, TrackId,
+} from './types';
 
-interface TrigConditionPopoverProps {
+interface StepPopoverProps {
   trackId: TrackId;
   stepIndex: number;
   conditions?: StepConditions;
+  locks?: StepLocks;
   anchorRect?: { top: number; left: number };
   onClose: () => void;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
@@ -29,14 +33,15 @@ interface TrigConditionPopoverProps {
  *   anchorRect: Position anchor
  *   onClose: Called when popover should close
  */
-export default function TrigConditionPopover({
+export default function StepPopover({
   trackId,
   stepIndex,
   conditions,
+  locks,
   anchorRect,
   onClose,
   scrollContainerRef,
-}: TrigConditionPopoverProps) {
+}: StepPopoverProps) {
   const { actions } = useSequencer();
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +56,13 @@ export default function TrigConditionPopover({
   const [fillValue, setFillValue] = useState<
     'none' | 'fill' | '!fill'
   >(conditions?.fill ?? 'none');
+
+  const [gainValue, setGainValue] = useState(
+    locks?.gain !== undefined
+      ? Math.round(locks.gain * 100)
+      : 100
+  );
+  const gainTouched = useRef(false);
 
   const updateConditions = useCallback(
     (
@@ -109,6 +121,19 @@ export default function TrigConditionPopover({
     [updateConditions, probability, cycleValue]
   );
 
+  const handleGainChange = useCallback(
+    (v: number) => {
+      setGainValue(v);
+      gainTouched.current = true;
+      actions.setParameterLock(
+        trackId,
+        stepIndex,
+        { gain: v / 100 }
+      );
+    },
+    [actions, trackId, stepIndex]
+  );
+
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       if (
@@ -162,11 +187,32 @@ export default function TrigConditionPopover({
     );
   }, [anchorRect, onClose, scrollContainerRef]);
 
+  // Flip popover above anchor if it would overflow
+  // the viewport bottom.
+  const [flippedTop, setFlippedTop] = useState<
+    number | null
+  >(null);
+  useEffect(() => {
+    const el = popoverRef.current;
+    if (!el || !anchorRect) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom > window.innerHeight - 8) {
+      // 8px margin from viewport edge.
+      // anchorRect.top is button.bottom + 4,
+      // so button.bottom = anchorRect.top - 4.
+      // Place popover above: button.bottom - 4 - gap
+      // - popoverHeight.
+      const above =
+        anchorRect.top - 4 - 4 - rect.height;
+      setFlippedTop(Math.max(8, above));
+    }
+  }, [anchorRect]);
+
   return (
     <div
       ref={popoverRef}
       role="dialog"
-      aria-label="Trig conditions"
+      aria-label="Step editor"
       className={
         'fixed z-30'
         + ' w-56 bg-neutral-900 border'
@@ -174,7 +220,7 @@ export default function TrigConditionPopover({
         + ' shadow-xl p-3 space-y-3'
       }
       style={anchorRect ? {
-        top: `${anchorRect.top}px`,
+        top: `${flippedTop ?? anchorRect.top}px`,
         left: `${anchorRect.left}px`,
       } : undefined}
     >
@@ -303,6 +349,61 @@ export default function TrigConditionPopover({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-neutral-700" />
+
+      {/* Locks section */}
+      <div className={
+        'flex items-center justify-between'
+      }>
+        <div className={
+          'text-xs font-bold uppercase'
+          + ' tracking-wider text-neutral-400'
+        }>
+          Locks
+        </div>
+        <button
+          onClick={() => {
+            actions.clearParameterLock(
+              trackId, stepIndex
+            );
+            setGainValue(100);
+            gainTouched.current = false;
+          }}
+          disabled={locks === undefined}
+          className={
+            'text-[11px] px-1.5 py-0.5 rounded'
+            + ' border transition-colors'
+            + (locks !== undefined
+              ? ' text-neutral-400'
+                + ' hover:text-neutral-200'
+                + ' border-neutral-700'
+                + ' hover:bg-neutral-800'
+              : ' text-neutral-700'
+                + ' border-neutral-800'
+                + ' cursor-default')
+          }
+        >
+          Reset locks
+        </button>
+      </div>
+
+      <div className="space-y-1">
+        <div className={
+          'text-[10px] uppercase tracking-wider'
+          + ' text-neutral-500'
+        }>
+          Gain
+        </div>
+        <RangeSlider
+          value={gainValue}
+          min={0}
+          max={100}
+          onChange={handleGainChange}
+          label="Gain"
+        />
       </div>
 
     </div>

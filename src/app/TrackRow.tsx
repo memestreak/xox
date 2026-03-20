@@ -7,7 +7,9 @@ import type { RefObject } from 'react';
 import {
   LongPressEventType, useLongPress,
 } from 'use-long-press';
-import type { StepConditions, TrackId } from './types';
+import type {
+  StepConditions, StepLocks, TrackId,
+} from './types';
 import TrackToggle from './TrackToggle';
 import StepButton from './StepButton';
 import Knob from './Knob';
@@ -144,6 +146,7 @@ interface TrackRowProps {
   onToggleFreeRun: (trackId: TrackId) => void;
   onClearTrack: (trackId: TrackId) => void;
   trigConditions?: Record<number, StepConditions>;
+  parameterLocks?: Record<number, StepLocks>;
   onOpenPopover?: (
     trackId: TrackId,
     stepIndex: number,
@@ -181,6 +184,7 @@ function TrackRowInner({
   onToggleFreeRun,
   onClearTrack,
   trigConditions,
+  parameterLocks,
   onOpenPopover,
   longPressActiveRef,
 }: TrackRowProps) {
@@ -402,6 +406,10 @@ function TrackRowInner({
                     onToggle={handleToggleStep}
                     conditions={
                       trigConditions?.[globalIdx]
+                    }
+                    gainLock={
+                      parameterLocks?.[globalIdx]
+                        ?.gain
                     }
                     onOpenPopover={handleOpenPopover}
                     longPressActiveRef={

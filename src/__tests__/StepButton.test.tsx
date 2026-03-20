@@ -203,20 +203,22 @@ describe('StepButton interactions', () => {
     }
   );
 
-  it('right-click on inactive: no popover', () => {
-    const onOpen = vi.fn();
-    render(
-      <StepButton
-        {...base}
-        isActive={false}
-        onOpenPopover={onOpen}
-      />
-    );
-    fireEvent.contextMenu(
-      screen.getByRole('button')
-    );
-    expect(onOpen).not.toHaveBeenCalled();
-  });
+  it('right-click on inactive: calls onOpenPopover',
+    () => {
+      const onOpen = vi.fn();
+      render(
+        <StepButton
+          {...base}
+          isActive={false}
+          onOpenPopover={onOpen}
+        />
+      );
+      fireEvent.contextMenu(
+        screen.getByRole('button')
+      );
+      expect(onOpen).toHaveBeenCalled();
+    }
+  );
 
   it('click still toggles', () => {
     const toggle = vi.fn();
@@ -230,4 +232,79 @@ describe('StepButton interactions', () => {
     fireEvent.click(screen.getByRole('button'));
     expect(toggle).toHaveBeenCalled();
   });
+});
+
+describe('StepButton gain lock opacity', () => {
+  it('active step with gain lock shows opacity',
+    () => {
+      render(
+        <StepButton
+          {...base}
+          isActive={true}
+          gainLock={0.5}
+        />
+      );
+      const btn = screen.getByRole('button');
+      expect(btn.style.opacity).toBe('0.5');
+    }
+  );
+
+  it('active step with gain lock 0 shows min opacity',
+    () => {
+      render(
+        <StepButton
+          {...base}
+          isActive={true}
+          gainLock={0}
+        />
+      );
+      const btn = screen.getByRole('button');
+      expect(btn.style.opacity).toBe('0.2');
+    }
+  );
+
+  it('inactive step with gain lock has no opacity',
+    () => {
+      render(
+        <StepButton
+          {...base}
+          isActive={false}
+          gainLock={0.3}
+        />
+      );
+      const btn = screen.getByRole('button');
+      expect(btn.style.opacity).toBe('');
+    }
+  );
+
+  it('active step without gain lock has no opacity',
+    () => {
+      render(
+        <StepButton
+          {...base}
+          isActive={true}
+        />
+      );
+      const btn = screen.getByRole('button');
+      expect(btn.style.opacity).toBe('');
+    }
+  );
+});
+
+describe('StepButton popover on inactive steps', () => {
+  it('opens popover on inactive step right-click',
+    () => {
+      const onOpenPopover = vi.fn();
+      render(
+        <StepButton
+          {...base}
+          isActive={false}
+          onOpenPopover={onOpenPopover}
+        />
+      );
+      const btn = screen.getByRole('button');
+      fireEvent.contextMenu(btn);
+      expect(onOpenPopover).toHaveBeenCalled();
+    }
+  );
 });

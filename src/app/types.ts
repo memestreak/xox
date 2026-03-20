@@ -27,6 +27,14 @@ export interface StepConditions {
 }
 
 /**
+ * Per-step parameter lock overrides.
+ * Each field overrides the track-level default when present.
+ */
+export interface StepLocks {
+  gain?: number; // 0.0–1.0
+}
+
+/**
  * Represents a pattern with variable-length step strings.
  */
 export interface Pattern {
@@ -36,6 +44,9 @@ export interface Pattern {
   steps: Record<TrackId, string>;
   trigConditions?: Partial<
     Record<TrackId, Record<number, StepConditions>>
+  >;
+  parameterLocks?: Partial<
+    Record<TrackId, Record<number, StepLocks>>
   >;
 }
 
@@ -98,5 +109,8 @@ export interface SequencerConfig {
   swing: number;
   trigConditions: Partial<
     Record<TrackId, Record<number, StepConditions>>
+  >;
+  parameterLocks: Partial<
+    Record<TrackId, Record<number, StepLocks>>
   >;
 }

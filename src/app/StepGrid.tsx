@@ -7,8 +7,7 @@ import type { RefObject } from 'react';
 import { TRACKS, useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
 import AccentRow from './AccentRow';
-import TrigConditionPopover
-  from './TrigConditionPopover';
+import StepPopover from './StepPopover';
 import { useDragPaint } from './useDragPaint';
 import type { TrackId, TrackPattern } from './types';
 import trackPatternData from './data/trackPatterns.json';
@@ -162,6 +161,9 @@ export default function StepGrid({
             trigConditions={
               config.trigConditions[track.id]
             }
+            parameterLocks={
+              config.parameterLocks[track.id]
+            }
             onOpenPopover={(
               trackId: TrackId,
               stepIndex: number,
@@ -187,11 +189,16 @@ export default function StepGrid({
         />
       </div>
       {openPopover !== null ? (
-        <TrigConditionPopover
+        <StepPopover
           trackId={openPopover.trackId}
           stepIndex={openPopover.stepIndex}
           conditions={
             config.trigConditions[
+              openPopover.trackId
+            ]?.[openPopover.stepIndex]
+          }
+          locks={
+            config.parameterLocks[
               openPopover.trackId
             ]?.[openPopover.stepIndex]
           }

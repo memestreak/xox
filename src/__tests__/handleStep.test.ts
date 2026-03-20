@@ -2,7 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useSequencer } from '../app/SequencerContext';
 import { TRACK_IDS } from '../app/types';
-import type { TrackId } from '../app/types';
+import type { TrackId, StepLocks } from '../app/types';
 import patternsData from '../app/data/patterns.json';
 import type { Pattern } from '../app/types';
 import { TestWrapper } from './helpers/sequencer-wrapper';
@@ -41,6 +41,9 @@ async function setupAndTrigger(
     soloTracks?: TrackId[];
     muteTracks?: TrackId[];
     gains?: Partial<Record<TrackId, number>>;
+    parameterLocks?: Partial<
+      Record<TrackId, Record<number, StepLocks>>
+    >;
   } = {}
 ) {
   const {
@@ -49,6 +52,7 @@ async function setupAndTrigger(
     soloTracks = [],
     muteTracks = [],
     gains = {},
+    parameterLocks = {},
   } = options;
 
   const { result } = renderSequencer();
@@ -91,6 +95,17 @@ async function setupAndTrigger(
     }
     for (const [id, value] of Object.entries(gains)) {
       result.current.actions.setGain(id as TrackId, value);
+    }
+    for (const [trackId, stepMap] of
+      Object.entries(parameterLocks)) {
+      for (const [stepIndex, locks] of
+        Object.entries(stepMap as Record<number, StepLocks>)) {
+        result.current.actions.setParameterLock(
+          trackId as TrackId,
+          Number(stepIndex),
+          locks
+        );
+      }
     }
   });
 
@@ -732,6 +747,32 @@ describe('trig conditions in handleStep', () => {
     }
   );
 
+  it('clearTrack removes parameterLocks for track',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.setParameterLock(
+          'bd', 0, { gain: 0.5 }
+        );
+      });
+
+      expect(
+        result.current.meta.config
+          .parameterLocks.bd?.[0]
+      ).toEqual({ gain: 0.5 });
+
+      await act(async () => {
+        result.current.actions.clearTrack('bd');
+      });
+
+      expect(
+        result.current.meta.config
+          .parameterLocks.bd
+      ).toBeUndefined();
+    }
+  );
+
   it('mute resets cycle count for that track',
     async () => {
       const { result } = renderSequencer();
@@ -797,4 +838,67 @@ describe('trig conditions in handleStep', () => {
       expect(mockPlaySound).not.toHaveBeenCalled();
     }
   );
+});
+
+// -------------------------------------------------
+// handleStep parameter locks
+// -------------------------------------------------
+describe('handleStep parameter locks', () => {
+  beforeEach(() => {
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+    mockStop.mockClear();
+  });
+
+  it('gain lock overrides mixer gain', async () => {
+    // bd mixer gain = 1.0, but lock = 0.5
+    // Expected: 0.5^3 = 0.125
+    const { mockPlaySound: mp } = await setupAndTrigger({
+      activeTracks: ['bd'],
+      gains: { bd: 1.0 },
+      parameterLocks: { bd: { 0: { gain: 0.5 } } },
+    });
+    expect(mp).toHaveBeenCalledTimes(1);
+    const gainArg = mp.mock.calls[0][2];
+    expect(gainArg).toBeCloseTo(0.125);
+  });
+
+  it('accent stacks on locked gain', async () => {
+    // bd mixer gain = 1.0, lock = 0.5, accented
+    // Expected: 0.5^3 * 1.5 = 0.1875
+    const { mockPlaySound: mp } = await setupAndTrigger({
+      activeTracks: ['bd'],
+      accentStep0: true,
+      gains: { bd: 1.0 },
+      parameterLocks: { bd: { 0: { gain: 0.5 } } },
+    });
+    expect(mp).toHaveBeenCalledTimes(1);
+    const gainArg = mp.mock.calls[0][2];
+    expect(gainArg).toBeCloseTo(0.1875);
+  });
+
+  it('no lock falls back to mixer gain', async () => {
+    // bd mixer gain = 0.8, no lock
+    // Expected: 0.8^3 = 0.512
+    const { mockPlaySound: mp } = await setupAndTrigger({
+      activeTracks: ['bd'],
+      gains: { bd: 0.8 },
+    });
+    expect(mp).toHaveBeenCalledTimes(1);
+    const gainArg = mp.mock.calls[0][2];
+    expect(gainArg).toBeCloseTo(0.512);
+  });
+
+  it('gain lock = 0 produces silence', async () => {
+    // bd mixer gain = 1.0, lock = 0
+    // Expected: 0^3 = 0
+    const { mockPlaySound: mp } = await setupAndTrigger({
+      activeTracks: ['bd'],
+      gains: { bd: 1.0 },
+      parameterLocks: { bd: { 0: { gain: 0 } } },
+    });
+    expect(mp).toHaveBeenCalledTimes(1);
+    const gainArg = mp.mock.calls[0][2];
+    expect(gainArg).toBeCloseTo(0);
+  });
 });

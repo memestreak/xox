@@ -5,6 +5,7 @@ import patternsData from './data/patterns.json';
 import type {
   SequencerConfig,
   StepConditions,
+  StepLocks,
   TrackId,
   TrackMixerState,
 } from './types';
@@ -45,6 +46,7 @@ export function defaultConfig(): SequencerConfig {
     mixer,
     swing: 0,
     trigConditions: {},
+    parameterLocks: {},
   };
 }
 
@@ -92,9 +94,22 @@ function fromBase64url(str: string): Uint8Array {
 export async function encodeConfig(
   config: SequencerConfig
 ): Promise<string> {
-  const json = JSON.stringify(config);
+  const toEncode: Record<string, unknown> = {
+    ...config,
+  };
+  // Strip empty parameterLocks to keep URLs small
+  if (
+    Object.keys(
+      config.parameterLocks ?? {}
+    ).length === 0
+  ) {
+    delete toEncode.parameterLocks;
+  }
+  const json = JSON.stringify(toEncode);
   const stream = new Blob([json]).stream()
-    .pipeThrough(new CompressionStream('deflate-raw'));
+    .pipeThrough(
+      new CompressionStream('deflate-raw')
+    );
   const bytes = new Uint8Array(
     await new Response(stream).arrayBuffer()
   );
@@ -165,6 +180,9 @@ function validateConfig(
   const trigConditions = validateTrigConditions(
     obj.trigConditions, trackLengths
   );
+  const parameterLocks = validateParameterLocks(
+    obj.parameterLocks
+  );
 
   return {
     version: CONFIG_VERSION,
@@ -176,6 +194,7 @@ function validateConfig(
     mixer,
     swing,
     trigConditions,
+    parameterLocks,
   };
 }
 
@@ -421,6 +440,79 @@ function validateTrigConditions(
       );
       if (cond !== null) {
         validSteps[stepIndex] = cond;
+      }
+    }
+
+    if (Object.keys(validSteps).length > 0) {
+      result[id] = validSteps;
+    }
+  }
+
+  return result;
+}
+
+const MAX_STEP_INDEX = 63;
+
+/**
+ * Validate a single StepLocks object.
+ * Returns null if no valid fields remain.
+ */
+function validateSingleLock(
+  raw: unknown
+): StepLocks | null {
+  if (raw === null || typeof raw !== 'object') {
+    return null;
+  }
+  const obj = raw as Record<string, unknown>;
+  const sl: StepLocks = {};
+
+  if (
+    typeof obj.gain === 'number'
+    && isFinite(obj.gain)
+  ) {
+    sl.gain = Math.max(0, Math.min(1, obj.gain));
+  }
+
+  if (Object.keys(sl).length === 0) return null;
+  return sl;
+}
+
+/**
+ * Validate parameterLocks map. Drops ac track,
+ * invalid step indices, and invalid lock objects.
+ */
+function validateParameterLocks(
+  value: unknown
+): SequencerConfig['parameterLocks'] {
+  if (
+    value === null || typeof value !== 'object'
+  ) return {};
+  const obj = value as Record<string, unknown>;
+  const result:
+    SequencerConfig['parameterLocks'] = {};
+
+  for (const id of TRACK_IDS) {
+    if (id === 'ac') continue;
+    const trackEntry = obj[id];
+    if (
+      trackEntry === null
+      || typeof trackEntry !== 'object'
+    ) continue;
+
+    const stepMap =
+      trackEntry as Record<string, unknown>;
+    const validSteps: Record<number, StepLocks> = {};
+
+    for (const key of Object.keys(stepMap)) {
+      const stepIndex = Number(key);
+      if (
+        !Number.isInteger(stepIndex)
+        || stepIndex < 0
+        || stepIndex > MAX_STEP_INDEX
+      ) continue;
+      const lock = validateSingleLock(stepMap[key]);
+      if (lock !== null) {
+        validSteps[stepIndex] = lock;
       }
     }
 

@@ -2,17 +2,20 @@ import { render, screen, fireEvent }
   from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach }
   from 'vitest';
-import TrigConditionPopover
-  from '../app/TrigConditionPopover';
+import StepPopover from '../app/StepPopover';
 
 const mockSet = vi.fn();
 const mockClear = vi.fn();
+const mockSetLock = vi.fn();
+const mockClearLock = vi.fn();
 
 vi.mock('../app/SequencerContext', () => ({
   useSequencer: () => ({
     actions: {
       setTrigCondition: mockSet,
       clearTrigCondition: mockClear,
+      setParameterLock: mockSetLock,
+      clearParameterLock: mockClearLock,
     },
   }),
 }));
@@ -24,16 +27,18 @@ const base = {
   onClose: vi.fn(),
 };
 
-describe('TrigConditionPopover', () => {
+describe('StepPopover', () => {
   beforeEach(() => {
     mockSet.mockClear();
     mockClear.mockClear();
+    mockSetLock.mockClear();
+    mockClearLock.mockClear();
     base.onClose.mockClear();
   });
 
   it('header shows step number + track abbrev',
     () => {
-      render(<TrigConditionPopover {...base} />);
+      render(<StepPopover {...base} />);
       expect(
         screen.getByText(/Step 4/)
       ).toBeTruthy();
@@ -44,15 +49,15 @@ describe('TrigConditionPopover', () => {
   );
 
   it('slider defaults to 100', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     expect(
-      screen.getByRole('slider')
+      screen.getByRole('slider', { name: 'Probability' })
         .getAttribute('aria-valuenow')
     ).toBe('100');
   });
 
   it('cycle defaults to 1:1', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     const sel = screen.getByRole(
       'combobox'
     ) as HTMLSelectElement;
@@ -61,7 +66,7 @@ describe('TrigConditionPopover', () => {
 
   it('changing cycle calls setTrigCondition',
     () => {
-      render(<TrigConditionPopover {...base} />);
+      render(<StepPopover {...base} />);
       fireEvent.change(
         screen.getByRole('combobox'),
         { target: { value: '2:4' } }
@@ -75,13 +80,14 @@ describe('TrigConditionPopover', () => {
   it('all defaults calls clearTrigCondition',
     () => {
       render(
-        <TrigConditionPopover
+        <StepPopover
           {...base}
           conditions={{ probability: 50 }}
         />
       );
       fireEvent.keyDown(
-        screen.getByRole('slider'), { key: 'End' }
+        screen.getByRole('slider', { name: 'Probability' }),
+        { key: 'End' }
       );
       expect(mockClear).toHaveBeenCalledWith(
         'bd', 3
@@ -90,7 +96,7 @@ describe('TrigConditionPopover', () => {
   );
 
   it('Escape calls onClose', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     fireEvent.keyDown(
       document, { key: 'Escape' }
     );
@@ -103,7 +109,7 @@ describe('TrigConditionPopover', () => {
     render(
       <div>
         <div data-testid="outside">outside</div>
-        <TrigConditionPopover
+        <StepPopover
           {...base}
           onClose={onClose}
         />
@@ -118,7 +124,7 @@ describe('TrigConditionPopover', () => {
   });
 
   it('fill section renders three options', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     const radios = screen.getAllByRole('radio');
     expect(radios).toHaveLength(3);
     expect(radios[0].textContent).toBe('None');
@@ -127,7 +133,7 @@ describe('TrigConditionPopover', () => {
   });
 
   it('selecting FILL sets fill condition', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     const fillBtn = screen.getByRole('radio', {
       name: /^FILL$/,
     });
@@ -138,7 +144,7 @@ describe('TrigConditionPopover', () => {
   });
 
   it('selecting !FILL sets fill condition', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     const nfillBtn = screen.getByRole('radio', {
       name: /^!FILL$/,
     });
@@ -150,7 +156,7 @@ describe('TrigConditionPopover', () => {
 
   it('selecting None removes fill', () => {
     render(
-      <TrigConditionPopover
+      <StepPopover
         {...base}
         conditions={{ fill: 'fill' }}
       />
@@ -166,7 +172,7 @@ describe('TrigConditionPopover', () => {
 
   it('pre-populates fill from conditions', () => {
     render(
-      <TrigConditionPopover
+      <StepPopover
         {...base}
         conditions={{ fill: '!fill' }}
       />
@@ -182,7 +188,7 @@ describe('TrigConditionPopover', () => {
   it('pre-populates from existing conditions',
     () => {
       render(
-        <TrigConditionPopover
+        <StepPopover
           {...base}
           conditions={{
             probability: 75,
@@ -191,7 +197,7 @@ describe('TrigConditionPopover', () => {
         />
       );
       expect(
-        screen.getByRole('slider')
+        screen.getByRole('slider', { name: 'Probability' })
           .getAttribute('aria-valuenow')
       ).toBe('75');
       const sel2 = screen.getByRole(
@@ -200,4 +206,55 @@ describe('TrigConditionPopover', () => {
       expect(sel2.value).toBe('1:3');
     }
   );
+});
+
+describe('StepPopover gain lock', () => {
+  beforeEach(() => {
+    mockSet.mockClear();
+    mockClear.mockClear();
+    mockSetLock.mockClear();
+    mockClearLock.mockClear();
+    base.onClose.mockClear();
+  });
+
+  it('renders gain slider in locks section', () => {
+    render(<StepPopover {...base} />);
+    expect(screen.getByText('Locks')).toBeTruthy();
+    expect(
+      screen.getByRole('slider', { name: 'Gain' })
+    ).toBeTruthy();
+  });
+
+  it('slider starts at 100 when no lock exists', () => {
+    render(<StepPopover {...base} />);
+    const slider = screen.getByRole(
+      'slider', { name: 'Gain' }
+    );
+    expect(
+      slider.getAttribute('aria-valuenow')
+    ).toBe('100');
+  });
+
+  it('slider shows current lock value', () => {
+    render(
+      <StepPopover {...base} locks={{ gain: 0.6 }} />
+    );
+    const slider = screen.getByRole(
+      'slider', { name: 'Gain' }
+    );
+    expect(
+      slider.getAttribute('aria-valuenow')
+    ).toBe('60');
+  });
+
+  it('Reset locks button clears locks', () => {
+    render(
+      <StepPopover {...base} locks={{ gain: 0.5 }} />
+    );
+    const resetBtn = screen.getByText('Reset locks');
+    fireEvent.click(resetBtn);
+    expect(mockClearLock).toHaveBeenCalledWith(
+      'bd', 3
+    );
+  });
 });
