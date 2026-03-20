@@ -7,12 +7,16 @@ import type { RefObject } from 'react';
 import { useSequencer } from './SequencerContext';
 import { CYCLE_OPTIONS } from './trigConditions';
 import ProbabilitySlider from './ProbabilitySlider';
-import type { StepConditions, TrackId } from './types';
+import RangeSlider from './RangeSlider';
+import type {
+  StepConditions, StepLocks, TrackId,
+} from './types';
 
 interface StepPopoverProps {
   trackId: TrackId;
   stepIndex: number;
   conditions?: StepConditions;
+  locks?: StepLocks;
   anchorRect?: { top: number; left: number };
   onClose: () => void;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
@@ -33,6 +37,7 @@ export default function StepPopover({
   trackId,
   stepIndex,
   conditions,
+  locks,
   anchorRect,
   onClose,
   scrollContainerRef,
@@ -51,6 +56,13 @@ export default function StepPopover({
   const [fillValue, setFillValue] = useState<
     'none' | 'fill' | '!fill'
   >(conditions?.fill ?? 'none');
+
+  const [gainValue, setGainValue] = useState(
+    locks?.gain !== undefined
+      ? Math.round(locks.gain * 100)
+      : 100
+  );
+  const gainTouched = useRef(false);
 
   const updateConditions = useCallback(
     (
@@ -107,6 +119,19 @@ export default function StepPopover({
       updateConditions(probability, cycleValue, v);
     },
     [updateConditions, probability, cycleValue]
+  );
+
+  const handleGainChange = useCallback(
+    (v: number) => {
+      setGainValue(v);
+      gainTouched.current = true;
+      actions.setParameterLock(
+        trackId,
+        stepIndex,
+        { gain: v / 100 }
+      );
+    },
+    [actions, trackId, stepIndex]
   );
 
   useEffect(() => {
@@ -303,6 +328,61 @@ export default function StepPopover({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-neutral-700" />
+
+      {/* Locks section */}
+      <div className={
+        'flex items-center justify-between'
+      }>
+        <div className={
+          'text-xs font-bold uppercase'
+          + ' tracking-wider text-neutral-400'
+        }>
+          Locks
+        </div>
+        <button
+          onClick={() => {
+            actions.clearParameterLock(
+              trackId, stepIndex
+            );
+            setGainValue(100);
+            gainTouched.current = false;
+          }}
+          disabled={locks === undefined}
+          className={
+            'text-[11px] px-1.5 py-0.5 rounded'
+            + ' border transition-colors'
+            + (locks !== undefined
+              ? ' text-neutral-400'
+                + ' hover:text-neutral-200'
+                + ' border-neutral-700'
+                + ' hover:bg-neutral-800'
+              : ' text-neutral-700'
+                + ' border-neutral-800'
+                + ' cursor-default')
+          }
+        >
+          Reset locks
+        </button>
+      </div>
+
+      <div className="space-y-1">
+        <div className={
+          'text-[10px] uppercase tracking-wider'
+          + ' text-neutral-500'
+        }>
+          Gain
+        </div>
+        <RangeSlider
+          value={gainValue}
+          min={0}
+          max={100}
+          onChange={handleGainChange}
+          label="Gain"
+        />
       </div>
 
     </div>
