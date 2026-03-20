@@ -6,6 +6,7 @@ interface PageIndicatorProps {
   currentPage: number;
   pageCount: number;
   autoFollow: boolean;
+  playbackPage: number;
   setPage: (page: number) => void;
   setAutoFollow: (value: boolean) => void;
 }
@@ -20,6 +21,7 @@ function PageIndicatorInner({
   currentPage,
   pageCount,
   autoFollow,
+  playbackPage,
   setPage,
   setAutoFollow,
 }: PageIndicatorProps) {
@@ -61,7 +63,7 @@ function PageIndicatorInner({
               onClick={() => setPage(i)}
               className={
                 'w-2.5 h-2.5 rounded-full'
-                + ' transition-colors'
+                + ' transition-all'
                 + ' focus-visible:outline-none'
                 + ' focus-visible:ring-2'
                 + ' focus-visible:ring-orange-500 '
@@ -69,8 +71,13 @@ function PageIndicatorInner({
                   ? 'bg-orange-500'
                     + ' shadow-[0_0_8px_rgba('
                     + '249,115,22,0.6)]'
-                  : 'bg-neutral-600'
-                    + ' hover:bg-neutral-400')
+                  : i === playbackPage
+                    ? 'bg-neutral-600'
+                      + ' ring-1 ring-orange-500/60'
+                      + ' shadow-[0_0_6px_rgba('
+                      + '249,115,22,0.3)]'
+                    : 'bg-neutral-600'
+                      + ' hover:bg-neutral-400')
               }
             />
           )

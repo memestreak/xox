@@ -16,6 +16,7 @@ function SequencerInner() {
 
   const [currentPage, setCurrentPage] = useState(0);
   const [autoFollow, setAutoFollow] = useState(true);
+  const [playbackPage, setPlaybackPage] = useState(-1);
 
   const pageCount = Math.ceil(patternLength / 16);
   const clampedPage = Math.min(
@@ -28,6 +29,7 @@ function SequencerInner() {
       currentPage={currentPage}
       pageCount={pageCount}
       autoFollow={autoFollow}
+      playbackPage={playbackPage}
       setPage={setCurrentPage}
       setAutoFollow={setAutoFollow}
     />
@@ -54,6 +56,7 @@ function SequencerInner() {
             pageOffset={pageOffset}
             autoFollow={autoFollow}
             setPage={setCurrentPage}
+            setPlaybackPage={setPlaybackPage}
           />
           <footer className="grid grid-cols-3 items-center pt-4 lg:pt-8">
             <div />
