@@ -92,7 +92,7 @@ function TransportControlsInner({
           <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
             Pattern
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0">
               <PatternPicker
                 categories={categories}

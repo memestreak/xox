@@ -279,13 +279,12 @@ function TrackRowInner({
     setIsDragging(false);
   }, []);
 
-  const handlePct = Math.max(
-    0,
-    Math.min(
-      100,
-      ((trackLength - pageOffset) / 16) * 100
-    )
-  );
+  const handleOnPage =
+    trackLength > pageOffset
+    && trackLength <= pageOffset + 16;
+  const handlePct = handleOnPage
+    ? ((trackLength - pageOffset) / 16) * 100
+    : 0;
 
   const handleToggleStep = useCallback(
     (tid: TrackId, localStep: number) =>
@@ -415,46 +414,48 @@ function TrackRowInner({
           </div>
 
           {/* Draggable length handle */}
-          <div
-            role="slider"
-            aria-label={`${trackName} length`}
-            aria-valuemin={1}
-            aria-valuemax={patternLength}
-            aria-valuenow={trackLength}
-            tabIndex={0}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            {...endBarLongPress()}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              if (!isDragging) handleFreeRun();
-            }}
-            style={{
-              left: `${handlePct}%`,
-              touchAction: 'none',
-            }}
-            className={
-              'absolute top-0 h-full w-4'
-              + ' -translate-x-1/2 z-20'
-              + (isDragging
-                ? ' cursor-col-resize'
-                : ' cursor-default')
-              + ' before:absolute before:inset-y-0'
-              + ' before:left-1/2'
-              + ' before:-translate-x-1/2'
-              + ' before:w-1.5 before:rounded-full'
-              + ' before:transition-colors'
-              + (isDragging
-                ? ' before:bg-neutral-300'
-                : ' before:bg-neutral-500/60'
-                  + ' hover:before:bg-neutral-300')
-            }
-          />
+          {handleOnPage && (
+            <div
+              role="slider"
+              aria-label={`${trackName} length`}
+              aria-valuemin={1}
+              aria-valuemax={patternLength}
+              aria-valuenow={trackLength}
+              tabIndex={0}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              {...endBarLongPress()}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                if (!isDragging) handleFreeRun();
+              }}
+              style={{
+                left: `${handlePct}%`,
+                touchAction: 'none',
+              }}
+              className={
+                'absolute top-0 h-full w-4'
+                + ' -translate-x-1/2 z-20'
+                + (isDragging
+                  ? ' cursor-col-resize'
+                  : ' cursor-default')
+                + ' before:absolute before:inset-y-0'
+                + ' before:left-1/2'
+                + ' before:-translate-x-1/2'
+                + ' before:w-1.5 before:rounded-full'
+                + ' before:transition-colors'
+                + (isDragging
+                  ? ' before:bg-neutral-300'
+                  : ' before:bg-neutral-500/60'
+                    + ' hover:before:bg-neutral-300')
+              }
+            />
+          )}
 
           {/* Free-run indicator */}
-          {isFreeRun && (
+          {isFreeRun && handleOnPage && (
             <span
               aria-label="free run"
               style={{

@@ -26,7 +26,7 @@ function PageIndicatorInner({
   return (
     <div
       className={
-        'flex flex-col items-center gap-1'
+        'flex flex-col items-start gap-1.5'
         + ' flex-shrink-0'
       }
     >
@@ -35,7 +35,9 @@ function PageIndicatorInner({
         aria-pressed={autoFollow}
         onClick={() => setAutoFollow(!autoFollow)}
         className={
-          'w-4 h-4 rounded text-[8px]'
+          'px-2.5 py-px rounded-full'
+          + ' text-[10px] lg:text-xs'
+          + ' whitespace-nowrap'
           + ' font-bold transition-colors'
           + ' focus-visible:outline-none'
           + ' focus-visible:ring-2'
@@ -47,9 +49,9 @@ function PageIndicatorInner({
               + ' text-neutral-500')
         }
       >
-        F
+        Follow
       </button>
-      <div className="flex gap-1">
+      <div className="flex gap-1.5 self-center">
         {Array.from(
           { length: pageCount },
           (_, i) => (
@@ -58,14 +60,14 @@ function PageIndicatorInner({
               aria-label={`Page ${i + 1}`}
               onClick={() => setPage(i)}
               className={
-                'w-[7px] h-[7px] rounded-full'
+                'w-2.5 h-2.5 rounded-full'
                 + ' transition-colors'
                 + ' focus-visible:outline-none'
                 + ' focus-visible:ring-2'
                 + ' focus-visible:ring-orange-500 '
                 + (i === currentPage
                   ? 'bg-orange-500'
-                    + ' shadow-[0_0_6px_rgba('
+                    + ' shadow-[0_0_8px_rgba('
                     + '249,115,22,0.6)]'
                   : 'bg-neutral-600'
                     + ' hover:bg-neutral-400')
