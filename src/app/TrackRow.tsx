@@ -123,6 +123,7 @@ interface TrackRowProps {
   steps: string;
   trackLength: number;
   patternLength: number;
+  pageOffset: number;
   isMuted: boolean;
   isSolo: boolean;
   isFreeRun: boolean;
@@ -165,6 +166,7 @@ function TrackRowInner({
   steps,
   trackLength,
   patternLength,
+  pageOffset,
   isMuted,
   isSolo,
   isFreeRun,
@@ -232,13 +234,16 @@ function TrackRowInner({
       if (!grid) return trackLength;
       const rect = grid.getBoundingClientRect();
       const x = clientX - rect.left;
-      const stepWidth = rect.width / patternLength;
+      const stepWidth = rect.width / 16;
       const raw = Math.round(x / stepWidth);
       return Math.max(
-        1, Math.min(patternLength, raw)
+        1,
+        Math.min(
+          patternLength, raw + pageOffset
+        )
       );
     },
-    [patternLength, trackLength]
+    [patternLength, trackLength, pageOffset]
   );
 
   const handlePointerDown = useCallback(
@@ -274,8 +279,30 @@ function TrackRowInner({
     setIsDragging(false);
   }, []);
 
-  const handlePct =
-    (trackLength / 16) * 100;
+  const handlePct = Math.max(
+    0,
+    Math.min(
+      100,
+      ((trackLength - pageOffset) / 16) * 100
+    )
+  );
+
+  const handleToggleStep = useCallback(
+    (tid: TrackId, localStep: number) =>
+      onToggleStep(tid, localStep + pageOffset),
+    [onToggleStep, pageOffset]
+  );
+
+  const handleOpenPopover = useCallback(
+    (
+      tid: TrackId,
+      localStep: number,
+      rect: { top: number; left: number }
+    ) => onOpenPopover?.(
+      tid, localStep + pageOffset, rect
+    ),
+    [onOpenPopover, pageOffset]
+  );
 
   return (
     <div>
@@ -353,9 +380,10 @@ function TrackRowInner({
             {Array.from(
               { length: 16 },
               (_, i) => {
+                const globalIdx = pageOffset + i;
                 const disabled =
-                  i >= trackLength
-                  || i >= patternLength;
+                  globalIdx >= trackLength
+                  || globalIdx >= patternLength;
                 return (
                   <StepButton
                     key={i}
@@ -364,19 +392,19 @@ function TrackRowInner({
                     stepIndex={i}
                     isActive={
                       !disabled
-                      && steps[i] === '1'
+                      && steps[globalIdx] === '1'
                     }
                     isCurrent={
                       !disabled
-                      && effectiveStep === i
+                      && effectiveStep === globalIdx
                     }
-                    isBeat={i % 4 === 0}
+                    isBeat={globalIdx % 4 === 0}
                     isDisabled={disabled}
-                    onToggle={onToggleStep}
+                    onToggle={handleToggleStep}
                     conditions={
-                      trigConditions?.[i]
+                      trigConditions?.[globalIdx]
                     }
-                    onOpenPopover={onOpenPopover}
+                    onOpenPopover={handleOpenPopover}
                     longPressActiveRef={
                       longPressActiveRef
                     }

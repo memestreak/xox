@@ -927,3 +927,41 @@ describe('useDragPaint', () => {
     );
   });
 });
+
+describe('pageOffset support', () => {
+  it('paintOne rejects steps beyond track length with offset', () => {
+    const onSetStep = vi.fn();
+    const tracks: TrackId[] = ['bd', 'sd'];
+    const { container, elements } = makeMockDOM(tracks);
+    mockElementFromPoint(elements, tracks);
+
+    const { result } = renderHook(() =>
+      useDragPaint({
+        containerRef: { current: container },
+        trackOrder: tracks,
+        trackLengths: { bd: 18, sd: 18 } as Record<TrackId, number>,
+        steps: {
+          bd: '0'.repeat(32),
+          sd: '0'.repeat(32),
+        } as Record<TrackId, string>,
+        onSetStep,
+        pageOffset: 16,
+      })
+    );
+
+    // Simulate pointer down on bd step 5
+    // (global 21, beyond trackLength 18)
+    act(() => {
+      result.current.onPointerDown({
+        button: 0,
+        clientX: 5 * 40 + 20,
+        clientY: 16,
+        pointerId: 1,
+        pointerType: 'mouse',
+        shiftKey: false,
+      } as unknown as React.PointerEvent<HTMLDivElement>);
+    });
+
+    expect(onSetStep).not.toHaveBeenCalled();
+  });
+});

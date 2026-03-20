@@ -19,6 +19,7 @@ const base = {
   steps: '1010101010101010',
   trackLength: 16,
   patternLength: 16,
+  pageOffset: 0,
   isMuted: false,
   isSolo: false,
   isFreeRun: false,

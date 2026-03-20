@@ -18,6 +18,7 @@ interface UseDragPaintOptions {
   onSetTrackSteps?: (trackId: TrackId, steps: string) => void;
   longPressActiveRef?: RefObject<boolean>;
   popoverOpenRef?: RefObject<boolean>;
+  pageOffset?: number;
 }
 
 interface CellHit {
@@ -138,6 +139,7 @@ export function useDragPaint({
   onSetTrackSteps,
   longPressActiveRef,
   popoverOpenRef,
+  pageOffset = 0,
 }: UseDragPaintOptions) {
   const dragRef = useRef<DragState>({
     active: false,
@@ -181,7 +183,7 @@ export function useDragPaint({
         return false;
       }
       const tid = trackOrder[trackIdx];
-      if (stepIdx >= trackLengths[tid]) return false;
+      if (stepIdx + pageOffset >= trackLengths[tid]) return false;
       if (
         trackIdx === drag.lastTrackIdx
         && stepIdx === drag.lastStep
@@ -190,10 +192,10 @@ export function useDragPaint({
       }
       drag.lastTrackIdx = trackIdx;
       drag.lastStep = stepIdx;
-      onSetStep(tid, stepIdx, drag.paintValue);
+      onSetStep(tid, stepIdx + pageOffset, drag.paintValue);
       return true;
     },
-    [trackOrder, trackLengths, onSetStep]
+    [trackOrder, trackLengths, onSetStep, pageOffset]
   );
 
   /**
@@ -268,7 +270,7 @@ export function useDragPaint({
       if (!hit) return;
 
       const { trackId, stepIndex } = hit;
-      if (stepIndex >= trackLengths[trackId]) return;
+      if (stepIndex + pageOffset >= trackLengths[trackId]) return;
 
       stepsAtDown.current = steps;
 
@@ -309,7 +311,9 @@ export function useDragPaint({
       // Normal paint mode
       drag.cyclingMode = false;
       drag.paintValue =
-        stepsAtDown.current[trackId][stepIndex] === '1'
+        stepsAtDown.current[trackId][
+          stepIndex + pageOffset
+        ] === '1'
           ? '0' : '1';
     },
     [
@@ -319,6 +323,7 @@ export function useDragPaint({
       onSetTrackSteps,
       longPressActiveRef,
       popoverOpenRef,
+      pageOffset,
     ]
   );
 

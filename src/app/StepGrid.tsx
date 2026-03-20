@@ -120,6 +120,7 @@ export default function StepGrid({
             steps={currentPattern.steps[track.id]}
             trackLength={trackLengths[track.id]}
             patternLength={patternLength}
+            pageOffset={0}
             isMuted={trackStates[track.id].isMuted}
             isSolo={trackStates[track.id].isSolo}
             isFreeRun={
