@@ -66,6 +66,7 @@ function goldenConfigV1Decoded(): SequencerConfig {
     mixer,
     swing: 0,
     trigConditions: {},
+    parameterLocks: {},
   };
 }
 
@@ -103,6 +104,7 @@ function goldenConfigV2Decoded(): SequencerConfig {
     mixer,
     swing: 0,
     trigConditions: {},
+    parameterLocks: {},
   };
 }
 
@@ -139,6 +141,7 @@ function goldenConfigV2(): SequencerConfig {
     mixer,
     swing: 0,
     trigConditions: {},
+    parameterLocks: {},
   };
 }
 

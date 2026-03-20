@@ -570,6 +570,109 @@ describe('fill condition validation', () => {
   );
 });
 
+describe('parameterLocks validation', () => {
+  it('round-trips parameterLocks through encode/decode',
+    async () => {
+      const config = makeConfig({
+        parameterLocks: {
+          bd: { 0: { gain: 0.5 }, 3: { gain: 0.8 } },
+          sd: { 7: { gain: 0.2 } },
+        },
+      });
+      const hash = await encodeConfig(config);
+      const decoded = await decodeConfig(hash);
+      expect(decoded.parameterLocks).toEqual(
+        config.parameterLocks
+      );
+    }
+  );
+
+  it('defaults to {} when missing', async () => {
+    const hash = await encodeRaw({
+      ...defaultConfig(),
+    });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.parameterLocks).toEqual({});
+  });
+
+  it('clamps gain to [0, 1]', async () => {
+    const hash = await encodeRaw({
+      ...defaultConfig(),
+      parameterLocks: {
+        bd: { 0: { gain: 2.5 }, 1: { gain: -0.3 } },
+      },
+    });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.parameterLocks.bd?.[0]?.gain).toBe(1);
+    expect(decoded.parameterLocks.bd?.[1]?.gain).toBe(0);
+  });
+
+  it('drops invalid track IDs', async () => {
+    const hash = await encodeRaw({
+      ...defaultConfig(),
+      parameterLocks: {
+        zz: { 0: { gain: 0.5 } },
+        bd: { 0: { gain: 0.7 } },
+      },
+    });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.parameterLocks).toEqual({
+      bd: { 0: { gain: 0.7 } },
+    });
+  });
+
+  it('drops ac track entries', async () => {
+    const hash = await encodeRaw({
+      ...defaultConfig(),
+      parameterLocks: {
+        ac: { 0: { gain: 0.5 } },
+        bd: { 0: { gain: 0.7 } },
+      },
+    });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.parameterLocks).toEqual({
+      bd: { 0: { gain: 0.7 } },
+    });
+  });
+
+  it('drops step indices >= 64', async () => {
+    const hash = await encodeRaw({
+      ...defaultConfig(),
+      parameterLocks: {
+        bd: { 0: { gain: 0.5 }, 99: { gain: 0.8 } },
+      },
+    });
+    const decoded = await decodeConfig(hash);
+    expect(decoded.parameterLocks).toEqual({
+      bd: { 0: { gain: 0.5 } },
+    });
+  });
+
+  it('strips empty parameterLocks from encoded output',
+    async () => {
+      const config = makeConfig({
+        parameterLocks: {},
+      });
+      const hash = await encodeConfig(config);
+      // Decode raw JSON to inspect
+      const bytes = Uint8Array.from(
+        atob(
+          hash.replace(/-/g, '+').replace(/_/g, '/')
+            + '='.repeat((4 - (hash.length % 4)) % 4)
+        ),
+        c => c.charCodeAt(0)
+      );
+      const stream = new Blob([bytes]).stream()
+        .pipeThrough(
+          new DecompressionStream('deflate-raw')
+        );
+      const json = await new Response(stream).text();
+      const parsed = JSON.parse(json);
+      expect(parsed.parameterLocks).toBeUndefined();
+    }
+  );
+});
+
 describe('validateMixer', () => {
   it('negative gain clamped to 0', async () => {
     const config = defaultConfig();

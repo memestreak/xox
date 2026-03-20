@@ -78,6 +78,7 @@ exports[`golden-file tests > defaultConfig() snapshot 1`] = `
       "isSolo": false,
     },
   },
+  "parameterLocks": {},
   "patternLength": 16,
   "steps": {
     "ac": "0000000000000000",
