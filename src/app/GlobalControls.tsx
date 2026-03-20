@@ -48,7 +48,7 @@ function GlobalControlsInner() {
             className="bg-neutral-800 border border-neutral-700 rounded p-1 text-xs lg:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors w-12 lg:w-14"
           >
             {Array.from(
-              { length: 16 },
+              { length: 64 },
               (_, i) => (
                 <option key={i + 1} value={i + 1}>
                   {i + 1}
