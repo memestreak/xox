@@ -92,6 +92,35 @@ export interface TrackMixerState {
 }
 
 /**
+ * Pattern change mode — controls when a new pattern
+ * takes effect during playback.
+ */
+export type PatternMode =
+  | 'sequential'
+  | 'direct-start'
+  | 'direct-jump';
+
+/**
+ * Temp button state machine.
+ */
+export type TempState = 'off' | 'armed' | 'active';
+
+/**
+ * Snapshot of config fields preserved for temp mode
+ * revert. Mixer state is excluded because setPattern
+ * does not modify it.
+ */
+export interface HomeSnapshot {
+  steps: Record<TrackId, string>;
+  trigConditions: Partial<
+    Record<TrackId, Record<number, StepConditions>>
+  >;
+  selectedPatternId: string;
+  trackLengths: Record<TrackId, number>;
+  patternLength: number;
+}
+
+/**
  * Complete serializable sequencer configuration.
  *
  * This is the single source of truth for all persistable

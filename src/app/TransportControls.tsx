@@ -8,6 +8,7 @@ import TempoController from './TempoController';
 import SettingsPopover from './SettingsPopover';
 import GlobalControls from './GlobalControls';
 import FillButton from './FillButton';
+import PatternModeSelector from './PatternModeSelector';
 import { useSequencer } from './SequencerContext';
 import PatternPicker from './PatternPicker';
 import { getCategorizedPatterns } from './patternUtils';
@@ -60,8 +61,8 @@ function TransportControlsInner({
           <SettingsPopover />
         </div>
       </div>
-      {/* Row 2: Kit + Pattern */}
-      <div className="grid grid-cols-[1fr_1fr_1.5fr] gap-2 lg:gap-4 pt-2 lg:pt-0">
+      {/* Row 2: Global + Kit + Mode + Pattern */}
+      <div className="grid grid-cols-[1fr_1fr_auto_1.5fr] gap-2 lg:gap-4 pt-2 lg:pt-0">
         <GlobalControls />
         <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
           <label
@@ -88,6 +89,7 @@ function TransportControlsInner({
             ))}
           </select>
         </div>
+        <PatternModeSelector />
         <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
           <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
             Pattern
