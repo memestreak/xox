@@ -40,6 +40,16 @@ export interface Pattern {
 }
 
 /**
+ * A single per-track beat pattern used by the
+ * shift+drag pattern cycling gesture.
+ */
+export interface TrackPattern {
+  id: string;
+  name: string;
+  steps: string; // 16-char binary string
+}
+
+/**
  * Represents the mutable state of a track in the mixer.
  */
 export interface TrackState {

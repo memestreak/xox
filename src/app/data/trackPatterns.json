@@ -1,0 +1,54 @@
+{
+  "patterns": [
+    {
+      "id": "whole-note",
+      "name": "Whole Note",
+      "steps": "1000000000000000"
+    },
+    {
+      "id": "half-notes",
+      "name": "Half Notes",
+      "steps": "1000000010000000"
+    },
+    {
+      "id": "offbeat-quarters",
+      "name": "Offbeat Quarters",
+      "steps": "0000100000001000"
+    },
+    {
+      "id": "quarter-notes",
+      "name": "Quarter Notes",
+      "steps": "1000100010001000"
+    },
+    {
+      "id": "dotted-eighth",
+      "name": "Dotted Eighth",
+      "steps": "1001001001001001"
+    },
+    {
+      "id": "eighth-notes",
+      "name": "Eighth Notes",
+      "steps": "1010101010101010"
+    },
+    {
+      "id": "offbeat-eighths",
+      "name": "Offbeat Eighths",
+      "steps": "0101010101010101"
+    },
+    {
+      "id": "shuffle",
+      "name": "Shuffle",
+      "steps": "1001101001011010"
+    },
+    {
+      "id": "syncopated",
+      "name": "Syncopated",
+      "steps": "1010011010100110"
+    },
+    {
+      "id": "sixteenth-notes",
+      "name": "Sixteenth Notes",
+      "steps": "1111111111111111"
+    }
+  ]
+}
