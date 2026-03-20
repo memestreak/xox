@@ -110,15 +110,21 @@ function StepButtonInner({
 
   let color: string;
   if (isActive) {
-    color = (!mini && isCurrent)
-      ? 'bg-orange-400 motion-safe:scale-105'
+    if (isCurrent && !mini) {
+      color = 'bg-orange-400 motion-safe:scale-105'
         + ' shadow-[0_0_20px_rgba(251,146,60,0.8)]'
-        + ' z-10'
-      : 'bg-orange-600';
+        + ' z-10';
+    } else if (isCurrent && mini) {
+      color = 'bg-orange-400';
+    } else {
+      color = 'bg-orange-600';
+    }
   } else {
-    color = (!mini && isCurrent)
-      ? 'bg-neutral-700'
-      : 'bg-neutral-800/40 hover:bg-neutral-800';
+    if (isCurrent) {
+      color = 'bg-neutral-700';
+    } else {
+      color = 'bg-neutral-800/40 hover:bg-neutral-800';
+    }
   }
 
   const longPressHandlers = longPress();

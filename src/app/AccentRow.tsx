@@ -8,6 +8,7 @@ import {
 } from 'use-long-press';
 import type { TrackId } from './types';
 import StepButton from './StepButton';
+import Knob from './Knob';
 
 interface AccentRowProps {
   steps: string;
@@ -15,6 +16,9 @@ interface AccentRowProps {
   patternLength: number;
   pageOffset: number;
   isFreeRun: boolean;
+  gain: number;
+  currentStep: number;
+  totalSteps: number;
   onToggleStep: (
     trackId: TrackId, stepIndex: number
   ) => void;
@@ -22,12 +26,16 @@ interface AccentRowProps {
     trackId: TrackId, length: number
   ) => void;
   onToggleFreeRun: (trackId: TrackId) => void;
+  onSetGain: (
+    trackId: TrackId, value: number
+  ) => void;
 }
 
 /**
  * Mini accent row at the bottom of the step grid.
  * Half-height step buttons for toggling accent steps,
- * with a draggable length handle and free-run support.
+ * with a draggable length handle, free-run support,
+ * and an intensity knob.
  */
 function AccentRowInner({
   steps,
@@ -35,9 +43,13 @@ function AccentRowInner({
   patternLength,
   pageOffset,
   isFreeRun,
+  gain,
+  currentStep,
+  totalSteps,
   onToggleStep,
   onSetTrackLength,
   onToggleFreeRun,
+  onSetGain,
 }: AccentRowProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -45,6 +57,11 @@ function AccentRowInner({
   const handleFreeRun = useCallback(
     () => onToggleFreeRun('ac'),
     [onToggleFreeRun]
+  );
+
+  const handleGain = useCallback(
+    (v: number) => onSetGain('ac', v),
+    [onSetGain]
   );
 
   const handleToggleStep = useCallback(
@@ -65,6 +82,12 @@ function AccentRowInner({
       cancelOnMovement: 1,
     }
   );
+
+  const effectiveStep =
+    currentStep >= 0
+      ? (isFreeRun ? totalSteps : currentStep)
+        % trackLength
+      : -1;
 
   const lengthFromPointer = useCallback(
     (clientX: number): number => {
@@ -123,107 +146,157 @@ function AccentRowInner({
     : 0;
 
   return (
-    <div className="flex gap-4 items-center pt-2">
-      <div className="hidden lg:block w-48" />
-      <div className="flex-1 relative">
-        <div
-          ref={gridRef}
-          data-track="ac"
-          className="grid grid-cols-8 lg:grid-cols-16 gap-[3px] lg:gap-1.5"
+    <div>
+      {/* Mobile: label + knob above grid */}
+      <div className="flex items-center gap-2 mb-1 lg:hidden">
+        <span
+          className={
+            'text-[10px] font-bold uppercase'
+            + ' tracking-wider'
+            + (isFreeRun
+              ? ' text-orange-400'
+              : ' text-neutral-400')
+          }
         >
-          {Array.from(
-            { length: 16 },
-            (_, i) => {
-              const globalIdx = pageOffset + i;
-              const disabled =
-                globalIdx >= trackLength
-                || globalIdx >= patternLength;
-              return (
-                <StepButton
-                  key={i}
-                  trackId={'ac' as TrackId}
-                  trackName="accent"
-                  stepIndex={i}
-                  isActive={
-                    !disabled
-                    && steps[globalIdx] === '1'
-                  }
-                  isCurrent={false}
-                  isBeat={globalIdx % 4 === 0}
-                  isDisabled={disabled}
-                  mini
-                  onToggle={handleToggleStep}
-                />
-              );
-            }
-          )}
-        </div>
-
-        {/* Draggable length handle */}
-        {handleOnPage && (
-          <div
-            role="slider"
-            aria-label="accent length"
-            aria-valuemin={1}
-            aria-valuemax={patternLength}
-            aria-valuenow={trackLength}
-            tabIndex={0}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            {...endBarLongPress()}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              if (!isDragging) handleFreeRun();
-            }}
-            style={{
-              left: `${handlePct}%`,
-              touchAction: 'none',
-            }}
-            className={
-              'absolute top-0 h-full w-4'
-              + ' -translate-x-1/2 z-20'
-              + (isDragging
-                ? ' cursor-col-resize'
-                : ' cursor-default')
-              + ' before:absolute before:inset-y-0'
-              + ' before:left-1/2'
-              + ' before:-translate-x-1/2'
-              + ' before:w-1.5 before:rounded-full'
-              + ' before:transition-colors'
-              + (isDragging
-                ? ' before:bg-neutral-300'
-                : ' before:bg-neutral-500/60'
-                  + ' hover:before:bg-neutral-300')
-            }
+          Accent
+        </span>
+        <div className="ml-auto">
+          <Knob
+            value={gain}
+            onChange={handleGain}
+            trackName="Accent"
+            size={20}
+            defaultValue={0.5}
           />
-        )}
+        </div>
+      </div>
 
-        {/* Free-run indicator */}
-        {isFreeRun && handleOnPage && (
+      <div className="flex gap-4 items-center">
+        {/* Desktop: sidebar with label + knob */}
+        <div className="hidden lg:flex w-48 items-center gap-2">
           <span
-            aria-label="free run"
-            style={{
-              left: `${handlePct}%`,
-              fontFamily: 'var(--font-orbitron)',
-            }}
             className={
-              'absolute top-1/2 -translate-x-1/2'
-              + ' -translate-y-1/2 z-30'
-              + ' pointer-events-none select-none'
-              + ' flex items-center'
-              + ' justify-center'
-              + ' w-3.5 h-3.5 rounded-full'
-              + ' bg-orange-500'
-              + ' text-[10px] font-bold'
-              + ' text-white'
-              + ' shadow-[0_0_6px_rgba(251,146,60,0.6)]'
+              'w-16 truncate text-xs text-left'
+              + ' font-bold uppercase tracking-wider'
+              + (isFreeRun
+                ? ' text-orange-400'
+                : ' text-neutral-400')
             }
           >
-            F
+            Accent
           </span>
-        )}
+          <Knob
+            value={gain}
+            onChange={handleGain}
+            trackName="Accent"
+            defaultValue={0.5}
+          />
+        </div>
+
+        {/* Step grid with drag handle */}
+        <div className="flex-1 relative">
+          <div
+            ref={gridRef}
+            data-track="ac"
+            className="grid grid-cols-8 lg:grid-cols-16 gap-[3px] lg:gap-1.5"
+          >
+            {Array.from(
+              { length: 16 },
+              (_, i) => {
+                const globalIdx = pageOffset + i;
+                const disabled =
+                  globalIdx >= trackLength
+                  || globalIdx >= patternLength;
+                return (
+                  <StepButton
+                    key={i}
+                    trackId={'ac' as TrackId}
+                    trackName="accent"
+                    stepIndex={i}
+                    isActive={
+                      !disabled
+                      && steps[globalIdx] === '1'
+                    }
+                    isCurrent={
+                      !disabled
+                      && effectiveStep === globalIdx
+                    }
+                    isBeat={globalIdx % 4 === 0}
+                    isDisabled={disabled}
+                    mini
+                    onToggle={handleToggleStep}
+                  />
+                );
+              }
+            )}
+          </div>
+
+          {/* Draggable length handle */}
+          {handleOnPage && (
+            <div
+              role="slider"
+              aria-label="accent length"
+              aria-valuemin={1}
+              aria-valuemax={patternLength}
+              aria-valuenow={trackLength}
+              tabIndex={0}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              {...endBarLongPress()}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                if (!isDragging) handleFreeRun();
+              }}
+              style={{
+                left: `${handlePct}%`,
+                touchAction: 'none',
+              }}
+              className={
+                'absolute top-0 h-full w-4'
+                + ' -translate-x-1/2 z-20'
+                + (isDragging
+                  ? ' cursor-col-resize'
+                  : ' cursor-default')
+                + ' before:absolute before:inset-y-0'
+                + ' before:left-1/2'
+                + ' before:-translate-x-1/2'
+                + ' before:w-1.5 before:rounded-full'
+                + ' before:transition-colors'
+                + (isDragging
+                  ? ' before:bg-neutral-300'
+                  : ' before:bg-neutral-500/60'
+                    + ' hover:before:bg-neutral-300')
+              }
+            />
+          )}
+
+          {/* Free-run indicator */}
+          {isFreeRun && handleOnPage && (
+            <span
+              aria-label="free run"
+              style={{
+                left: `${handlePct}%`,
+                fontFamily: 'var(--font-orbitron)',
+              }}
+              className={
+                'absolute top-1/2 -translate-x-1/2'
+                + ' -translate-y-1/2 z-30'
+                + ' pointer-events-none select-none'
+                + ' flex items-center'
+                + ' justify-center'
+                + ' w-3.5 h-3.5 rounded-full'
+                + ' bg-orange-500'
+                + ' text-[10px] font-bold'
+                + ' text-white'
+                + ' shadow-[0_0_6px_rgba(251,146,60,0.6)]'
+              }
+            >
+              F
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

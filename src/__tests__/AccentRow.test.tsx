@@ -9,9 +9,13 @@ const base = {
   patternLength: 16,
   pageOffset: 0,
   isFreeRun: false,
+  gain: 0.5,
+  currentStep: -1,
+  totalSteps: 0,
   onToggleStep: vi.fn(),
   onSetTrackLength: vi.fn(),
   onToggleFreeRun: vi.fn(),
+  onSetGain: vi.fn(),
 };
 
 describe('AccentRow', () => {
@@ -19,10 +23,10 @@ describe('AccentRow', () => {
     const { container } = render(
       <AccentRow {...base} />
     );
-    const buttons = container.querySelectorAll(
-      'button, [aria-label*="step"]'
+    const steps = container.querySelectorAll(
+      '[data-step]'
     );
-    expect(buttons.length).toBe(16);
+    expect(steps.length).toBe(16);
   });
 
   it('shows active state for accent steps', () => {
@@ -73,7 +77,9 @@ describe('AccentRow', () => {
     render(
       <AccentRow {...base} trackLength={8} />
     );
-    const slider = screen.getByRole('slider');
+    const slider = screen.getByLabelText(
+      'accent length'
+    );
     expect(slider).toBeTruthy();
     expect(
       slider.getAttribute('aria-valuenow')
@@ -84,7 +90,9 @@ describe('AccentRow', () => {
     render(
       <AccentRow {...base} trackLength={16} />
     );
-    const slider = screen.getByRole('slider');
+    const slider = screen.getByLabelText(
+      'accent length'
+    );
     expect(
       slider.getAttribute('aria-valuenow')
     ).toBe('16');
@@ -112,7 +120,9 @@ describe('AccentRow', () => {
     render(
       <AccentRow
         {...base}
-        steps={'0000000000000000' + '1010000000000000'}
+        steps={
+          '0000000000000000' + '1010000000000000'
+        }
         trackLength={32}
         patternLength={32}
         pageOffset={16}
@@ -130,8 +140,30 @@ describe('AccentRow', () => {
     const { container } = render(
       <AccentRow {...base} />
     );
-    const btn = container.querySelector('button');
+    const btn = container.querySelector(
+      '[data-step] button, button[data-step]'
+    ) ?? container.querySelector('button');
     expect(btn?.className).toContain('h-2.5');
     expect(btn?.className).toContain('lg:h-3');
+  });
+
+  it('shows running light on current step', () => {
+    render(
+      <AccentRow {...base} currentStep={2} />
+    );
+    const btn = screen.getByLabelText(
+      'accent step 3'
+    );
+    expect(
+      btn.className
+    ).toContain('bg-orange-400');
+  });
+
+  it('renders intensity knob', () => {
+    render(<AccentRow {...base} />);
+    expect(
+      screen.getAllByLabelText('Volume Accent')
+        .length
+    ).toBeGreaterThanOrEqual(1);
   });
 });

@@ -16,9 +16,10 @@ import trackPatternData from './data/trackPatterns.json';
 const TRACK_PATTERNS: TrackPattern[] =
   trackPatternData.patterns;
 
-const TRACK_ORDER: TrackId[] = TRACKS.map(
-  t => t.id
-);
+const TRACK_ORDER: TrackId[] = [
+  ...TRACKS.map(t => t.id),
+  'ac' as TrackId,
+];
 
 interface StepGridProps {
   scrollContainerRef: RefObject<HTMLDivElement | null>;
@@ -170,6 +171,20 @@ export default function StepGrid({
             })}
           />
         ))}
+        <AccentRow
+          steps={currentPattern.steps.ac}
+          trackLength={trackLengths.ac}
+          patternLength={patternLength}
+          pageOffset={pageOffset}
+          isFreeRun={trackStates.ac.freeRun}
+          gain={trackStates.ac.gain}
+          currentStep={displayStep}
+          totalSteps={displayTotal}
+          onToggleStep={toggleStep}
+          onSetTrackLength={setTrackLength}
+          onToggleFreeRun={toggleFreeRun}
+          onSetGain={setGain}
+        />
       </div>
       {openPopover !== null ? (
         <TrigConditionPopover
@@ -185,16 +200,6 @@ export default function StepGrid({
           scrollContainerRef={scrollContainerRef}
         />
       ) : null}
-      <AccentRow
-        steps={currentPattern.steps.ac}
-        trackLength={trackLengths.ac}
-        patternLength={patternLength}
-        pageOffset={pageOffset}
-        isFreeRun={trackStates.ac.freeRun}
-        onToggleStep={toggleStep}
-        onSetTrackLength={setTrackLength}
-        onToggleFreeRun={toggleFreeRun}
-      />
     </div>
   );
 }

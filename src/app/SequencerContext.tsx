@@ -400,7 +400,9 @@ export function SequencerProvider({
 
           const cubic = st.gain ** 3;
           const gain =
-            isAccented ? cubic * 1.5 : cubic;
+            isAccented
+              ? cubic * (1 + states.ac.gain)
+              : cubic;
           audioEngine.playSound(
             track.id, scheduledTime, gain
           );
