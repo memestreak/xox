@@ -25,7 +25,6 @@ interface StepGridProps {
   pageOffset: number;
   autoFollow: boolean;
   setPage: (page: number) => void;
-  setPlaybackPage: (page: number) => void;
 }
 
 /**
@@ -39,7 +38,6 @@ export default function StepGrid({
   pageOffset,
   autoFollow,
   setPage,
-  setPlaybackPage,
 }: StepGridProps) {
   const { state, actions, meta } = useSequencer();
   const {
@@ -110,16 +108,13 @@ export default function StepGrid({
         setDisplayTotal(
           Math.max(0, curTotal - 1)
         );
-        // Report playback page
-        const stepPage = curStep >= 0
-          ? Math.floor(curStep / 16)
-          : -1;
-        setPlaybackPage(stepPage);
         // Auto-follow page
         if (
           autoFollowRef.current
           && curStep >= 0
         ) {
+          const stepPage =
+            Math.floor(curStep / 16);
           setPage(stepPage);
         }
       }
@@ -128,7 +123,7 @@ export default function StepGrid({
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [stepRef, totalStepsRef, setPage, setPlaybackPage]);
+  }, [stepRef, totalStepsRef, setPage]);
 
   return (
     <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-3 lg:p-6 rounded-xl lg:rounded-2xl border border-neutral-800/50">
