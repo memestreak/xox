@@ -40,8 +40,11 @@ export default function RangeSlider({
 
   const range = max - min;
 
-  const clamp = (v: number) =>
-    Math.max(min, Math.min(max, Math.round(v)));
+  const clamp = useCallback(
+    (v: number) =>
+      Math.max(min, Math.min(max, Math.round(v))),
+    [min, max]
+  );
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -70,7 +73,7 @@ export default function RangeSlider({
         clamp(dragRef.current.startValue + delta)
       );
     },
-    [onChange, range]
+    [onChange, range, clamp]
   );
 
   const release = useCallback(() => {
@@ -102,7 +105,7 @@ export default function RangeSlider({
       e.preventDefault();
       onChange(next);
     },
-    [onChange, min, max]
+    [onChange, min, max, clamp]
   );
 
   const pct = range > 0

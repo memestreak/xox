@@ -21,6 +21,7 @@ import type {
   Pattern,
   SequencerConfig,
   StepConditions,
+  StepLocks,
   TrackId,
   TrackState,
 } from './types';
@@ -109,6 +110,15 @@ interface SequencerActions {
     conditions: StepConditions
   ) => void;
   clearTrigCondition: (
+    trackId: TrackId,
+    stepIndex: number
+  ) => void;
+  setParameterLock: (
+    trackId: TrackId,
+    stepIndex: number,
+    locks: StepLocks
+  ) => void;
+  clearParameterLock: (
     trackId: TrackId,
     stepIndex: number
   ) => void;
@@ -398,7 +408,11 @@ export function SequencerProvider({
           );
           if (!shouldFire) return;
 
-          const cubic = st.gain ** 3;
+          const locks =
+            cfg.parameterLocks?.[track.id]
+              ?.[effectiveStep];
+          const baseGain = locks?.gain ?? st.gain;
+          const cubic = baseGain ** 3;
           const gain =
             isAccented
               ? cubic * (1 + states.ac.gain)
@@ -493,6 +507,8 @@ export function SequencerProvider({
         steps: newSteps,
         trigConditions:
           pattern.trigConditions ?? {},
+        parameterLocks:
+          pattern.parameterLocks ?? {},
       };
     });
     setSelectedPatternId(pattern.id);
@@ -598,6 +614,9 @@ export function SequencerProvider({
         const newTrigConds = {
           ...prev.trigConditions,
         };
+        const newParamLocks = {
+          ...prev.parameterLocks,
+        };
         for (const id of TRACK_IDS) {
           if (newTrackLengths[id] > clamped) {
             newTrackLengths[id] = clamped;
@@ -627,6 +646,20 @@ export function SequencerProvider({
             }
             newTrigConds[id] = pruned;
           }
+          // Prune locks beyond new length
+          const trackLocks = newParamLocks[id];
+          if (trackLocks) {
+            const pruned: Record<
+              number, StepLocks
+            > = {};
+            for (const [k, v] of
+              Object.entries(trackLocks)) {
+              if (Number(k) < len) {
+                pruned[Number(k)] = v;
+              }
+            }
+            newParamLocks[id] = pruned;
+          }
         }
         return {
           ...prev,
@@ -634,6 +667,7 @@ export function SequencerProvider({
           trackLengths: newTrackLengths,
           steps: newSteps,
           trigConditions: newTrigConds,
+          parameterLocks: newParamLocks,
         };
       });
       setSelectedPatternId('custom');
@@ -675,6 +709,26 @@ export function SequencerProvider({
             [trackId]: pruned,
           };
         }
+        // Prune locks beyond new length
+        const trackLocks =
+          prev.parameterLocks[trackId];
+        let newParameterLocks =
+          prev.parameterLocks;
+        if (trackLocks) {
+          const pruned: Record<
+            number, StepLocks
+          > = {};
+          for (const [k, v] of
+            Object.entries(trackLocks)) {
+            if (Number(k) < clamped) {
+              pruned[Number(k)] = v;
+            }
+          }
+          newParameterLocks = {
+            ...prev.parameterLocks,
+            [trackId]: pruned,
+          };
+        }
         return {
           ...prev,
           trackLengths: {
@@ -686,6 +740,7 @@ export function SequencerProvider({
             [trackId]: newSteps,
           },
           trigConditions: newTrigConditions,
+          parameterLocks: newParameterLocks,
         };
       });
       setSelectedPatternId('custom');
@@ -766,6 +821,7 @@ export function SequencerProvider({
         mixer: newMixer,
         swing: 0,
         trigConditions: {},
+        parameterLocks: {},
       };
     });
     setIsLatched(false);
@@ -781,6 +837,10 @@ export function SequencerProvider({
           ...prev.trigConditions,
         };
         delete newTrigConditions[trackId];
+        const newParameterLocks = {
+          ...prev.parameterLocks,
+        };
+        delete newParameterLocks[trackId];
         return {
           ...prev,
           steps: {
@@ -799,6 +859,7 @@ export function SequencerProvider({
             },
           },
           trigConditions: newTrigConditions,
+          parameterLocks: newParameterLocks,
         };
       });
       setSelectedPatternId('custom');
@@ -921,6 +982,50 @@ export function SequencerProvider({
     []
   );
 
+  const setParameterLock = useCallback(
+    (
+      trackId: TrackId,
+      stepIndex: number,
+      locks: StepLocks
+    ) => {
+      setConfig(prev => ({
+        ...prev,
+        parameterLocks: {
+          ...prev.parameterLocks,
+          [trackId]: {
+            ...prev.parameterLocks[trackId],
+            [stepIndex]: locks,
+          },
+        },
+      }));
+    },
+    []
+  );
+
+  const clearParameterLock = useCallback(
+    (trackId: TrackId, stepIndex: number) => {
+      setConfig(prev => {
+        const trackLocks = {
+          ...prev.parameterLocks[trackId],
+        };
+        delete trackLocks[stepIndex];
+        const newParameterLocks = {
+          ...prev.parameterLocks,
+        };
+        if (Object.keys(trackLocks).length === 0) {
+          delete newParameterLocks[trackId];
+        } else {
+          newParameterLocks[trackId] = trackLocks;
+        }
+        return {
+          ...prev,
+          parameterLocks: newParameterLocks,
+        };
+      });
+    },
+    []
+  );
+
   // ─── Context value ────────────────────────────────
 
   const value: SequencerContextValue = {
@@ -958,6 +1063,8 @@ export function SequencerProvider({
       setFillHeld,
       setTrigCondition,
       clearTrigCondition,
+      setParameterLock,
+      clearParameterLock,
     },
     meta: { stepRef, totalStepsRef, config },
   };

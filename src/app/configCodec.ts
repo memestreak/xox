@@ -181,7 +181,7 @@ function validateConfig(
     obj.trigConditions, trackLengths
   );
   const parameterLocks = validateParameterLocks(
-    obj.parameterLocks, trackLengths
+    obj.parameterLocks
   );
 
   return {
@@ -482,8 +482,7 @@ function validateSingleLock(
  * invalid step indices, and invalid lock objects.
  */
 function validateParameterLocks(
-  value: unknown,
-  _trackLengths: Record<TrackId, number>
+  value: unknown
 ): SequencerConfig['parameterLocks'] {
   if (
     value === null || typeof value !== 'object'
