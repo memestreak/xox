@@ -49,7 +49,7 @@ function TransportControlsInner({
           <button
             onClick={togglePlay}
             disabled={!isLoaded}
-            className={`px-4 lg:px-8 py-2 rounded-full font-bold text-sm lg:text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${isPlaying
+            className={`w-20 lg:w-28 py-2 rounded-full font-bold text-sm lg:text-base text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${isPlaying
               ? 'bg-red-600 hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.4)]'
               : 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_20px_rgba(234,88,12,0.4)]'
               } ${!isLoaded ? 'opacity-50 cursor-wait' : ''}`}
@@ -68,7 +68,7 @@ function TransportControlsInner({
             htmlFor="kit-select"
             className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold"
           >
-            Drum Kit
+            Kit
           </label>
           <select
             id="kit-select"
