@@ -22,6 +22,9 @@ const TRACK_ORDER: TrackId[] = TRACKS.map(
 
 interface StepGridProps {
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  pageOffset: number;
+  autoFollow: boolean;
+  setPage: (page: number) => void;
 }
 
 /**
@@ -32,6 +35,9 @@ interface StepGridProps {
  */
 export default function StepGrid({
   scrollContainerRef,
+  pageOffset,
+  autoFollow,
+  setPage,
 }: StepGridProps) {
   const { state, actions, meta } = useSequencer();
   const {
@@ -60,6 +66,7 @@ export default function StepGrid({
     onSetTrackSteps: setTrackSteps,
     longPressActiveRef,
     popoverOpenRef,
+    pageOffset,
   });
 
   const [openPopover, setOpenPopover] = useState<{
@@ -77,6 +84,11 @@ export default function StepGrid({
   // re-render on step ticks.
   const [displayStep, setDisplayStep] = useState(-1);
   const [displayTotal, setDisplayTotal] = useState(0);
+
+  const autoFollowRef = useRef(autoFollow);
+  useEffect(() => {
+    autoFollowRef.current = autoFollow;
+  }, [autoFollow]);
 
   useEffect(() => {
     let raf: number;
@@ -96,13 +108,22 @@ export default function StepGrid({
         setDisplayTotal(
           Math.max(0, curTotal - 1)
         );
+        // Auto-follow page
+        if (
+          autoFollowRef.current
+          && curStep >= 0
+        ) {
+          const stepPage =
+            Math.floor(curStep / 16);
+          setPage(stepPage);
+        }
       }
       raf = requestAnimationFrame(tick);
     };
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [stepRef, totalStepsRef]);
+  }, [stepRef, totalStepsRef, setPage]);
 
   return (
     <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-3 lg:p-6 rounded-xl lg:rounded-2xl border border-neutral-800/50">
@@ -120,7 +141,7 @@ export default function StepGrid({
             steps={currentPattern.steps[track.id]}
             trackLength={trackLengths[track.id]}
             patternLength={patternLength}
-            pageOffset={0}
+            pageOffset={pageOffset}
             isMuted={trackStates[track.id].isMuted}
             isSolo={trackStates[track.id].isSolo}
             isFreeRun={
@@ -167,6 +188,7 @@ export default function StepGrid({
       <RunningLight
         currentStep={displayStep}
         patternLength={patternLength}
+        pageOffset={pageOffset}
       />
     </div>
   );

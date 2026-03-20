@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from 'react';
+import type { ReactNode } from 'react';
 import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import TempoController from './TempoController';
@@ -16,11 +17,17 @@ const categories = getCategorizedPatterns(
   patternsData.patterns as Pattern[]
 );
 
+interface TransportControlsProps {
+  pageIndicator?: ReactNode;
+}
+
 /**
  * Header section with logo, BPM, play/stop, kit and
  * pattern selectors.
  */
-function TransportControlsInner() {
+function TransportControlsInner({
+  pageIndicator,
+}: TransportControlsProps) {
   const { state, actions } = useSequencer();
   const {
     isPlaying, bpm, currentKit,
@@ -54,7 +61,7 @@ function TransportControlsInner() {
         </div>
       </div>
       {/* Row 2: Kit + Pattern */}
-      <div className="grid grid-cols-3 gap-2 lg:gap-4 pt-2 lg:pt-0">
+      <div className="grid grid-cols-[1fr_1fr_1.5fr] gap-2 lg:gap-4 pt-2 lg:pt-0">
         <GlobalControls />
         <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
           <label
@@ -85,11 +92,16 @@ function TransportControlsInner() {
           <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
             Pattern
           </span>
-          <PatternPicker
-            categories={categories}
-            currentPattern={currentPattern}
-            onSelect={setPattern}
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <PatternPicker
+                categories={categories}
+                currentPattern={currentPattern}
+                onSelect={setPattern}
+              />
+            </div>
+            {pageIndicator}
+          </div>
         </div>
       </div>
     </header>
