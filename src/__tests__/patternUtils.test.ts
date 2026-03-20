@@ -25,16 +25,13 @@ describe('getCategorizedPatterns', () => {
     expect(new Set(ids).size).toBe(patterns.length);
   });
 
-  it('preserves order within categories', () => {
+  it('sorts patterns by name within categories', () => {
     for (const group of result) {
-      const groupIds = group.patterns.map(p => p.id);
-      const sourceIds = patterns
-        .filter(
-          p => (p.category ?? 'Other') ===
-            group.category
-        )
-        .map(p => p.id);
-      expect(groupIds).toEqual(sourceIds);
+      const names = group.patterns.map(p => p.name);
+      const sorted = [...names].sort((a, b) =>
+        a.localeCompare(b)
+      );
+      expect(names).toEqual(sorted);
     }
   });
 
@@ -77,10 +74,10 @@ describe('getCategorizedPatterns', () => {
     );
   });
 
-  it('accounts for all 127 patterns', () => {
+  it('accounts for all 137 patterns', () => {
     const total = result.reduce(
       (sum, g) => sum + g.patterns.length, 0
     );
-    expect(total).toBe(127);
+    expect(total).toBe(137);
   });
 });

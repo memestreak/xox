@@ -29,6 +29,9 @@ export function getCategorizedPatterns(
       map.set(cat, [p]);
     }
   }
+  for (const list of map.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  }
   const groups = Array.from(
     map, ([category, patterns]) => ({
       category,
