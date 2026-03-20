@@ -123,6 +123,7 @@ interface TrackRowProps {
   steps: string;
   trackLength: number;
   patternLength: number;
+  pageOffset: number;
   isMuted: boolean;
   isSolo: boolean;
   isFreeRun: boolean;
@@ -165,6 +166,7 @@ function TrackRowInner({
   steps,
   trackLength,
   patternLength,
+  pageOffset,
   isMuted,
   isSolo,
   isFreeRun,
@@ -232,13 +234,16 @@ function TrackRowInner({
       if (!grid) return trackLength;
       const rect = grid.getBoundingClientRect();
       const x = clientX - rect.left;
-      const stepWidth = rect.width / patternLength;
+      const stepWidth = rect.width / 16;
       const raw = Math.round(x / stepWidth);
       return Math.max(
-        1, Math.min(patternLength, raw)
+        1,
+        Math.min(
+          patternLength, raw + pageOffset
+        )
       );
     },
-    [patternLength, trackLength]
+    [patternLength, trackLength, pageOffset]
   );
 
   const handlePointerDown = useCallback(
@@ -274,8 +279,29 @@ function TrackRowInner({
     setIsDragging(false);
   }, []);
 
-  const handlePct =
-    (trackLength / 16) * 100;
+  const handleOnPage =
+    trackLength > pageOffset
+    && trackLength <= pageOffset + 16;
+  const handlePct = handleOnPage
+    ? ((trackLength - pageOffset) / 16) * 100
+    : 0;
+
+  const handleToggleStep = useCallback(
+    (tid: TrackId, localStep: number) =>
+      onToggleStep(tid, localStep + pageOffset),
+    [onToggleStep, pageOffset]
+  );
+
+  const handleOpenPopover = useCallback(
+    (
+      tid: TrackId,
+      localStep: number,
+      rect: { top: number; left: number }
+    ) => onOpenPopover?.(
+      tid, localStep + pageOffset, rect
+    ),
+    [onOpenPopover, pageOffset]
+  );
 
   return (
     <div>
@@ -353,9 +379,10 @@ function TrackRowInner({
             {Array.from(
               { length: 16 },
               (_, i) => {
+                const globalIdx = pageOffset + i;
                 const disabled =
-                  i >= trackLength
-                  || i >= patternLength;
+                  globalIdx >= trackLength
+                  || globalIdx >= patternLength;
                 return (
                   <StepButton
                     key={i}
@@ -364,19 +391,19 @@ function TrackRowInner({
                     stepIndex={i}
                     isActive={
                       !disabled
-                      && steps[i] === '1'
+                      && steps[globalIdx] === '1'
                     }
                     isCurrent={
                       !disabled
-                      && effectiveStep === i
+                      && effectiveStep === globalIdx
                     }
-                    isBeat={i % 4 === 0}
+                    isBeat={globalIdx % 4 === 0}
                     isDisabled={disabled}
-                    onToggle={onToggleStep}
+                    onToggle={handleToggleStep}
                     conditions={
-                      trigConditions?.[i]
+                      trigConditions?.[globalIdx]
                     }
-                    onOpenPopover={onOpenPopover}
+                    onOpenPopover={handleOpenPopover}
                     longPressActiveRef={
                       longPressActiveRef
                     }
@@ -387,46 +414,48 @@ function TrackRowInner({
           </div>
 
           {/* Draggable length handle */}
-          <div
-            role="slider"
-            aria-label={`${trackName} length`}
-            aria-valuemin={1}
-            aria-valuemax={patternLength}
-            aria-valuenow={trackLength}
-            tabIndex={0}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            {...endBarLongPress()}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              if (!isDragging) handleFreeRun();
-            }}
-            style={{
-              left: `${handlePct}%`,
-              touchAction: 'none',
-            }}
-            className={
-              'absolute top-0 h-full w-4'
-              + ' -translate-x-1/2 z-20'
-              + (isDragging
-                ? ' cursor-col-resize'
-                : ' cursor-default')
-              + ' before:absolute before:inset-y-0'
-              + ' before:left-1/2'
-              + ' before:-translate-x-1/2'
-              + ' before:w-1.5 before:rounded-full'
-              + ' before:transition-colors'
-              + (isDragging
-                ? ' before:bg-neutral-300'
-                : ' before:bg-neutral-500/60'
-                  + ' hover:before:bg-neutral-300')
-            }
-          />
+          {handleOnPage && (
+            <div
+              role="slider"
+              aria-label={`${trackName} length`}
+              aria-valuemin={1}
+              aria-valuemax={patternLength}
+              aria-valuenow={trackLength}
+              tabIndex={0}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              {...endBarLongPress()}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                if (!isDragging) handleFreeRun();
+              }}
+              style={{
+                left: `${handlePct}%`,
+                touchAction: 'none',
+              }}
+              className={
+                'absolute top-0 h-full w-4'
+                + ' -translate-x-1/2 z-20'
+                + (isDragging
+                  ? ' cursor-col-resize'
+                  : ' cursor-default')
+                + ' before:absolute before:inset-y-0'
+                + ' before:left-1/2'
+                + ' before:-translate-x-1/2'
+                + ' before:w-1.5 before:rounded-full'
+                + ' before:transition-colors'
+                + (isDragging
+                  ? ' before:bg-neutral-300'
+                  : ' before:bg-neutral-500/60'
+                    + ' hover:before:bg-neutral-300')
+              }
+            />
+          )}
 
           {/* Free-run indicator */}
-          {isFreeRun && (
+          {isFreeRun && handleOnPage && (
             <span
               aria-label="free run"
               style={{

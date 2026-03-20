@@ -66,4 +66,13 @@ describe('GlobalControls', () => {
     fireEvent.keyDown(knob, { key: 'ArrowUp' });
     expect(mockSetSwing).toHaveBeenCalled();
   });
+
+  it('renders 64 step options', () => {
+    render(<GlobalControls />);
+    const select = screen.getByRole('combobox');
+    const options = select.querySelectorAll('option');
+    expect(options.length).toBe(64);
+    expect(options[0].value).toBe('1');
+    expect(options[63].value).toBe('64');
+  });
 });

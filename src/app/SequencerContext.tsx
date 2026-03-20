@@ -587,7 +587,7 @@ export function SequencerProvider({
   const setPatternLength = useCallback(
     (length: number) => {
       const clamped =
-        Math.max(1, Math.min(16, length));
+        Math.max(1, Math.min(64, length));
       setConfig(prev => {
         const newTrackLengths = {
           ...prev.trackLengths,

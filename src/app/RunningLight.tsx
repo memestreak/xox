@@ -5,6 +5,7 @@ import { memo } from 'react';
 interface RunningLightProps {
   currentStep: number;
   patternLength: number;
+  pageOffset: number;
 }
 
 /**
@@ -15,6 +16,7 @@ interface RunningLightProps {
 function RunningLightInner({
   currentStep,
   patternLength,
+  pageOffset,
 }: RunningLightProps) {
   return (
     <div className="flex gap-4 items-center pt-2">
@@ -28,9 +30,9 @@ function RunningLightInner({
               className={
                 'h-1.5 rounded-full'
                 + ' transition-colors duration-100 '
-                + (i >= patternLength
+                + (pageOffset + i >= patternLength
                   ? 'bg-transparent'
-                  : i === currentStep
+                  : pageOffset + i === currentStep
                     ? 'bg-orange-500'
                       + ' shadow-[0_0_10px_rgba(249,115,22,0.8)]'
                     : 'bg-neutral-900')

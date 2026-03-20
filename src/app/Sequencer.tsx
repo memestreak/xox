@@ -1,15 +1,37 @@
 "use client";
 
-import { useRef } from 'react';
-import { SequencerProvider } from './SequencerContext';
+import {
+  useRef, useState,
+} from 'react';
+import { SequencerProvider, useSequencer }
+  from './SequencerContext';
 import TransportControls from './TransportControls';
 import StepGrid from './StepGrid';
+import PageIndicator from './PageIndicator';
 
-/**
- * Inner shell that composes the major UI sections.
- */
 function SequencerInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { state } = useSequencer();
+  const { patternLength } = state;
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const [autoFollow, setAutoFollow] = useState(true);
+
+  const pageCount = Math.ceil(patternLength / 16);
+  const clampedPage = Math.min(
+    currentPage, pageCount - 1
+  );
+  const pageOffset = clampedPage * 16;
+
+  const pageIndicator = (
+    <PageIndicator
+      currentPage={currentPage}
+      pageCount={pageCount}
+      autoFollow={autoFollow}
+      setPage={setCurrentPage}
+      setAutoFollow={setAutoFollow}
+    />
+  );
 
   return (
     <div className="h-dvh overflow-hidden flex flex-col bg-neutral-950 text-neutral-100 font-sans">
@@ -20,12 +42,19 @@ function SequencerInner() {
         Skip to main content
       </a>
       <div className="max-w-none lg:max-w-4xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-4 flex flex-col flex-1 min-h-0">
-        <TransportControls />
+        <TransportControls
+          pageIndicator={pageIndicator}
+        />
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto py-3 lg:py-4 track-scroll-region"
         >
-          <StepGrid scrollContainerRef={scrollRef} />
+          <StepGrid
+            scrollContainerRef={scrollRef}
+            pageOffset={pageOffset}
+            autoFollow={autoFollow}
+            setPage={setCurrentPage}
+          />
           <footer className="grid grid-cols-3 items-center pt-4 lg:pt-8">
             <div />
             <a
@@ -46,10 +75,6 @@ function SequencerInner() {
   );
 }
 
-/**
- * Top-level Sequencer component. Wraps the UI in the
- * SequencerProvider that owns all state and audio logic.
- */
 export default function Sequencer() {
   return (
     <SequencerProvider>

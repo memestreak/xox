@@ -394,6 +394,34 @@ describe('setPatternLength track lengths', () => {
       result.current.meta.config.trackLengths.ch
     ).toBe(12);
   });
+
+  it('accepts pattern length up to 64', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setPatternLength(32);
+    });
+    expect(
+      result.current.state.patternLength
+    ).toBe(32);
+    for (const id of TRACK_IDS) {
+      expect(
+        result.current.meta.config.trackLengths[id]
+      ).toBe(32);
+      expect(
+        result.current.meta.config.steps[id].length
+      ).toBe(32);
+    }
+  });
+
+  it('clamps pattern length at 64', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setPatternLength(100);
+    });
+    expect(
+      result.current.state.patternLength
+    ).toBe(64);
+  });
 });
 
 // -------------------------------------------------------

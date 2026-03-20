@@ -97,7 +97,7 @@ export default function PatternPicker({
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label="Pattern"
-        className="w-full px-4 lg:px-8 py-2 rounded-full
+        className="w-full px-3 lg:px-4 py-2 rounded-full
           font-bold text-sm lg:text-base truncate
           bg-neutral-800 text-neutral-400
           hover:text-neutral-200 hover:bg-neutral-700
