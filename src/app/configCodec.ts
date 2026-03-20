@@ -28,7 +28,7 @@ export function defaultConfig(): SequencerConfig {
   const trackLengths = {} as Record<TrackId, number>;
   for (const id of TRACK_IDS) {
     mixer[id] = {
-      gain: 1.0,
+      gain: id === 'ac' ? 0.5 : 1.0,
       isMuted: false,
       isSolo: false,
       freeRun: false,

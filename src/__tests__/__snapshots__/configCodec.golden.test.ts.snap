@@ -7,7 +7,7 @@ exports[`golden-file tests > defaultConfig() snapshot 1`] = `
   "mixer": {
     "ac": {
       "freeRun": false,
-      "gain": 1,
+      "gain": 0.5,
       "isMuted": false,
       "isSolo": false,
     },

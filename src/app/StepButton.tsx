@@ -13,6 +13,7 @@ interface StepButtonProps {
   isCurrent: boolean;
   isBeat: boolean;
   isDisabled: boolean;
+  mini?: boolean;
   onToggle: (
     trackId: TrackId, stepIndex: number
   ) => void;
@@ -39,6 +40,7 @@ function StepButtonInner({
   isCurrent,
   isBeat,
   isDisabled,
+  mini,
   onToggle,
   conditions,
   onOpenPopover,
@@ -84,6 +86,9 @@ function StepButtonInner({
     }
   }, [longPressActiveRef]);
 
+  const heightClass = mini
+    ? 'h-2.5 lg:h-3' : 'h-8 lg:h-12';
+
   if (isDisabled) {
     return (
       <div
@@ -93,7 +98,7 @@ function StepButtonInner({
           + ' (inactive)'
         }
         className={
-          'h-8 lg:h-12 rounded-sm'
+          heightClass + ' rounded-sm'
           + ' bg-neutral-900/20 cursor-not-allowed'
           + (isBeat
             ? ' border-l-2 border-neutral-800/30'
@@ -105,15 +110,21 @@ function StepButtonInner({
 
   let color: string;
   if (isActive) {
-    color = isCurrent
-      ? 'bg-orange-400 motion-safe:scale-105'
+    if (isCurrent && !mini) {
+      color = 'bg-orange-400 motion-safe:scale-105'
         + ' shadow-[0_0_20px_rgba(251,146,60,0.8)]'
-        + ' z-10'
-      : 'bg-orange-600';
+        + ' z-10';
+    } else if (isCurrent && mini) {
+      color = 'bg-orange-400';
+    } else {
+      color = 'bg-orange-600';
+    }
   } else {
-    color = isCurrent
-      ? 'bg-neutral-700'
-      : 'bg-neutral-800/40 hover:bg-neutral-800';
+    if (isCurrent) {
+      color = 'bg-neutral-700';
+    } else {
+      color = 'bg-neutral-800/40 hover:bg-neutral-800';
+    }
   }
 
   const longPressHandlers = longPress();
@@ -150,7 +161,7 @@ function StepButtonInner({
       style={{ touchAction: 'manipulation' }}
       className={
         'relative overflow-hidden'
-        + ' h-8 lg:h-12 rounded-sm'
+        + ' ' + heightClass + ' rounded-sm'
         + ' transition-colors duration-100'
         + ' motion-safe:transition-transform'
         + ' focus-visible:outline-none'
@@ -162,7 +173,7 @@ function StepButtonInner({
           : '')
       }
     >
-      {isActive
+      {!mini && isActive
         && conditions?.probability !== undefined
         ? (
           <span
@@ -176,7 +187,7 @@ function StepButtonInner({
             }}
           />
         ) : null}
-      {isActive && conditions?.fill
+      {!mini && isActive && conditions?.fill
         ? (
           <span
             data-testid="fill-badge"
@@ -195,7 +206,7 @@ function StepButtonInner({
               ? 'F' : '!F'}
           </span>
         ) : null}
-      {isActive && conditions?.cycle != null
+      {!mini && isActive && conditions?.cycle != null
         && conditions.cycle.b >= 2
         ? (
           <span

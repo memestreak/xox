@@ -54,7 +54,9 @@ describe('derived state', () => {
     for (const id of TRACK_IDS) {
       expect(states[id]).toBeDefined();
       expect(states[id].id).toBe(id);
-      expect(states[id].gain).toBe(1);
+      expect(states[id].gain).toBe(
+        id === 'ac' ? 0.5 : 1
+      );
       expect(states[id].isMuted).toBe(false);
       expect(states[id].isSolo).toBe(false);
       expect(typeof states[id].name).toBe('string');
