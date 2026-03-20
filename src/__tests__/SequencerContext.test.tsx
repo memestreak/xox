@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useSequencer } from '../app/SequencerContext';
 import { defaultConfig, encodeConfig } from '../app/configCodec';
 import { TRACK_IDS } from '../app/types';
-import type { TrackId } from '../app/types';
+import type { Pattern, TrackId } from '../app/types';
 import patternsData from '../app/data/patterns.json';
 import kitsData from '../app/data/kits.json';
 import { TestWrapper } from './helpers/sequencer-wrapper';
@@ -18,6 +18,7 @@ vi.mock('../app/AudioEngine', () => ({
     setPatternLength: vi.fn(),
     playSound: vi.fn(),
     onStep: vi.fn(),
+    requestReset: vi.fn(),
   },
 }));
 
@@ -853,4 +854,315 @@ describe('URL hash import', () => {
       );
     }
   );
+});
+
+// -------------------------------------------------------
+// H. Pattern mode state
+// -------------------------------------------------------
+describe('pattern mode state', () => {
+  it('initial patternMode is sequential', () => {
+    const { result } = renderSequencer();
+    expect(
+      result.current.state.patternMode
+    ).toBe('sequential');
+  });
+
+  it('initial tempState is off', () => {
+    const { result } = renderSequencer();
+    expect(
+      result.current.state.tempState
+    ).toBe('off');
+  });
+
+  it('setPatternMode changes mode', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setPatternMode(
+        'direct-start'
+      );
+    });
+    expect(
+      result.current.state.patternMode
+    ).toBe('direct-start');
+    act(() => {
+      result.current.actions.setPatternMode(
+        'direct-jump'
+      );
+    });
+    expect(
+      result.current.state.patternMode
+    ).toBe('direct-jump');
+  });
+
+  it('toggleTemp arms and disarms', () => {
+    const { result } = renderSequencer();
+    // Need to be playing for temp to arm
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.toggleTemp();
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('armed');
+    act(() => {
+      result.current.actions.toggleTemp();
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('off');
+  });
+
+  it('toggleTemp does nothing when stopped', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.toggleTemp();
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('off');
+  });
+
+  it('patternMode not in config (transient)', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setPatternMode(
+        'direct-start'
+      );
+    });
+    const config = result.current.meta.config;
+    expect(
+      'patternMode' in config
+    ).toBe(false);
+  });
+
+  it('clearAll resets temp state', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.toggleTemp();
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('armed');
+    act(() => {
+      result.current.actions.clearAll();
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('off');
+  });
+});
+
+// -------------------------------------------------------
+// I. Pattern switch logic
+// -------------------------------------------------------
+
+/** Create a minimal test pattern with all tracks zeroed
+ *  except bd which gets the provided steps. */
+function makePattern(
+  id: string, bdSteps: string
+): Pattern {
+  const steps = {} as Record<TrackId, string>;
+  for (const tid of TRACK_IDS) {
+    steps[tid] = tid === 'bd'
+      ? bdSteps
+      : '0'.repeat(bdSteps.length);
+  }
+  return { id, name: id, steps };
+}
+
+describe('pattern switch logic', () => {
+  it('stopped: setPattern applies immediately regardless'
+    + ' of mode', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setPatternMode(
+        'sequential'
+      );
+    });
+    const pat = makePattern(
+      'test', '1010101010101010'
+    );
+    act(() => {
+      result.current.actions.setPattern(pat);
+    });
+    expect(
+      result.current.state.currentPattern.id
+    ).toBe('test');
+  });
+
+  it('playing + sequential: setPattern queues, does not'
+    + ' apply immediately', () => {
+    const { result } = renderSequencer();
+    const original =
+      result.current.state.currentPattern.id;
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.setPatternMode(
+        'sequential'
+      );
+    });
+    const pat = makePattern(
+      'queued', '1111000011110000'
+    );
+    act(() => {
+      result.current.actions.setPattern(pat);
+    });
+    // Pattern should NOT have changed yet
+    expect(
+      result.current.state.currentPattern.id
+    ).toBe(original);
+  });
+
+  it('playing + direct-start: setPattern applies'
+    + ' immediately', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.setPatternMode(
+        'direct-start'
+      );
+    });
+    const pat = makePattern(
+      'direct', '1100110011001100'
+    );
+    act(() => {
+      result.current.actions.setPattern(pat);
+    });
+    expect(
+      result.current.state.currentPattern.id
+    ).toBe('direct');
+  });
+
+  it('playing + direct-jump: setPattern applies'
+    + ' immediately', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.setPatternMode(
+        'direct-jump'
+      );
+    });
+    const pat = makePattern(
+      'jump', '1010101010101010'
+    );
+    act(() => {
+      result.current.actions.setPattern(pat);
+    });
+    expect(
+      result.current.state.currentPattern.id
+    ).toBe('jump');
+  });
+
+  it('playing + sequential: re-selecting replaces'
+    + ' pending', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.setPatternMode(
+        'sequential'
+      );
+    });
+    const pat1 = makePattern(
+      'first', '1111111111111111'
+    );
+    const pat2 = makePattern(
+      'second', '0000000000000000'
+    );
+    act(() => {
+      result.current.actions.setPattern(pat1);
+    });
+    act(() => {
+      result.current.actions.setPattern(pat2);
+    });
+    // Second selection should have replaced first
+    // (no playlist). We can't directly inspect
+    // pendingPattern, but when sequential triggers,
+    // it should be 'second'.
+  });
+
+  it('playing + temp armed + direct-start: takes'
+    + ' snapshot and applies', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.setPatternMode(
+        'direct-start'
+      );
+    });
+    act(() => {
+      result.current.actions.toggleTemp();
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('armed');
+    const pat = makePattern(
+      'temp-pat', '1010101010101010'
+    );
+    act(() => {
+      result.current.actions.setPattern(pat);
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('active');
+    expect(
+      result.current.state.currentPattern.id
+    ).toBe('temp-pat');
+  });
+
+  it('stop during temp active reverts to home', () => {
+    const { result } = renderSequencer();
+    // Load a known pattern first
+    const home = (
+      patternsData.patterns as Pattern[]
+    )[0];
+    act(() => {
+      result.current.actions.setPattern(home);
+    });
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.setPatternMode(
+        'direct-start'
+      );
+    });
+    act(() => {
+      result.current.actions.toggleTemp();
+    });
+    const tempPat = makePattern(
+      'temp', '1111111111111111'
+    );
+    act(() => {
+      result.current.actions.setPattern(tempPat);
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('active');
+    // Stop should revert
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('off');
+    // Steps should match the home pattern
+    expect(
+      result.current.meta.config.steps.bd
+    ).toBe(home.steps.bd);
+  });
 });

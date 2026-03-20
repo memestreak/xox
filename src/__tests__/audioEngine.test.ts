@@ -231,6 +231,107 @@ describe('iOS silent mode bypass', () => {
   });
 });
 
+describe('AudioEngine requestReset', () => {
+  let stepLog: { step: number; time: number }[];
+
+  beforeEach(() => {
+    stepLog = [];
+    mockCurrentTime = 0;
+  });
+
+  afterEach(() => {
+    audioEngine.stop();
+  });
+
+  it('requestReset causes next step to be 0', async () => {
+    const onStep = vi.fn(
+      (step: number, time: number) => {
+        stepLog.push({ step, time });
+        // Request reset when we hit step 3
+        if (step === 3) {
+          audioEngine.requestReset();
+        }
+      }
+    );
+
+    // High BPM so steps advance quickly
+    await audioEngine.start(960, onStep);
+
+    for (let i = 0; i < 10; i++) {
+      mockCurrentTime += 0.05;
+      vi.advanceTimersByTime(25);
+    }
+
+    const steps = stepLog.map(s => s.step);
+    const idx3 = steps.indexOf(3);
+    expect(idx3).toBeGreaterThanOrEqual(0);
+    // After step 3, next step should be 0 (not 4)
+    expect(steps[idx3 + 1]).toBe(0);
+  });
+
+  it('requestReset preserves step timing', async () => {
+    const onStep = vi.fn(
+      (step: number, time: number) => {
+        stepLog.push({ step, time });
+        if (step === 2) {
+          audioEngine.requestReset();
+        }
+      }
+    );
+
+    // 120 BPM: 16th = 0.125s
+    await audioEngine.start(120, onStep);
+
+    for (let i = 0; i < 20; i++) {
+      mockCurrentTime += 0.05;
+      vi.advanceTimersByTime(25);
+    }
+
+    const step2 = stepLog.find(s => s.step === 2);
+    // The step after reset (step 0 again) should be
+    // exactly one 16th note after step 2
+    const resetStep = stepLog[stepLog.indexOf(step2!) + 1];
+    expect(resetStep.step).toBe(0);
+    expect(resetStep.time).toBeCloseTo(
+      step2!.time + 0.125, 6
+    );
+  });
+
+  it('pendingReset is one-shot (only affects next step)',
+    async () => {
+      const onStep = vi.fn(
+        (step: number, time: number) => {
+          stepLog.push({ step, time });
+          // Reset only on the first step 2
+          if (step === 2
+              && stepLog.filter(
+                s => s.step === 2
+              ).length === 1) {
+            audioEngine.requestReset();
+          }
+        }
+      );
+
+      await audioEngine.start(960, onStep);
+
+      for (let i = 0; i < 20; i++) {
+        mockCurrentTime += 0.05;
+        vi.advanceTimersByTime(25);
+      }
+
+      const steps = stepLog.map(s => s.step);
+      // After first reset: 0,1,2,0,1,2,3,...
+      const firstIdx2 = steps.indexOf(2);
+      expect(steps[firstIdx2 + 1]).toBe(0);
+      // Second time through step 2, it should continue
+      // to 3 normally
+      const secondIdx2 = steps.indexOf(2, firstIdx2 + 1);
+      expect(secondIdx2).toBeGreaterThan(firstIdx2);
+      expect(steps[secondIdx2 + 1]).toBe(3);
+    }
+  );
+});
+
 describe('AudioEngine playSound', () => {
   afterEach(() => {
     audioEngine.stop();

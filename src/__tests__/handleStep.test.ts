@@ -12,6 +12,8 @@ const mockPlaySound = vi.fn();
 const mockStart = vi.fn();
 const mockStop = vi.fn();
 
+const mockRequestReset = vi.fn();
+
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
     preloadKit: vi.fn().mockResolvedValue(undefined),
@@ -20,6 +22,7 @@ vi.mock('../app/AudioEngine', () => ({
     setBpm: vi.fn(),
     setPatternLength: vi.fn(),
     playSound: (...args: unknown[]) => mockPlaySound(...args),
+    requestReset: (...args: unknown[]) => mockRequestReset(...args),
     onStep: vi.fn(),
   },
 }));
@@ -900,5 +903,157 @@ describe('handleStep parameter locks', () => {
     expect(mp).toHaveBeenCalledTimes(1);
     const gainArg = mp.mock.calls[0][2];
     expect(gainArg).toBeCloseTo(0);
+  });
+});
+
+// -------------------------------------------------------
+// Step boundary: sequential pending + temp revert
+// -------------------------------------------------------
+
+/** Create a minimal test pattern. */
+function makePattern(
+  id: string, bdSteps: string
+): Pattern {
+  const steps = {} as Record<TrackId, string>;
+  for (const tid of TRACK_IDS) {
+    steps[tid] = tid === 'bd'
+      ? bdSteps
+      : '0'.repeat(bdSteps.length);
+  }
+  return { id, name: id, steps };
+}
+
+describe('step boundary hooks', () => {
+  beforeEach(() => {
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+    mockRequestReset.mockClear();
+  });
+
+  it('sequential: pending pattern applied at last'
+    + ' step', async () => {
+    const { result } = renderSequencer();
+
+    // Start playback
+    await act(async () => {
+      result.current.actions.togglePlay();
+    });
+    expect(mockStart).toHaveBeenCalled();
+    const onStep = mockStart.mock.calls[0][1] as (
+      step: number, time: number
+    ) => void;
+
+    await waitFor(() => {
+      expect(
+        result.current.state.isPlaying
+      ).toBe(true);
+    });
+
+    // Set sequential mode and queue a pattern
+    await act(async () => {
+      result.current.actions.setPatternMode(
+        'sequential'
+      );
+    });
+
+    const pending = makePattern(
+      'pending', '1111000011110000'
+    );
+    await act(async () => {
+      result.current.actions.setPattern(pending);
+    });
+
+    // Pattern should NOT have changed yet
+    expect(
+      result.current.state.currentPattern.id
+    ).not.toBe('pending');
+
+    // Step through to the last step (15 for 16-step)
+    await act(async () => {
+      onStep(15, 1.0);
+    });
+
+    // After last step, pending should be applied
+    await waitFor(() => {
+      expect(
+        result.current.state.currentPattern.id
+      ).toBe('pending');
+    });
+
+    // Sequential should NOT call requestReset
+    expect(mockRequestReset).not.toHaveBeenCalled();
+  });
+
+  it('temp revert at last step', async () => {
+    const { result } = renderSequencer();
+
+    // Load a known home pattern
+    const home = makePattern(
+      'home', '1010101010101010'
+    );
+    await act(async () => {
+      result.current.actions.setPattern(home);
+    });
+
+    // Start playback in direct-start mode
+    await act(async () => {
+      result.current.actions.togglePlay();
+    });
+    expect(mockStart).toHaveBeenCalled();
+    const onStep = mockStart.mock.calls[0][1] as (
+      step: number, time: number
+    ) => void;
+
+    await waitFor(() => {
+      expect(
+        result.current.state.isPlaying
+      ).toBe(true);
+    });
+
+    await act(async () => {
+      result.current.actions.setPatternMode(
+        'direct-start'
+      );
+    });
+
+    // Arm temp and select a temp pattern
+    await act(async () => {
+      result.current.actions.toggleTemp();
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('armed');
+
+    const tempPat = makePattern(
+      'temp', '1111111111111111'
+    );
+    await act(async () => {
+      result.current.actions.setPattern(tempPat);
+    });
+    expect(
+      result.current.state.tempState
+    ).toBe('active');
+    expect(
+      result.current.state.currentPattern.id
+    ).toBe('temp');
+
+    mockRequestReset.mockClear();
+
+    // Step through to the last step
+    await act(async () => {
+      onStep(15, 1.0);
+    });
+
+    // After last step, should revert to home
+    await waitFor(() => {
+      expect(
+        result.current.state.tempState
+      ).toBe('off');
+    });
+    expect(
+      result.current.state.currentPattern.id
+    ).toBe('home');
+    // Temp revert calls requestReset
+    expect(mockRequestReset).toHaveBeenCalled();
   });
 });

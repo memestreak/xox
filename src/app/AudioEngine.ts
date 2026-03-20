@@ -33,6 +33,7 @@ class AudioEngine {
   private nextStepTime: number = 0;
   private currentStep: number = 0;
   private schedulerTimer: NodeJS.Timeout | null = null;
+  private pendingReset = false;
 
   // Scheduler Configuration
   private bpm: number = 110;
@@ -172,6 +173,14 @@ class AudioEngine {
   }
 
   /**
+   * Requests a step counter reset to 0 on the next
+   * advanceStep() call. Safe to call from inside onStep.
+   */
+  public requestReset() {
+    this.pendingReset = true;
+  }
+
+  /**
    * The core scheduling loop.
    * It looks ahead in time and pre-schedules events to the AudioContext timeline.
    */
@@ -189,10 +198,14 @@ class AudioEngine {
    */
   private advanceStep() {
     const secondsPerBeat = 60.0 / this.bpm;
-    // 16th note = 1/4 of a quarter note (beat)
     this.nextStepTime += 0.25 * secondsPerBeat;
-    this.currentStep =
-      (this.currentStep + 1) % this.patternLength;
+    if (this.pendingReset) {
+      this.currentStep = 0;
+      this.pendingReset = false;
+    } else {
+      this.currentStep =
+        (this.currentStep + 1) % this.patternLength;
+    }
   }
 
   /**

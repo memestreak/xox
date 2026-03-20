@@ -17,11 +17,14 @@ import { defaultConfig, decodeConfig } from './configCodec';
 import { evaluateCondition } from './trigConditions';
 import { TRACK_IDS } from './types';
 import type {
+  HomeSnapshot,
   Kit,
   Pattern,
+  PatternMode,
   SequencerConfig,
   StepConditions,
   StepLocks,
+  TempState,
   TrackId,
   TrackState,
 } from './types';
@@ -73,6 +76,8 @@ interface SequencerState {
   swing: number;
   isFillActive: boolean;
   fillMode: 'off' | 'latched' | 'momentary';
+  patternMode: PatternMode;
+  tempState: TempState;
 }
 
 interface SequencerActions {
@@ -122,6 +127,8 @@ interface SequencerActions {
     trackId: TrackId,
     stepIndex: number
   ) => void;
+  setPatternMode: (mode: PatternMode) => void;
+  toggleTemp: () => void;
 }
 
 interface SequencerMeta {
@@ -134,6 +141,27 @@ interface SequencerContextValue {
   state: SequencerState;
   actions: SequencerActions;
   meta: SequencerMeta;
+}
+
+/**
+ * Normalize pattern steps to match track lengths
+ * (pad with '0' or truncate).
+ */
+export function normalizePatternSteps(
+  steps: Record<TrackId, string>,
+  trackLengths: Record<TrackId, number>
+): Record<TrackId, string> {
+  const result = { ...steps };
+  for (const id of TRACK_IDS) {
+    const cur = result[id] ?? '';
+    const len = trackLengths[id];
+    if (cur.length < len) {
+      result[id] = cur.padEnd(len, '0');
+    } else if (cur.length > len) {
+      result[id] = cur.substring(0, len);
+    }
+  }
+  return result;
 }
 
 // ─── Contexts ─────────────────────────────────────────
@@ -218,6 +246,34 @@ export function SequencerProvider({
     isHeld ? 'momentary'
       : isLatched ? 'latched'
         : 'off';
+
+  // ─── Pattern mode state ─────────────────────────────
+  const [patternMode, setPatternMode] =
+    useState<PatternMode>('sequential');
+  const [tempState, setTempState] =
+    useState<TempState>('off');
+  const [homeSnapshot, setHomeSnapshot] =
+    useState<HomeSnapshot | null>(null);
+  const [pendingPattern, setPendingPattern] =
+    useState<Pattern | null>(null);
+
+  const tempStateRef = useRef<TempState>('off');
+  const homeSnapshotRef =
+    useRef<HomeSnapshot | null>(null);
+  const pendingPatternRef =
+    useRef<Pattern | null>(null);
+
+  useEffect(() => {
+    tempStateRef.current = tempState;
+  }, [tempState]);
+
+  useEffect(() => {
+    homeSnapshotRef.current = homeSnapshot;
+  }, [homeSnapshot]);
+
+  useEffect(() => {
+    pendingPatternRef.current = pendingPattern;
+  }, [pendingPattern]);
 
   // ─── Import config from URL hash on mount ─────────
   useEffect(() => {
@@ -422,6 +478,83 @@ export function SequencerProvider({
           );
         }
       });
+
+      // ─── Step boundary: pattern mode hooks ──────
+      if (step === cfg.patternLength - 1) {
+        // Sequential: apply pending pattern
+        const pending = pendingPatternRef.current;
+        if (pending) {
+          const normalized = normalizePatternSteps(
+            pending.steps, cfg.trackLengths
+          );
+          patternRef.current = {
+            ...pending,
+            steps: normalized,
+          };
+          configRef.current = {
+            ...cfg,
+            steps: normalized,
+            trigConditions:
+              pending.trigConditions ?? {},
+          };
+          pendingPatternRef.current = null;
+          // Update React state for UI
+          setConfig(prev => ({
+            ...prev,
+            steps: normalized,
+            trigConditions:
+              pending.trigConditions ?? {},
+          }));
+          setSelectedPatternId(pending.id);
+          setPendingPattern(null);
+          // No requestReset — natural wrap
+        }
+
+        // Temp revert
+        if (
+          tempStateRef.current === 'active'
+          && homeSnapshotRef.current
+          && !pending // Don't revert on same step
+                      // as applying pending
+        ) {
+          const snap = homeSnapshotRef.current;
+          patternRef.current = {
+            id: snap.selectedPatternId,
+            name: snap.selectedPatternId,
+            steps: snap.steps,
+          };
+          configRef.current = {
+            ...cfg,
+            steps: snap.steps,
+            trigConditions: snap.trigConditions,
+            trackLengths: snap.trackLengths,
+            patternLength: snap.patternLength,
+          };
+          if (
+            snap.patternLength !== cfg.patternLength
+          ) {
+            audioEngine.setPatternLength(
+              snap.patternLength
+            );
+          }
+          audioEngine.requestReset();
+          // Update React state
+          setConfig(prev => ({
+            ...prev,
+            steps: snap.steps,
+            trigConditions: snap.trigConditions,
+            trackLengths: snap.trackLengths,
+            patternLength: snap.patternLength,
+          }));
+          setSelectedPatternId(
+            snap.selectedPatternId
+          );
+          setTempState('off');
+          tempStateRef.current = 'off';
+          setHomeSnapshot(null);
+          homeSnapshotRef.current = null;
+        }
+      }
     },
     []
   );
@@ -442,6 +575,29 @@ export function SequencerProvider({
 
   const togglePlay = useCallback(() => {
     if (isPlaying) {
+      // Revert temp if active
+      if (tempStateRef.current === 'active'
+          && homeSnapshotRef.current) {
+        const snap = homeSnapshotRef.current;
+        setConfig(prev => ({
+          ...prev,
+          steps: snap.steps,
+          trigConditions: snap.trigConditions,
+          trackLengths: snap.trackLengths,
+          patternLength: snap.patternLength,
+        }));
+        setSelectedPatternId(
+          snap.selectedPatternId
+        );
+      }
+      // Clear all pattern mode transient state
+      setTempState('off');
+      tempStateRef.current = 'off';
+      setHomeSnapshot(null);
+      homeSnapshotRef.current = null;
+      setPendingPattern(null);
+      pendingPatternRef.current = null;
+
       audioEngine.stop();
       setIsPlaying(false);
       stepRef.current = -1;
@@ -490,29 +646,114 @@ export function SequencerProvider({
     setConfig(prev => ({ ...prev, kitId: kit.id }));
   }, []);
 
-  const setPattern = useCallback((pattern: Pattern) => {
-    setConfig(prev => {
-      const newSteps = { ...pattern.steps };
-      for (const id of TRACK_IDS) {
-        const cur = newSteps[id] ?? '';
-        const len = prev.trackLengths[id];
-        if (cur.length < len) {
-          newSteps[id] = cur.padEnd(len, '0');
-        } else if (cur.length > len) {
-          newSteps[id] = cur.substring(0, len);
+  const applyPatternNow = useCallback(
+    (pattern: Pattern) => {
+      setConfig(prev => {
+        const newSteps = normalizePatternSteps(
+          pattern.steps, prev.trackLengths
+        );
+        return {
+          ...prev,
+          steps: newSteps,
+          trigConditions:
+            pattern.trigConditions ?? {},
+          parameterLocks:
+            pattern.parameterLocks ?? {},
+        };
+      });
+      setSelectedPatternId(pattern.id);
+    },
+    []
+  );
+
+  const setPattern = useCallback(
+    (pattern: Pattern) => {
+      // When stopped, always apply immediately
+      if (!isPlaying) {
+        applyPatternNow(pattern);
+        return;
+      }
+
+      const ts = tempStateRef.current;
+
+      // Temp armed: snapshot home, apply via mode,
+      // transition to active
+      if (ts === 'armed') {
+        setHomeSnapshot({
+          steps: { ...configRef.current.steps },
+          trigConditions: {
+            ...configRef.current.trigConditions,
+          },
+          selectedPatternId,
+          trackLengths: {
+            ...configRef.current.trackLengths,
+          },
+          patternLength:
+            configRef.current.patternLength,
+        });
+        homeSnapshotRef.current = {
+          steps: { ...configRef.current.steps },
+          trigConditions: {
+            ...configRef.current.trigConditions,
+          },
+          selectedPatternId,
+          trackLengths: {
+            ...configRef.current.trackLengths,
+          },
+          patternLength:
+            configRef.current.patternLength,
+        };
+        setTempState('active');
+        tempStateRef.current = 'active';
+      }
+
+      // Temp active: replace temp pattern, keep home
+      // (no additional snapshot needed)
+
+      // Apply based on current mode
+      switch (patternMode) {
+        case 'sequential': {
+          if (ts === 'armed' || ts === 'active') {
+            // Temp + sequential: still queue
+            setPendingPattern(pattern);
+            pendingPatternRef.current = pattern;
+          } else {
+            setPendingPattern(pattern);
+            pendingPatternRef.current = pattern;
+          }
+          break;
+        }
+        case 'direct-start': {
+          // Update ref synchronously for handleStep
+          const normalized = normalizePatternSteps(
+            pattern.steps,
+            configRef.current.trackLengths
+          );
+          patternRef.current = {
+            ...pattern,
+            steps: normalized,
+          };
+          audioEngine.requestReset();
+          applyPatternNow(pattern);
+          break;
+        }
+        case 'direct-jump': {
+          const normalized = normalizePatternSteps(
+            pattern.steps,
+            configRef.current.trackLengths
+          );
+          patternRef.current = {
+            ...pattern,
+            steps: normalized,
+          };
+          applyPatternNow(pattern);
+          break;
         }
       }
-      return {
-        ...prev,
-        steps: newSteps,
-        trigConditions:
-          pattern.trigConditions ?? {},
-        parameterLocks:
-          pattern.parameterLocks ?? {},
-      };
-    });
-    setSelectedPatternId(pattern.id);
-  }, []);
+    },
+    [isPlaying, patternMode, selectedPatternId,
+      applyPatternNow]
+  );
 
   const toggleStep = useCallback(
     (trackId: TrackId, stepIndex: number) => {
@@ -828,6 +1069,12 @@ export function SequencerProvider({
     setIsHeld(false);
     fillActiveRef.current = false;
     setSelectedPatternId('custom');
+    setTempState('off');
+    tempStateRef.current = 'off';
+    setHomeSnapshot(null);
+    homeSnapshotRef.current = null;
+    setPendingPattern(null);
+    pendingPatternRef.current = null;
   }, []);
 
   const clearTrack = useCallback(
@@ -1026,6 +1273,48 @@ export function SequencerProvider({
     []
   );
 
+  // ─── Pattern mode actions ────────────────────────
+
+  const toggleTemp = useCallback(() => {
+    if (!isPlaying) return;
+    setTempState(prev => {
+      const next = prev === 'off' ? 'armed' : 'off';
+      tempStateRef.current = next;
+      if (next === 'off') {
+        // Disarming cancels any pending queue
+        setPendingPattern(null);
+        pendingPatternRef.current = null;
+        setHomeSnapshot(null);
+        homeSnapshotRef.current = null;
+      }
+      return next;
+    });
+  }, [isPlaying]);
+
+  // ─── Temp keyboard shortcut (t key) ─────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyT' || e.repeat) return;
+      const tag =
+        (e.target as HTMLElement)?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT'
+      ) return;
+      e.preventDefault();
+      toggleTemp();
+    };
+    document.addEventListener(
+      'keydown', handleKeyDown
+    );
+    return () => {
+      document.removeEventListener(
+        'keydown', handleKeyDown
+      );
+    };
+  }, [toggleTemp]);
+
   // ─── Context value ────────────────────────────────
 
   const value: SequencerContextValue = {
@@ -1041,6 +1330,8 @@ export function SequencerProvider({
       swing: config.swing,
       isFillActive,
       fillMode,
+      patternMode,
+      tempState,
     },
     actions: {
       togglePlay,
@@ -1065,6 +1356,8 @@ export function SequencerProvider({
       clearTrigCondition,
       setParameterLock,
       clearParameterLock,
+      setPatternMode,
+      toggleTemp,
     },
     meta: { stepRef, totalStepsRef, config },
   };
