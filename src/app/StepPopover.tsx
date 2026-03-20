@@ -187,6 +187,27 @@ export default function StepPopover({
     );
   }, [anchorRect, onClose, scrollContainerRef]);
 
+  // Flip popover above anchor if it would overflow
+  // the viewport bottom.
+  const [flippedTop, setFlippedTop] = useState<
+    number | null
+  >(null);
+  useEffect(() => {
+    const el = popoverRef.current;
+    if (!el || !anchorRect) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom > window.innerHeight - 8) {
+      // 8px margin from viewport edge.
+      // anchorRect.top is button.bottom + 4,
+      // so button.bottom = anchorRect.top - 4.
+      // Place popover above: button.bottom - 4 - gap
+      // - popoverHeight.
+      const above =
+        anchorRect.top - 4 - 4 - rect.height;
+      setFlippedTop(Math.max(8, above));
+    }
+  }, [anchorRect]);
+
   return (
     <div
       ref={popoverRef}
@@ -199,7 +220,7 @@ export default function StepPopover({
         + ' shadow-xl p-3 space-y-3'
       }
       style={anchorRect ? {
-        top: `${anchorRect.top}px`,
+        top: `${flippedTop ?? anchorRect.top}px`,
         left: `${anchorRect.left}px`,
       } : undefined}
     >
