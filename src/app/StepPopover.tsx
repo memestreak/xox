@@ -9,7 +9,7 @@ import { CYCLE_OPTIONS } from './trigConditions';
 import ProbabilitySlider from './ProbabilitySlider';
 import type { StepConditions, TrackId } from './types';
 
-interface TrigConditionPopoverProps {
+interface StepPopoverProps {
   trackId: TrackId;
   stepIndex: number;
   conditions?: StepConditions;
@@ -29,14 +29,14 @@ interface TrigConditionPopoverProps {
  *   anchorRect: Position anchor
  *   onClose: Called when popover should close
  */
-export default function TrigConditionPopover({
+export default function StepPopover({
   trackId,
   stepIndex,
   conditions,
   anchorRect,
   onClose,
   scrollContainerRef,
-}: TrigConditionPopoverProps) {
+}: StepPopoverProps) {
   const { actions } = useSequencer();
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -166,7 +166,7 @@ export default function TrigConditionPopover({
     <div
       ref={popoverRef}
       role="dialog"
-      aria-label="Trig conditions"
+      aria-label="Step editor"
       className={
         'fixed z-30'
         + ' w-56 bg-neutral-900 border'

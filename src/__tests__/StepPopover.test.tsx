@@ -2,8 +2,7 @@ import { render, screen, fireEvent }
   from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach }
   from 'vitest';
-import TrigConditionPopover
-  from '../app/TrigConditionPopover';
+import StepPopover from '../app/StepPopover';
 
 const mockSet = vi.fn();
 const mockClear = vi.fn();
@@ -24,7 +23,7 @@ const base = {
   onClose: vi.fn(),
 };
 
-describe('TrigConditionPopover', () => {
+describe('StepPopover', () => {
   beforeEach(() => {
     mockSet.mockClear();
     mockClear.mockClear();
@@ -33,7 +32,7 @@ describe('TrigConditionPopover', () => {
 
   it('header shows step number + track abbrev',
     () => {
-      render(<TrigConditionPopover {...base} />);
+      render(<StepPopover {...base} />);
       expect(
         screen.getByText(/Step 4/)
       ).toBeTruthy();
@@ -44,7 +43,7 @@ describe('TrigConditionPopover', () => {
   );
 
   it('slider defaults to 100', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     expect(
       screen.getByRole('slider')
         .getAttribute('aria-valuenow')
@@ -52,7 +51,7 @@ describe('TrigConditionPopover', () => {
   });
 
   it('cycle defaults to 1:1', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     const sel = screen.getByRole(
       'combobox'
     ) as HTMLSelectElement;
@@ -61,7 +60,7 @@ describe('TrigConditionPopover', () => {
 
   it('changing cycle calls setTrigCondition',
     () => {
-      render(<TrigConditionPopover {...base} />);
+      render(<StepPopover {...base} />);
       fireEvent.change(
         screen.getByRole('combobox'),
         { target: { value: '2:4' } }
@@ -75,7 +74,7 @@ describe('TrigConditionPopover', () => {
   it('all defaults calls clearTrigCondition',
     () => {
       render(
-        <TrigConditionPopover
+        <StepPopover
           {...base}
           conditions={{ probability: 50 }}
         />
@@ -90,7 +89,7 @@ describe('TrigConditionPopover', () => {
   );
 
   it('Escape calls onClose', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     fireEvent.keyDown(
       document, { key: 'Escape' }
     );
@@ -103,7 +102,7 @@ describe('TrigConditionPopover', () => {
     render(
       <div>
         <div data-testid="outside">outside</div>
-        <TrigConditionPopover
+        <StepPopover
           {...base}
           onClose={onClose}
         />
@@ -118,7 +117,7 @@ describe('TrigConditionPopover', () => {
   });
 
   it('fill section renders three options', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     const radios = screen.getAllByRole('radio');
     expect(radios).toHaveLength(3);
     expect(radios[0].textContent).toBe('None');
@@ -127,7 +126,7 @@ describe('TrigConditionPopover', () => {
   });
 
   it('selecting FILL sets fill condition', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     const fillBtn = screen.getByRole('radio', {
       name: /^FILL$/,
     });
@@ -138,7 +137,7 @@ describe('TrigConditionPopover', () => {
   });
 
   it('selecting !FILL sets fill condition', () => {
-    render(<TrigConditionPopover {...base} />);
+    render(<StepPopover {...base} />);
     const nfillBtn = screen.getByRole('radio', {
       name: /^!FILL$/,
     });
@@ -150,7 +149,7 @@ describe('TrigConditionPopover', () => {
 
   it('selecting None removes fill', () => {
     render(
-      <TrigConditionPopover
+      <StepPopover
         {...base}
         conditions={{ fill: 'fill' }}
       />
@@ -166,7 +165,7 @@ describe('TrigConditionPopover', () => {
 
   it('pre-populates fill from conditions', () => {
     render(
-      <TrigConditionPopover
+      <StepPopover
         {...base}
         conditions={{ fill: '!fill' }}
       />
@@ -182,7 +181,7 @@ describe('TrigConditionPopover', () => {
   it('pre-populates from existing conditions',
     () => {
       render(
-        <TrigConditionPopover
+        <StepPopover
           {...base}
           conditions={{
             probability: 75,
