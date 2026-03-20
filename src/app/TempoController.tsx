@@ -50,18 +50,6 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
     btn.classList.add('tap-flash');
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code !== 'KeyT') return;
-      if (event.repeat) return;
-      const tag = (event.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      handleTap();
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleTap]);
-
   return (
     <div className="relative flex items-center">
       <label htmlFor="bpm-input" className="sr-only">BPM</label>

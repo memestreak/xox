@@ -194,36 +194,4 @@ describe('TempoController tap tempo', () => {
     expect(setBpm).toHaveBeenCalledWith(30);
   });
 
-  it('T keydown triggers tap tempo', () => {
-    const setBpm = vi.fn();
-    render(
-      <TempoController bpm={120} setBpm={setBpm} />
-    );
-    perfSpy
-      .mockReturnValueOnce(1000)
-      .mockReturnValueOnce(1500);
-    fireEvent.keyDown(document, {
-      code: 'KeyT',
-      key: 't',
-    });
-    fireEvent.keyDown(document, {
-      code: 'KeyT',
-      key: 't',
-    });
-    expect(setBpm).toHaveBeenCalledWith(120);
-  });
-
-  it('T keydown ignored when INPUT is focused', () => {
-    const setBpm = vi.fn();
-    perfSpy.mockReturnValueOnce(1000);
-    render(
-      <TempoController bpm={120} setBpm={setBpm} />
-    );
-    const input = screen.getByLabelText(/bpm/i);
-    fireEvent.keyDown(input, {
-      code: 'KeyT',
-      key: 't',
-    });
-    expect(setBpm).not.toHaveBeenCalled();
-  });
 });
