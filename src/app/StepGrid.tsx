@@ -6,7 +6,7 @@ import {
 import type { RefObject } from 'react';
 import { TRACKS, useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
-import RunningLight from './RunningLight';
+import AccentRow from './AccentRow';
 import TrigConditionPopover
   from './TrigConditionPopover';
 import { useDragPaint } from './useDragPaint';
@@ -185,10 +185,15 @@ export default function StepGrid({
           scrollContainerRef={scrollContainerRef}
         />
       ) : null}
-      <RunningLight
-        currentStep={displayStep}
+      <AccentRow
+        steps={currentPattern.steps.ac}
+        trackLength={trackLengths.ac}
         patternLength={patternLength}
         pageOffset={pageOffset}
+        isFreeRun={trackStates.ac.freeRun}
+        onToggleStep={toggleStep}
+        onSetTrackLength={setTrackLength}
+        onToggleFreeRun={toggleFreeRun}
       />
     </div>
   );

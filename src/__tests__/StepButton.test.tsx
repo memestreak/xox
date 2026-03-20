@@ -122,6 +122,70 @@ describe('StepButton indicators', () => {
   });
 });
 
+describe('StepButton mini variant', () => {
+  it('renders at reduced height', () => {
+    const { container } = render(
+      <StepButton {...base} mini />
+    );
+    const btn = container.querySelector('button');
+    expect(btn?.className).toContain('h-2.5');
+    expect(btn?.className).toContain('lg:h-3');
+    expect(btn?.className).not.toContain('h-8');
+  });
+
+  it('skips trig condition overlays', () => {
+    const { container } = render(
+      <StepButton
+        {...base}
+        mini
+        conditions={{
+          probability: 50,
+          fill: 'fill',
+          cycle: { a: 1, b: 3 },
+        }}
+      />
+    );
+    expect(container.querySelector(
+      '[data-testid="prob-bar"]'
+    )).toBeNull();
+    expect(container.querySelector(
+      '[data-testid="fill-badge"]'
+    )).toBeNull();
+    expect(container.textContent).not.toContain(
+      '1:3'
+    );
+  });
+
+  it('no current-step glow when mini', () => {
+    const { container } = render(
+      <StepButton
+        {...base}
+        mini
+        isCurrent={true}
+      />
+    );
+    const btn = container.querySelector('button');
+    expect(btn?.className).not.toContain(
+      'scale-105'
+    );
+    expect(btn?.className).not.toContain('shadow');
+  });
+
+  it('disabled mini renders at mini height', () => {
+    const { container } = render(
+      <StepButton
+        {...base}
+        mini
+        isDisabled={true}
+      />
+    );
+    const el = container.querySelector(
+      '[data-step]'
+    );
+    expect(el?.className).toContain('h-2.5');
+  });
+});
+
 describe('StepButton interactions', () => {
   it('right-click on active calls onOpenPopover',
     () => {
