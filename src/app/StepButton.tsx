@@ -17,6 +17,7 @@ interface StepButtonProps {
   onToggle: (
     trackId: TrackId, stepIndex: number
   ) => void;
+  gainLock?: number;
   conditions?: StepConditions;
   onOpenPopover?: (
     trackId: TrackId,
@@ -42,6 +43,7 @@ function StepButtonInner({
   isDisabled,
   mini,
   onToggle,
+  gainLock,
   conditions,
   onOpenPopover,
   longPressActiveRef,
@@ -50,7 +52,7 @@ function StepButtonInner({
 
   const openPopover = useCallback(
     (clientY?: number, clientX?: number) => {
-      if (!isActive || !onOpenPopover) return;
+      if (!onOpenPopover) return;
       const el = buttonRef.current;
       const r = el?.getBoundingClientRect();
       onOpenPopover(trackId, stepIndex, {
@@ -58,7 +60,7 @@ function StepButtonInner({
         left: r?.left ?? clientX ?? 0,
       });
     },
-    [isActive, onOpenPopover, trackId, stepIndex]
+    [onOpenPopover, trackId, stepIndex]
   );
 
   const handleToggle = useCallback(
@@ -158,7 +160,14 @@ function StepButtonInner({
         `${trackName} step ${stepIndex + 1}`
       }
       aria-pressed={isActive}
-      style={{ touchAction: 'manipulation' }}
+      style={{
+        touchAction: 'manipulation',
+        ...(
+          isActive && gainLock !== undefined
+            ? { opacity: Math.max(0.2, gainLock) }
+            : {}
+        ),
+      }}
       className={
         'relative overflow-hidden'
         + ' ' + heightClass + ' rounded-sm'
