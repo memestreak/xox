@@ -62,9 +62,8 @@ export default function Tooltip({
         + ' opacity-0'
         + ' group-hover/tooltip:opacity-100'
         + ' transition-opacity'
-        + ' [transition-delay:0ms]'
-        + ' group-hover/tooltip:'
-        + '[transition-delay:750ms]'
+        + ' delay-0'
+        + ' group-hover/tooltip:delay-1000'
       }
     >
       {text}

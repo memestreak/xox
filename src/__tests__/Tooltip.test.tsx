@@ -92,7 +92,7 @@ describe('Tooltip', () => {
     ).toBe(tooltip.id);
   });
 
-  it('has 500ms delay classes', () => {
+  it('has 1s delay classes', () => {
     renderWithProvider(
       <Tooltip tooltipKey="play">
         <button>Play</button>
@@ -100,7 +100,7 @@ describe('Tooltip', () => {
     );
     const tooltip = screen.getByRole('tooltip');
     expect(tooltip.className).toContain(
-      'group-hover/tooltip:[transition-delay:750ms]'
+      'group-hover/tooltip:delay-1000'
     );
   });
 });
