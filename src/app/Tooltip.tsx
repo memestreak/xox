@@ -12,6 +12,7 @@ type TooltipKey = keyof typeof tooltips;
 interface TooltipProps {
   tooltipKey: string;
   position?: 'top' | 'bottom';
+  align?: 'center' | 'right';
   children: ReactElement<
     Record<string, unknown>
   >;
@@ -20,6 +21,7 @@ interface TooltipProps {
 export default function Tooltip({
   tooltipKey,
   position = 'top',
+  align = 'center',
   children,
 }: TooltipProps) {
   const id = useId();
@@ -48,7 +50,9 @@ export default function Tooltip({
       role="tooltip"
       className={
         'pointer-events-none absolute'
-        + ' left-1/2 -translate-x-1/2'
+        + (align === 'right'
+          ? ' right-0'
+          : ' left-1/2 -translate-x-1/2')
         + ' ' + posClass
         + ' z-50 whitespace-nowrap'
         + ' px-1.5 py-0.5'

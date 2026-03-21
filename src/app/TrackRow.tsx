@@ -426,7 +426,7 @@ function TrackRowInner({
 
           {/* Draggable length handle */}
           {handleOnPage && (
-            <Tooltip tooltipKey="lengthHandle">
+            <Tooltip tooltipKey="lengthHandle" align="right">
               <div
                 role="slider"
                 aria-label={`${trackName} length`}
