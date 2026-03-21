@@ -85,10 +85,14 @@ export default function Tooltip({
       (children.props as { children?: ReactNode })
         .children;
 
+    const hasPosition = /\b(relative|absolute|fixed|sticky)\b/
+      .test(existingClass);
+
     return cloneElement(children, {
       'aria-describedby': id,
       className: existingClass
-        + ' group/tooltip relative',
+        + ' group/tooltip'
+        + (hasPosition ? '' : ' relative'),
       children: (
         <>
           {existingChildren}
