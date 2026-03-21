@@ -12,5 +12,7 @@
   "solo": "Solo this track",
   "step": "Click to toggle; long-press to edit",
   "trackName": "Click for track options",
-  "lengthHandle": "Drag to set track length"
+  "lengthHandle": "Drag to set track length",
+  "follow": "Auto-follow playhead during playback",
+  "page": "Jump to page"
 }
