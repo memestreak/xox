@@ -48,7 +48,7 @@ function TransportControlsInner({
         </h1>
         <div className="flex gap-2 lg:gap-4 items-center lg:items-end">
           <TempoController bpm={bpm} setBpm={setBpm} />
-          <Tooltip tooltipKey="play">
+          <Tooltip tooltipKey="play" position="bottom">
             <button
               onClick={togglePlay}
               disabled={!isLoaded}

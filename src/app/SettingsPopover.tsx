@@ -76,7 +76,7 @@ export default function SettingsPopover() {
 
   return (
     <div className="relative">
-      <Tooltip tooltipKey="settings">
+      <Tooltip tooltipKey="settings" position="bottom">
         <button
           ref={buttonRef}
           onClick={() => setIsOpen(prev => !prev)}

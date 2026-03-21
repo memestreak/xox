@@ -49,7 +49,7 @@ export default function FillButton() {
   }
 
   return (
-    <Tooltip tooltipKey="fill">
+    <Tooltip tooltipKey="fill" position="bottom">
       <button
         aria-pressed={isFillActive}
       onPointerDown={handlePointerDown}
