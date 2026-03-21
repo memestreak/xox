@@ -109,7 +109,7 @@ export default function Tooltip({
   // For everything else (custom components, <select>,
   // <input>, etc.), wrap in a div.
   return (
-    <div className="group/tooltip relative inline-block">
+    <div className="group/tooltip relative">
       {cloneElement(children, {
         'aria-describedby': id,
       })}
