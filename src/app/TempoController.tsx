@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
+import Tooltip from './Tooltip';
 
 export const MIN_BPM = 20;
 export const MAX_BPM = 300;
@@ -65,18 +66,20 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
         onChange={(e) => setBpm(Math.max(MIN_BPM, Math.min(MAX_BPM, Number(e.target.value) || MIN_BPM)))}
         className="bg-neutral-900 border border-neutral-800 rounded pl-2 pr-10 py-1 w-28 text-orange-500 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:border-orange-500 transition-colors"
       />
-      <button
-        ref={tapBtnRef}
-        type="button"
-        aria-label="Tap tempo"
-        onMouseDown={() => { handleTap(); flashTap(); }}
-        onTouchStart={() => { handleTap(); flashTap(); }}
-        onClick={(e) => e.preventDefault()}
-        className="group/tap absolute inset-y-0 right-0 px-2 flex items-center text-[10px] uppercase tracking-widest font-bold cursor-pointer transition-colors"
-      >
-        <span className="text-neutral-500 group-hover/tap:hidden">BPM</span>
-        <span className="text-neutral-400 hidden group-hover/tap:inline">TAP</span>
-      </button>
+      <Tooltip tooltipKey="tap" position="bottom">
+        <button
+          ref={tapBtnRef}
+          type="button"
+          aria-label="Tap tempo"
+          onMouseDown={() => { handleTap(); flashTap(); }}
+          onTouchStart={() => { handleTap(); flashTap(); }}
+          onClick={(e) => e.preventDefault()}
+          className="group/tap absolute inset-y-0 right-0 px-2 flex items-center text-[10px] uppercase tracking-widest font-bold cursor-pointer transition-colors"
+        >
+          <span className="text-neutral-500 group-hover/tap:hidden">BPM</span>
+          <span className="text-neutral-400 hidden group-hover/tap:inline">TAP</span>
+        </button>
+      </Tooltip>
     </div>
   );
 }
