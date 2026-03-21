@@ -9,6 +9,7 @@ import {
 import type { TrackId } from './types';
 import StepButton from './StepButton';
 import Knob from './Knob';
+import Tooltip from './Tooltip';
 
 interface AccentRowProps {
   steps: string;
@@ -161,13 +162,15 @@ function AccentRowInner({
           Accent
         </span>
         <div className="ml-auto">
-          <Knob
-            value={gain}
-            onChange={handleGain}
-            trackName="Accent"
-            size={20}
-            defaultValue={0.5}
-          />
+          <Tooltip tooltipKey="accentIntensity" position="bottom">
+            <Knob
+              value={gain}
+              onChange={handleGain}
+              trackName="Accent"
+              size={20}
+              defaultValue={0.5}
+            />
+          </Tooltip>
         </div>
       </div>
 
@@ -188,12 +191,14 @@ function AccentRowInner({
           {/* Spacer matching mute + solo toggle widths */}
           <div className="w-6 h-6" />
           <div className="w-6 h-6" />
-          <Knob
-            value={gain}
-            onChange={handleGain}
-            trackName="Accent"
-            defaultValue={0.5}
-          />
+          <Tooltip tooltipKey="accentIntensity" position="bottom">
+            <Knob
+              value={gain}
+              onChange={handleGain}
+              trackName="Accent"
+              defaultValue={0.5}
+            />
+          </Tooltip>
         </div>
 
         {/* Step grid with drag handle */}
