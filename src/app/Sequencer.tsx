@@ -5,7 +5,6 @@ import {
 } from 'react';
 import { SequencerProvider, useSequencer }
   from './SequencerContext';
-import { TooltipProvider } from './TooltipContext';
 import TransportControls from './TransportControls';
 import StepGrid from './StepGrid';
 import PageIndicator from './PageIndicator';
@@ -79,9 +78,7 @@ function SequencerInner() {
 export default function Sequencer() {
   return (
     <SequencerProvider>
-      <TooltipProvider>
-        <SequencerInner />
-      </TooltipProvider>
+      <SequencerInner />
     </SequencerProvider>
   );
 }
