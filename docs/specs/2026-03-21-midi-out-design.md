@@ -44,17 +44,17 @@ avoid the more aggressive SysEx permission prompt.
 
 ```typescript
 /** Note length: fixed milliseconds or tempo-relative. */
-type NoteLength =
+export type NoteLength =
   | { type: 'fixed'; ms: number }
   | { type: 'percent'; value: number };
 
 /** Per-track MIDI note mapping. */
-interface MidiTrackConfig {
+export interface MidiTrackConfig {
   noteNumber: number;  // 0–127
 }
 
 /** Complete MIDI output configuration. */
-interface MidiConfig {
+export interface MidiConfig {
   enabled: boolean;
   deviceId: string | null;
   channel: number;  // 1–16
@@ -86,6 +86,12 @@ The accent track (`ac`) is excluded from `MidiConfig.tracks`
 at the type level. It modifies velocity of other tracks
 (same as audio) but does not send its own MIDI note.
 
+### TypeScript types for Web MIDI API
+
+Install `@types/webmidi` as a devDependency to get
+`MIDIAccess`, `MIDIOutput`, `MIDIOutputMap`, and related
+interfaces.
+
 ### Storage
 
 Key: `'xox-midi'` in localStorage. JSON-serialized
@@ -116,18 +122,21 @@ class MidiEngine {
   // React StrictMode double-mount).
   async init(): Promise<boolean>;
 
-  // Send note-on at scheduled time, schedule note-off
-  // after noteLength duration.
+  // Send note-on at perfTimeMs, schedule note-off at
+  // perfTimeMs + noteLengthMs via MIDIOutput.send()
+  // timestamp parameter (no setTimeout).
   // No-ops if !enabled, no output, or trackId === 'ac'.
   sendNote(
     trackId: TrackId,
-    audioTime: number,
+    perfTimeMs: number,
     gain: number
   ): void;
 
+  // Send All Notes Off (CC 123) on the active channel.
+  // Called when playback stops or before config changes.
+  stop(): void;
+
   // Update BPM (needed for percent-based note lengths).
-  // Called from the same effect that calls
-  // audioEngine.setBpm().
   setBpm(bpm: number): void;
 
   // List available MIDI output ports
@@ -136,40 +145,61 @@ class MidiEngine {
   // Select an output by device ID
   setOutput(deviceId: string): void;
 
-  // Get/set config (triggers localStorage persist)
+  // Get/set config (triggers localStorage persist).
+  // On channel/note changes, sends All Notes Off on
+  // the old channel before applying the new config.
   getConfig(): MidiConfig;
   updateConfig(partial: Partial<MidiConfig>): void;
 }
 ```
 
 **Singleton access:** Exported as a module-level instance
-(same pattern as `audioEngine`).
-
-**Time conversion:** The scheduler provides `audioTime`
-as `AudioContext.currentTime`. Convert to
-`DOMHighResTimeStamp` for `MIDIOutput.send()`:
-
+(same pattern as `audioEngine`):
+```typescript
+export const midiEngine = new MidiEngine();
 ```
-perfTimeMs = performance.now()
-  + (audioTime - audioContext.currentTime) * 1000
+
+**Time conversion:** handleStep converts AudioContext time
+to `DOMHighResTimeStamp` before calling sendNote. The
+conversion happens in SequencerContext, not in MidiEngine:
+
+```typescript
+// In handleStep (SequencerContext.tsx):
+const perfTimeMs = performance.now()
+  + (scheduledTime - audioEngine.getCurrentTime()) * 1000;
+midiEngine.sendNote(track.id, perfTimeMs, gain);
 ```
+
+This keeps MidiEngine fully decoupled from AudioEngine.
+A new `getCurrentTime()` getter is added to AudioEngine
+to expose `this.ctx!.currentTime`.
 
 **Note length computation:**
 - Fixed: use `config.noteLength.ms` directly
 - Percent: `(60 / this.bpm) * 0.25 * 1000 * (value / 100)`
+
+**Note-on and note-off scheduling:** Both messages use
+`MIDIOutput.send(data, timestamp)` with the browser's
+native MIDI scheduling. No setTimeout is used:
+
+```typescript
+const noteOnTime = perfTimeMs;
+const noteOffTime = perfTimeMs + noteLengthMs;
+output.send([0x90 | (ch - 1), note, velocity], noteOnTime);
+output.send([0x80 | (ch - 1), note, 0], noteOffTime);
+```
 
 **MIDI message encoding:**
 
 ```
 Note-on:  [0x90 | (channel - 1), noteNumber, velocity]
 Note-off: [0x80 | (channel - 1), noteNumber, 0]
+All Notes Off: [0xB0 | (channel - 1), 123, 0]
 ```
 
-**Velocity mapping:** The `gain` parameter passed to
-`sendNote` is the same value passed to `playSound` — it
-is already cubed (`baseGain ** 3`) and accent-scaled by
-`handleStep`. Therefore the mapping is linear with
-clamping:
+**Velocity mapping:** The `gain` parameter is already cubed
+(`baseGain ** 3`) and accent-scaled by handleStep.
+Linear mapping with clamping:
 
 ```typescript
 const velocity = Math.max(
@@ -179,6 +209,10 @@ const velocity = Math.max(
 
 Clamped to 1–127 because velocity 0 means note-off in
 some MIDI implementations.
+
+**Defense in depth:** `sendNote` checks `trackId === 'ac'`
+and returns early, even though the handleStep TRACKS loop
+already excludes accent. This guards against future callers.
 
 **Device hotplug:** Listen for `statechange` on
 `MIDIAccess`. If the selected device disconnects, set
@@ -193,28 +227,82 @@ call (~line 420):
 
 ```typescript
 audioEngine.playSound(track.id, scheduledTime, gain);
-midiEngine.sendNote(track.id, scheduledTime, gain);
+
+// MIDI output (time conversion done here to keep
+// MidiEngine decoupled from AudioEngine)
+const perfTimeMs = performance.now()
+  + (scheduledTime - audioEngine.getCurrentTime()) * 1000;
+midiEngine.sendNote(track.id, perfTimeMs, gain);
 ```
 
-One additional line. MidiEngine internally checks if
-enabled and handles all MIDI logic.
+Swing offset is already baked into `scheduledTime`, so
+MIDI notes swing identically to audio. Trig conditions
+(probability, cycle, fill) and freeRun mode are
+transparent — they gate whether this code is reached at
+all.
+
+### Stop integration
+
+In `SequencerContext.tsx`, in the `togglePlay` callback
+alongside `audioEngine.stop()`:
+
+```typescript
+audioEngine.stop();
+midiEngine.stop();  // sends All Notes Off (CC 123)
+```
+
+This prevents stuck notes on external gear when playback
+is stopped mid-step.
+
+### BPM sync
+
+In `SequencerContext.tsx`, in the BPM effect alongside
+`audioEngine.setBpm()`:
+
+```typescript
+useEffect(() => {
+  audioEngine.setBpm(config.bpm);
+  midiEngine.setBpm(config.bpm);
+}, [config.bpm]);
+```
+
+### Config change cleanup
+
+When `updateConfig()` detects a channel or note number
+change, it sends All Notes Off (CC 123) on the **old**
+channel before applying the new config. This prevents
+stuck notes when the user changes MIDI routing mid-playback.
 
 ### MidiEngine initialization
 
-`MidiEngine.init()` is called once when the app mounts,
-inside `SequencerContext`. It requests MIDI access and
-loads config from localStorage. The init result (whether
-MIDI is available) is exposed as state for the UI.
+`midiEngine.init()` is called once when the app mounts,
+inside SequencerContext (or MidiContext provider). It
+requests MIDI access and loads config from localStorage.
 
 The init call is idempotent — if called again (e.g. React
 StrictMode double-mount in development), it returns the
 existing result without re-requesting MIDI access.
 
-### BPM sync
+### MidiContext (`src/app/MidiContext.tsx`)
 
-`MidiEngine.setBpm()` is called from the same `useEffect`
-that calls `audioEngine.setBpm()` in SequencerContext, so
-percent-based note lengths track tempo changes.
+A separate lightweight React context wrapping MidiEngine:
+
+```typescript
+interface MidiContextValue {
+  available: boolean;       // Web MIDI API accessible?
+  config: MidiConfig;
+  outputs: MIDIOutput[];    // connected devices
+  updateConfig: (partial: Partial<MidiConfig>) => void;
+}
+```
+
+This avoids bloating SequencerContext with MIDI concerns.
+The MidiContext provider:
+- Calls `midiEngine.init()` on mount
+- Subscribes to `statechange` for hotplug device updates
+- Persists config changes to localStorage via MidiEngine
+- Wraps the app tree (inside or alongside
+  SequencerProvider)
 
 ## UI Design
 
@@ -222,25 +310,28 @@ percent-based note lengths track tempo changes.
 
 Add a "MIDI Settings…" menu item in `SettingsPopover.tsx`
 below the existing "Export URL" button. Clicking it opens
-a separate MIDI settings panel.
+a modal dialog.
 
-### MIDI settings panel (`src/app/MidiSettings.tsx`)
+### MIDI settings modal (`src/app/MidiSettings.tsx`)
 
-A panel/modal accessed from the gear menu containing:
+A centered modal dialog with backdrop, accessed from the
+gear menu. Contains:
 
 1. **Enable toggle** — on/off switch for MIDI output
 2. **Device dropdown** — lists connected MIDI outputs by
-   name. Shows "No devices" when empty.
+   name. Shows "No devices" when empty. Updates on hotplug.
 3. **Channel selector** — dropdown or number input, 1–16
 4. **Note length** — dropdown with presets (see below)
 5. **Track note mapping** — grid of 11 tracks (excluding
    `ac`), each with a number input for MIDI note (0–127).
    Track labels (BD, SD, etc.) with editable note numbers.
 
+Dismiss via close button, Escape key, or backdrop click.
+
 When no MIDI device is detected or Web MIDI is unsupported,
-the section is visible but disabled with a status message:
-"No MIDI device detected" or "MIDI not supported in this
-browser".
+the modal is visible but controls are disabled with a
+status message: "No MIDI device detected" or "MIDI not
+supported in this browser".
 
 ### Note length options
 
@@ -266,49 +357,66 @@ based lengths adapt to tempo changes automatically.
 | Device disconnects mid-play | sendNote silently no-ops; UI updates |
 | Device reconnects | Auto-reconnect if deviceId matches |
 | Gain > 1.0 (accent) | Velocity clamped to 127 |
+| Stop mid-playback | All Notes Off (CC 123) sent |
+| Config change mid-playback | All Notes Off on old channel, then apply |
 
 ## Files Affected
 
 ### New files
 
 - `src/app/MidiEngine.ts` — Web MIDI API wrapper singleton
-- `src/app/MidiSettings.tsx` — MIDI config panel component
+- `src/app/MidiContext.tsx` — React context for MIDI state
+- `src/app/MidiSettings.tsx` — MIDI config modal component
 
 ### Modified files
 
-- `src/app/SequencerContext.tsx` — init MidiEngine, call
-  sendNote in handleStep, sync BPM, expose MIDI state
+- `src/app/SequencerContext.tsx` — call sendNote in
+  handleStep (with time conversion), call stop() in
+  togglePlay, sync BPM
+- `src/app/AudioEngine.ts` — add `getCurrentTime()` getter
 - `src/app/SettingsPopover.tsx` — add "MIDI Settings…"
   menu item
 - `src/app/types.ts` — add `MidiConfig`, `MidiTrackConfig`,
   `NoteLength` types
+- `package.json` — add `@types/webmidi` devDependency
 
 ## Testing
 
 ### Unit tests (`src/__tests__/midiEngine.test.ts`)
 
-- Mock `navigator.requestMIDIAccess` with fake `MIDIAccess`
-  and `MIDIOutput` objects
+Mock `navigator.requestMIDIAccess` with fake `MIDIAccess`
+and `MIDIOutput` objects (same pattern as AudioContext
+mocking in audioEngine.test.ts):
+
 - Verify `sendNote()` calls `output.send()` with correct
   note-on bytes `[0x99, noteNum, velocity]` for channel 10
-- Verify note-off is scheduled after the configured note
-  length duration
+- Verify note-off sent via `output.send()` with timestamp
+  = noteOnTime + noteLengthMs (not setTimeout)
 - Verify velocity calculation: `gain=0.5` (already cubed)
   → `velocity = Math.max(1, Math.round(0.5 * 127)) = 64`
 - Verify accent gain (>1.0) clamps velocity to 127
 - Verify `sendNote()` no-ops when disabled, no output,
   or trackId is `'ac'`
+- Verify `stop()` sends All Notes Off (CC 123)
+- Verify `updateConfig()` sends All Notes Off on old
+  channel when channel changes
 - Verify config round-trips through localStorage
 - Verify graceful handling when `requestMIDIAccess` is
   undefined or rejects
 - Verify percent-based note length uses current BPM
+- Verify idempotent init (second call returns same result)
 
 ### Integration (handleStep)
 
-- Extend existing `handleStep.test.ts` to verify
-  `midiEngine.sendNote()` is called with the same
-  `scheduledTime` and `gain` as `audioEngine.playSound()`
+Extend `handleStep.test.ts` with a mock midiEngine
+alongside the existing mock audioEngine (same vi.mock
+pattern):
+
+- Verify `midiEngine.sendNote()` is called with
+  perfTimeMs and same gain as `audioEngine.playSound()`
 - Verify muted/soloed tracks are skipped for MIDI too
+- Verify swing offset is reflected in MIDI timing
+- Verify trig condition gates apply to MIDI
 
 ### Manual testing
 
@@ -321,6 +429,8 @@ based lengths adapt to tempo changes automatically.
 7. Change note length — verify audible duration difference
 8. Disconnect device mid-play — verify no errors, UI updates
 9. Reconnect — verify auto-reconnect
+10. Stop playback — verify no stuck notes on gear
+11. Change channel mid-playback — verify clean switch
 
 ## Timing Considerations
 
