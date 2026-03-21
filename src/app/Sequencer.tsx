@@ -6,6 +6,7 @@ import {
 import { SequencerProvider, useSequencer }
   from './SequencerContext';
 import { TooltipProvider } from './TooltipContext';
+import { MidiProvider } from './MidiContext';
 import TransportControls from './TransportControls';
 import StepGrid from './StepGrid';
 import PageIndicator from './PageIndicator';
@@ -79,9 +80,11 @@ function SequencerInner() {
 export default function Sequencer() {
   return (
     <SequencerProvider>
-      <TooltipProvider>
-        <SequencerInner />
-      </TooltipProvider>
+      <MidiProvider>
+        <TooltipProvider>
+          <SequencerInner />
+        </TooltipProvider>
+      </MidiProvider>
     </SequencerProvider>
   );
 }
