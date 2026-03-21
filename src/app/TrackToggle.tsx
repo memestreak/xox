@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from 'react';
+import Tooltip from './Tooltip';
 
 type Variant = 'mute' | 'solo';
 type Size = 'sm' | 'md' | 'lg';
@@ -64,23 +65,25 @@ function TrackToggleInner({
     variant === 'mute' ? 'Mute' : 'Solo';
 
   return (
-    <button
-      onClick={onToggle}
-      className={
-        'shrink-0 flex items-center justify-center'
-        + ' font-bold border transition-colors'
-        + ' focus-visible:outline-none'
-        + ' focus-visible:ring-2'
-        + ' focus-visible:ring-orange-500 '
-        + SIZE_STYLES[size]
-        + ' '
-        + (active ? v.active : v.inactive)
-      }
-      aria-label={`${action} ${trackName}`}
-      aria-pressed={active}
-    >
-      {v.label}
-    </button>
+    <Tooltip tooltipKey={variant}>
+      <button
+        onClick={onToggle}
+        className={
+          'shrink-0 flex items-center justify-center'
+          + ' font-bold border transition-colors'
+          + ' focus-visible:outline-none'
+          + ' focus-visible:ring-2'
+          + ' focus-visible:ring-orange-500 '
+          + SIZE_STYLES[size]
+          + ' '
+          + (active ? v.active : v.inactive)
+        }
+        aria-label={`${action} ${trackName}`}
+        aria-pressed={active}
+      >
+        {v.label}
+      </button>
+    </Tooltip>
   );
 }
 

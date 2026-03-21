@@ -8,6 +8,8 @@ import {
 } from 'react';
 import { useSequencer } from './SequencerContext';
 import { encodeConfig } from './configCodec';
+import { useTooltips } from './TooltipContext';
+import Tooltip from './Tooltip';
 
 /**
  * Gear icon button with a dropdown popover for settings.
@@ -18,6 +20,9 @@ import { encodeConfig } from './configCodec';
  */
 export default function SettingsPopover() {
   const { meta } = useSequencer();
+  const {
+    tooltipsEnabled, setTooltipsEnabled,
+  } = useTooltips();
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -71,13 +76,14 @@ export default function SettingsPopover() {
 
   return (
     <div className="relative">
-      <button
-        ref={buttonRef}
-        onClick={() => setIsOpen(prev => !prev)}
-        aria-label="Settings"
-        aria-expanded={isOpen}
-        className="p-2 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-      >
+      <Tooltip tooltipKey="settings">
+        <button
+          ref={buttonRef}
+          onClick={() => setIsOpen(prev => !prev)}
+          aria-label="Settings"
+          aria-expanded={isOpen}
+          className="p-2 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+        >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
@@ -90,7 +96,8 @@ export default function SettingsPopover() {
             clipRule="evenodd"
           />
         </svg>
-      </button>
+        </button>
+      </Tooltip>
       {isOpen && (
         <div
           ref={popoverRef}
@@ -104,6 +111,20 @@ export default function SettingsPopover() {
           >
             {feedback || 'Export URL'}
           </button>
+          <label
+            role="menuitem"
+            className="w-full flex items-center justify-between px-4 py-3 text-sm text-neutral-200 hover:bg-neutral-800 transition-colors cursor-pointer"
+          >
+            Show tooltips
+            <input
+              type="checkbox"
+              checked={tooltipsEnabled}
+              onChange={(e) =>
+                setTooltipsEnabled(e.target.checked)
+              }
+              className="accent-orange-500"
+            />
+          </label>
         </div>
       )}
     </div>
