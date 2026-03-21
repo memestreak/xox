@@ -11,6 +11,8 @@ import { TestWrapper } from './helpers/sequencer-wrapper';
 const mockPlaySound = vi.fn();
 const mockStart = vi.fn();
 const mockStop = vi.fn();
+const mockSendNote = vi.fn();
+const mockMidiStop = vi.fn();
 
 const mockRequestReset = vi.fn();
 
@@ -23,7 +25,25 @@ vi.mock('../app/AudioEngine', () => ({
     setPatternLength: vi.fn(),
     playSound: (...args: unknown[]) => mockPlaySound(...args),
     requestReset: (...args: unknown[]) => mockRequestReset(...args),
+    getCurrentTime: vi.fn().mockReturnValue(0),
     onStep: vi.fn(),
+  },
+}));
+
+vi.mock('../app/MidiEngine', () => ({
+  midiEngine: {
+    sendNote: (...args: unknown[]) =>
+      mockSendNote(...args),
+    stop: (...args: unknown[]) =>
+      mockMidiStop(...args),
+    setBpm: vi.fn(),
+    init: vi.fn().mockResolvedValue(true),
+    getConfig: vi.fn().mockReturnValue({
+      enabled: true,
+    }),
+    getOutputs: vi.fn().mockReturnValue([]),
+    setOnDeviceChange: vi.fn(),
+    updateConfig: vi.fn(),
   },
 }));
 
@@ -114,6 +134,7 @@ async function setupAndTrigger(
 
   // Start playback to register handleStep
   mockPlaySound.mockClear();
+  mockSendNote.mockClear();
   mockStart.mockClear();
 
   await act(async () => {
@@ -148,6 +169,8 @@ describe('handleStep', () => {
     mockPlaySound.mockClear();
     mockStart.mockClear();
     mockStop.mockClear();
+    mockSendNote.mockClear();
+    mockMidiStop.mockClear();
   });
 
   it('no solos, no mutes: all active tracks play', async () => {
@@ -244,6 +267,42 @@ describe('handleStep', () => {
     const gainArg = mp.mock.calls[0][2];
     expect(gainArg).toBeCloseTo(0.125);
   });
+
+  it('calls midiEngine.sendNote alongside playSound',
+    async () => {
+      const { mockPlaySound: mp } = await setupAndTrigger({
+        activeTracks: ['bd'],
+        gains: { bd: 1.0 },
+      });
+
+      expect(mp).toHaveBeenCalledTimes(1);
+      expect(mockSendNote).toHaveBeenCalledTimes(1);
+
+      // Same track and gain
+      expect(mockSendNote.mock.calls[0][0]).toBe('bd');
+      expect(mockSendNote.mock.calls[0][2]).toBe(
+        mp.mock.calls[0][2]
+      );
+
+      // perfTimeMs is a valid number (not NaN/undefined)
+      const perfTimeMs = mockSendNote.mock.calls[0][1];
+      expect(perfTimeMs).toEqual(expect.any(Number));
+      expect(Number.isNaN(perfTimeMs)).toBe(false);
+    }
+  );
+
+  it('skips MIDI for muted tracks', async () => {
+    await setupAndTrigger({
+      activeTracks: ['bd', 'sd'],
+      muteTracks: ['bd'],
+    });
+
+    const sentIds = mockSendNote.mock.calls.map(
+      (c: unknown[]) => c[0]
+    );
+    expect(sentIds).not.toContain('bd');
+    expect(sentIds).toContain('sd');
+  });
 });
 
 // -------------------------------------------------
@@ -254,6 +313,8 @@ describe('handleStep swing timing', () => {
     mockPlaySound.mockClear();
     mockStart.mockClear();
     mockStop.mockClear();
+    mockSendNote.mockClear();
+    mockMidiStop.mockClear();
   });
 
   it('odd step with swing: time is offset', async () => {
@@ -491,6 +552,8 @@ describe('trig conditions in handleStep', () => {
     mockPlaySound.mockClear();
     mockStart.mockClear();
     mockStop.mockClear();
+    mockSendNote.mockClear();
+    mockMidiStop.mockClear();
   });
 
   it('step with probability condition can be suppressed',
@@ -851,6 +914,8 @@ describe('handleStep parameter locks', () => {
     mockPlaySound.mockClear();
     mockStart.mockClear();
     mockStop.mockClear();
+    mockSendNote.mockClear();
+    mockMidiStop.mockClear();
   });
 
   it('gain lock overrides mixer gain', async () => {
