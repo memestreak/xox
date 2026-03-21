@@ -11,6 +11,7 @@ import FillButton from './FillButton';
 import PatternModeSelector from './PatternModeSelector';
 import { useSequencer } from './SequencerContext';
 import PatternPicker from './PatternPicker';
+import Tooltip from './Tooltip';
 import { getCategorizedPatterns } from './patternUtils';
 import type { Pattern } from './types';
 
@@ -47,16 +48,18 @@ function TransportControlsInner({
         </h1>
         <div className="flex gap-2 lg:gap-4 items-center lg:items-end">
           <TempoController bpm={bpm} setBpm={setBpm} />
-          <button
-            onClick={togglePlay}
-            disabled={!isLoaded}
-            className={`w-20 lg:w-28 py-2 rounded-full font-bold text-sm lg:text-base text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${isPlaying
-              ? 'bg-red-600 hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.4)]'
-              : 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_20px_rgba(234,88,12,0.4)]'
-              } ${!isLoaded ? 'opacity-50 cursor-wait' : ''}`}
-          >
-            {isPlaying ? 'STOP' : 'PLAY'}
-          </button>
+          <Tooltip tooltipKey="play">
+            <button
+              onClick={togglePlay}
+              disabled={!isLoaded}
+              className={`w-20 lg:w-28 py-2 rounded-full font-bold text-sm lg:text-base text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${isPlaying
+                ? 'bg-red-600 hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.4)]'
+                : 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_20px_rgba(234,88,12,0.4)]'
+                } ${!isLoaded ? 'opacity-50 cursor-wait' : ''}`}
+            >
+              {isPlaying ? 'STOP' : 'PLAY'}
+            </button>
+          </Tooltip>
           <FillButton />
           <SettingsPopover />
         </div>
@@ -71,23 +74,25 @@ function TransportControlsInner({
           >
             Kit
           </label>
-          <select
-            id="kit-select"
-            value={currentKit.id}
-            onChange={(e) => {
-              const kit = kitsData.kits.find(
-                k => k.id === e.target.value
-              );
-              if (kit) setKit(kit);
-            }}
-            className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors"
-          >
-            {kitsData.kits.map(k => (
-              <option key={k.id} value={k.id}>
-                {k.name}
-              </option>
-            ))}
-          </select>
+          <Tooltip tooltipKey="kit">
+            <select
+              id="kit-select"
+              value={currentKit.id}
+              onChange={(e) => {
+                const kit = kitsData.kits.find(
+                  k => k.id === e.target.value
+                );
+                if (kit) setKit(kit);
+              }}
+              className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors"
+            >
+              {kitsData.kits.map(k => (
+                <option key={k.id} value={k.id}>
+                  {k.name}
+                </option>
+              ))}
+            </select>
+          </Tooltip>
         </div>
         <PatternModeSelector />
         <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
