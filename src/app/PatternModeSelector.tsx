@@ -35,7 +35,7 @@ export default function PatternModeSelector() {
         Mode
       </span>
       <div className="flex gap-1 items-stretch">
-        <Tooltip tooltipKey="mode">
+        <Tooltip tooltipKey="mode" position="bottom">
         <select
           id="mode-select"
           value={patternMode}
@@ -53,7 +53,7 @@ export default function PatternModeSelector() {
           ))}
         </select>
         </Tooltip>
-        <Tooltip tooltipKey="temp">
+        <Tooltip tooltipKey="temp" position="bottom">
         <button
           onClick={() => actions.toggleTemp()}
           disabled={!isPlaying}
