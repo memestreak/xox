@@ -2,6 +2,7 @@
 
 import { useSequencer } from './SequencerContext';
 import type { PatternMode } from './types';
+import Tooltip from './Tooltip';
 
 const MODE_OPTIONS: {
   value: PatternMode;
@@ -34,6 +35,7 @@ export default function PatternModeSelector() {
         Mode
       </span>
       <div className="flex gap-1 items-stretch">
+        <Tooltip tooltipKey="mode">
         <select
           id="mode-select"
           value={patternMode}
@@ -50,6 +52,8 @@ export default function PatternModeSelector() {
             </option>
           ))}
         </select>
+        </Tooltip>
+        <Tooltip tooltipKey="temp">
         <button
           onClick={() => actions.toggleTemp()}
           disabled={!isPlaying}
@@ -68,6 +72,7 @@ export default function PatternModeSelector() {
         >
           T
         </button>
+        </Tooltip>
       </div>
     </div>
   );

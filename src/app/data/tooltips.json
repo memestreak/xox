@@ -14,5 +14,7 @@
   "trackName": "Click for track options",
   "lengthHandle": "Drag to set track length",
   "follow": "Auto-follow playhead during playback",
-  "page": "Jump to page"
+  "page": "Jump to page",
+  "mode": "Pattern playback mode",
+  "temp": "Temporary mode change while playing"
 }
