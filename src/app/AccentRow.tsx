@@ -185,6 +185,9 @@ function AccentRowInner({
           >
             Accent
           </span>
+          {/* Spacer matching mute + solo toggle widths */}
+          <div className="w-6 h-6" />
+          <div className="w-6 h-6" />
           <Knob
             value={gain}
             onChange={handleGain}
