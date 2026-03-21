@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import Tooltip from './Tooltip';
 
 export const MIN_BPM = 20;
