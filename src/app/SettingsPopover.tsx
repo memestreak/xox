@@ -10,6 +10,7 @@ import { useSequencer } from './SequencerContext';
 import { encodeConfig } from './configCodec';
 import { useTooltips } from './TooltipContext';
 import Tooltip from './Tooltip';
+import MidiSettings from './MidiSettings';
 
 /**
  * Gear icon button with a dropdown popover for settings.
@@ -25,6 +26,7 @@ export default function SettingsPopover() {
   } = useTooltips();
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [midiOpen, setMidiOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -125,8 +127,22 @@ export default function SettingsPopover() {
               className="accent-orange-500"
             />
           </label>
+          <button
+            role="menuitem"
+            onClick={() => {
+              setMidiOpen(true);
+              setIsOpen(false);
+            }}
+            className="w-full text-left px-4 py-3 text-sm text-neutral-200 hover:bg-neutral-800 transition-colors border-t border-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-500"
+          >
+            MIDI Settings…
+          </button>
         </div>
       )}
+      <MidiSettings
+        isOpen={midiOpen}
+        onClose={() => setMidiOpen(false)}
+      />
     </div>
   );
 }
