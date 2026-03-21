@@ -228,6 +228,15 @@ class AudioEngine {
     // Schedule the sound to start at the exact 'time' calculated by the scheduler
     source.start(time);
   }
+
+  /**
+   * Returns the current AudioContext time in seconds.
+   * Used by MIDI integration to convert audio time to
+   * performance.now() timestamps.
+   */
+  public getCurrentTime(): number {
+    return this.ctx?.currentTime ?? 0;
+  }
 }
 
 export const audioEngine = new AudioEngine();
