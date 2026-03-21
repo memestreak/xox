@@ -23,7 +23,7 @@
 # misc
 .DS_Store
 *.pem
-.claude/
+.claude/settings.local.json
 .playwright-cli/
 .worktrees/
 
