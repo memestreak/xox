@@ -66,17 +66,18 @@ export default function MidiSettings({
   );
 
   if (!midi) return null;
-  const { available, config, outputs, updateConfig } = midi;
+  const {
+    available, initialized, config, outputs, updateConfig,
+  } = midi;
 
   const disabled = !available;
-  const statusMsg = !available
-    ? (typeof navigator !== 'undefined' &&
-        'requestMIDIAccess' in navigator
-      ? 'MIDI access denied'
-      : 'MIDI not supported in this browser')
-    : outputs.length === 0
-      ? 'No MIDI devices detected'
-      : null;
+  const statusMsg = !initialized
+    ? null
+    : !available
+      ? 'MIDI not available'
+      : outputs.length === 0
+        ? 'No MIDI devices detected'
+        : null;
 
   return (
     <dialog

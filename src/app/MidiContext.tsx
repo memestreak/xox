@@ -14,6 +14,7 @@ import { defaultMidiConfig } from './types';
 
 interface MidiContextValue {
   available: boolean;
+  initialized: boolean;
   config: MidiConfig;
   outputs: MIDIOutput[];
   updateConfig: (partial: Partial<MidiConfig>) => void;
@@ -35,6 +36,7 @@ export function MidiProvider({
   children,
 }: MidiProviderProps) {
   const [available, setAvailable] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const [config, setConfig] = useState<MidiConfig>(
     defaultMidiConfig
   );
@@ -52,6 +54,7 @@ export function MidiProvider({
     midiEngine.init().then((ok) => {
       if (!mounted) return;
       setAvailable(ok);
+      setInitialized(true);
       if (ok) {
         setConfig(midiEngine.getConfig());
         setOutputs(midiEngine.getOutputs());
@@ -75,6 +78,7 @@ export function MidiProvider({
   return (
     <MidiContext value={{
       available,
+      initialized,
       config,
       outputs,
       updateConfig,
