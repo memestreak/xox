@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react';
 import { useSequencer } from './SequencerContext';
-import Tooltip from './Tooltip';
 
 /**
  * Fill button: momentary by default (hold to
@@ -49,9 +48,8 @@ export default function FillButton() {
   }
 
   return (
-    <Tooltip tooltipKey="fill">
-      <button
-        aria-pressed={isFillActive}
+    <button
+      aria-pressed={isFillActive}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
@@ -70,8 +68,7 @@ export default function FillButton() {
         + bg
       }
     >
-        FILL
-      </button>
-    </Tooltip>
+      FILL
+    </button>
   );
 }
