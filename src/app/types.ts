@@ -143,3 +143,51 @@ export interface SequencerConfig {
     Record<TrackId, Record<number, StepLocks>>
   >;
 }
+
+/** Note length: fixed milliseconds or tempo-relative. */
+export type NoteLength =
+  | { type: 'fixed'; ms: number }
+  | { type: 'percent'; value: number };
+
+/** Per-track MIDI note mapping. */
+export interface MidiTrackConfig {
+  noteNumber: number;  // 0–127
+}
+
+/** Complete MIDI output configuration. */
+export interface MidiConfig {
+  enabled: boolean;
+  deviceId: string | null;
+  channel: number;  // 1–16
+  noteLength: NoteLength;
+  tracks: Record<
+    Exclude<TrackId, 'ac'>,
+    MidiTrackConfig
+  >;
+}
+
+/** Default GM drum map note numbers. */
+export const GM_DRUM_MAP: Record<
+  Exclude<TrackId, 'ac'>, number
+> = {
+  bd: 36, sd: 38, ch: 42, oh: 46, cy: 49,
+  ht: 50, mt: 47, lt: 43, rs: 37, cp: 39, cb: 56,
+} as const;
+
+/** Factory for default MidiConfig. */
+export function defaultMidiConfig(): MidiConfig {
+  const tracks = {} as MidiConfig['tracks'];
+  for (const [id, note] of
+    Object.entries(GM_DRUM_MAP) as
+      [Exclude<TrackId, 'ac'>, number][]
+  ) {
+    tracks[id] = { noteNumber: note };
+  }
+  return {
+    enabled: false,
+    deviceId: null,
+    channel: 10,
+    noteLength: { type: 'fixed', ms: 50 },
+    tracks,
+  };
+}

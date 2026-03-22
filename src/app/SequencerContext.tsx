@@ -13,6 +13,7 @@ import {
 import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import { audioEngine } from './AudioEngine';
+import { midiEngine } from './MidiEngine';
 import { defaultConfig, decodeConfig } from './configCodec';
 import { evaluateCondition } from './trigConditions';
 import { TRACK_IDS } from './types';
@@ -376,6 +377,7 @@ export function SequencerProvider({
 
   useEffect(() => {
     audioEngine.setBpm(config.bpm);
+    midiEngine.setBpm(config.bpm);
   }, [config.bpm]);
 
   useEffect(() => {
@@ -475,6 +477,14 @@ export function SequencerProvider({
               : cubic;
           audioEngine.playSound(
             track.id, scheduledTime, gain
+          );
+          // MIDI output (convert AudioContext time to
+          // performance.now timestamp)
+          const perfTimeMs = performance.now()
+            + (scheduledTime
+              - audioEngine.getCurrentTime()) * 1000;
+          midiEngine.sendNote(
+            track.id, perfTimeMs, gain
           );
         }
       });
@@ -599,6 +609,7 @@ export function SequencerProvider({
       pendingPatternRef.current = null;
 
       audioEngine.stop();
+      midiEngine.stop();
       setIsPlaying(false);
       stepRef.current = -1;
       totalStepsRef.current = 0;

@@ -343,3 +343,11 @@ describe('AudioEngine playSound', () => {
     }).not.toThrow();
   });
 });
+
+describe('getCurrentTime()', () => {
+  it('returns AudioContext.currentTime', async () => {
+    mockCurrentTime = 1.234;
+    await audioEngine.preloadKit('808');
+    expect(audioEngine.getCurrentTime()).toBe(1.234);
+  });
+});
