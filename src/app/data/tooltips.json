@@ -1,0 +1,21 @@
+{
+  "play": "Start / stop playback",
+  "fill": "Hold to fill; ⌘+click to latch",
+  "tap": "Tap repeatedly to set tempo",
+  "swing": "Drag to adjust swing timing",
+  "reset": "Reset all settings to defaults",
+  "steps": "Set pattern length (1–64)",
+  "kit": "Choose sample kit",
+  "pattern": "Browse preset patterns",
+  "settings": "Settings",
+  "mute": "Mute this track",
+  "solo": "Solo this track",
+  "step": "Click to toggle; long-press to edit",
+  "trackName": "Click for track options",
+  "lengthHandle": "Drag to set track length",
+  "follow": "Auto-follow playhead during playback",
+  "page": "Jump to page",
+  "accentIntensity": "Accent intensity",
+  "mode": "Pattern playback mode",
+  "temp": "Temporary mode change while playing"
+}

@@ -25,6 +25,7 @@
 *.pem
 .claude/settings.local.json
 .playwright-cli/
+.playwright-mcp/
 .worktrees/
 
 # debug

@@ -13,6 +13,7 @@ import type {
 import TrackToggle from './TrackToggle';
 import StepButton from './StepButton';
 import Knob from './Knob';
+import Tooltip from './Tooltip';
 
 interface TrackNameButtonProps {
   size: 'sm' | 'lg';
@@ -65,30 +66,32 @@ function TrackNameButtonInner({
 
   return (
     <div className="relative">
-      <button
-        ref={size === 'lg' ? nameRef : undefined}
-        onClick={(e: React.MouseEvent) => {
-          if (e.shiftKey) {
-            onClearTrack();
-            return;
+      <Tooltip tooltipKey="trackName">
+        <button
+          ref={size === 'lg' ? nameRef : undefined}
+          onClick={(e: React.MouseEvent) => {
+            if (e.shiftKey) {
+              onClearTrack();
+              return;
+            }
+            setMenuOpen(v => !v);
+          }}
+          className={
+            (size === 'sm'
+              ? 'text-[10px]'
+              : 'w-16 truncate text-xs text-left')
+            + ' font-bold uppercase tracking-wider'
+            + ' rounded px-1 py-0.5 transition-colors'
+            + (isFreeRun
+              ? ' text-orange-400 bg-orange-400/10'
+              : ' text-neutral-400'
+                + ' hover:text-neutral-200'
+                + ' hover:bg-neutral-800/50')
           }
-          setMenuOpen(v => !v);
-        }}
-        className={
-          (size === 'sm'
-            ? 'text-[10px]'
-            : 'w-16 truncate text-xs text-left')
-          + ' font-bold uppercase tracking-wider'
-          + ' rounded px-1 py-0.5 transition-colors'
-          + (isFreeRun
-            ? ' text-orange-400 bg-orange-400/10'
-            : ' text-neutral-400'
-              + ' hover:text-neutral-200'
-              + ' hover:bg-neutral-800/50')
-        }
-      >
-        {trackName}
-      </button>
+        >
+          {trackName}
+        </button>
+      </Tooltip>
       {menuOpen && size === 'lg' && (
         <div
           ref={menuRef}
@@ -423,9 +426,10 @@ function TrackRowInner({
 
           {/* Draggable length handle */}
           {handleOnPage && (
-            <div
-              role="slider"
-              aria-label={`${trackName} length`}
+            <Tooltip tooltipKey="lengthHandle" align="right">
+              <div
+                role="slider"
+                aria-label={`${trackName} length`}
               aria-valuemin={1}
               aria-valuemax={patternLength}
               aria-valuenow={trackLength}
@@ -459,7 +463,8 @@ function TrackRowInner({
                   : ' before:bg-neutral-500/60'
                     + ' hover:before:bg-neutral-300')
               }
-            />
+              />
+            </Tooltip>
           )}
 
           {/* Free-run indicator */}

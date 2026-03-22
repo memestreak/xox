@@ -7,6 +7,7 @@ import {
 } from 'react';
 import type { Pattern } from './types';
 import type { PatternCategory } from './patternUtils';
+import Tooltip from './Tooltip';
 
 interface PatternPickerProps {
   categories: PatternCategory[];
@@ -90,25 +91,27 @@ export default function PatternPicker({
   return (
     <>
       {/* Trigger button */}
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => isOpen ? handleClose() : handleOpen()}
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        aria-label="Pattern"
-        className="w-full px-3 lg:px-4 py-2 rounded-full
-          font-bold text-sm lg:text-base truncate
-          bg-neutral-800 text-neutral-400
-          hover:text-neutral-200 hover:bg-neutral-700
-          transition-colors
-          focus-visible:outline-none focus-visible:ring-2
-          focus-visible:ring-orange-500
-          focus-visible:ring-offset-2
-          focus-visible:ring-offset-neutral-950"
-      >
-        {displayName}
-      </button>
+      <Tooltip tooltipKey="pattern">
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => isOpen ? handleClose() : handleOpen()}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          aria-label="Pattern"
+          className="w-full px-3 lg:px-4 py-2 rounded-full
+            font-bold text-sm lg:text-base truncate
+            bg-neutral-800 text-neutral-400
+            hover:text-neutral-200 hover:bg-neutral-700
+            transition-colors
+            focus-visible:outline-none focus-visible:ring-2
+            focus-visible:ring-orange-500
+            focus-visible:ring-offset-2
+            focus-visible:ring-offset-neutral-950"
+        >
+          {displayName}
+        </button>
+      </Tooltip>
 
       {/* Modal */}
       {isOpen && (
