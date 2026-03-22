@@ -15,7 +15,7 @@
   "lengthHandle": "Drag to set track length",
   "follow": "Auto-follow playhead during playback",
   "page": "Jump to page",
-  "accentIntensity": "Accent volume boost",
+  "accentIntensity": "Accent intensity",
   "mode": "Pattern playback mode",
   "temp": "Temporary mode change while playing"
 }
