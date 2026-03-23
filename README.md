@@ -18,9 +18,8 @@ A drum sequencer for the browser, built with Next.js and the
   steps; Shift+drag (or long-press+drag on touch) to cycle
   through per-track preset patterns
 - **Pattern change modes** — Sequential (wait for boundary),
-  Direct Start (reset to step 1), Direct Jump (keep position)
-- **Temp mode** — safely audition a different pattern while
-  playing, then revert
+  Direct Start (reset to step 1), Direct Jump (keep position),
+  with a "temp" mode.
 
 ### Playback & Mixing
 - **Look-ahead scheduler** (25 ms timer, 100 ms window) for
@@ -47,8 +46,6 @@ A drum sequencer for the browser, built with Next.js and the
   haptic feedback)
 - Responsive layout: 8-column grid on mobile, 16-column on
   desktop
-- **iOS silent-mode bypass** — automatically switches the audio
-  session to "playback" on first gesture
 
 ## Tech Stack
 
