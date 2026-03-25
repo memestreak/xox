@@ -136,15 +136,16 @@ describe('AccentRow', () => {
     expect(toggle).toHaveBeenCalledWith('ac', 16);
   });
 
-  it('renders mini-height buttons', () => {
+  it('renders circle buttons', () => {
     const { container } = render(
       <AccentRow {...base} />
     );
     const btn = container.querySelector(
       '[data-step] button, button[data-step]'
     ) ?? container.querySelector('button');
-    expect(btn?.className).toContain('h-2.5');
-    expect(btn?.className).toContain('lg:h-3');
+    expect(btn?.className).toContain('rounded-full');
+    expect(btn?.className).toContain('w-4');
+    expect(btn?.className).toContain('h-4');
   });
 
   it('shows running light on current step', () => {

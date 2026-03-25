@@ -30,6 +30,7 @@ interface AccentRowProps {
   onSetGain: (
     trackId: TrackId, value: number
   ) => void;
+  onClearTrack: (trackId: TrackId) => void;
 }
 
 /**
@@ -51,6 +52,7 @@ function AccentRowInner({
   onSetTrackLength,
   onToggleFreeRun,
   onSetGain,
+  onClearTrack,
 }: AccentRowProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -63,6 +65,11 @@ function AccentRowInner({
   const handleGain = useCallback(
     (v: number) => onSetGain('ac', v),
     [onSetGain]
+  );
+
+  const handleClear = useCallback(
+    () => onClearTrack('ac'),
+    [onClearTrack]
   );
 
   const handleToggleStep = useCallback(
@@ -150,17 +157,22 @@ function AccentRowInner({
     <div>
       {/* Mobile: label + knob above grid */}
       <div className="flex items-center gap-2 mb-1 lg:hidden">
-        <span
+        <button
+          type="button"
+          onClick={(e) => {
+            if (e.shiftKey) handleClear();
+          }}
           className={
             'text-[10px] font-bold uppercase'
-            + ' tracking-wider'
+            + ' tracking-wider bg-transparent'
+            + ' border-none cursor-pointer'
             + (isFreeRun
               ? ' text-orange-400'
               : ' text-neutral-400')
           }
         >
           Accent
-        </span>
+        </button>
         <div className="ml-auto">
           <Tooltip tooltipKey="accentIntensity" position="bottom">
             <Knob
@@ -177,17 +189,22 @@ function AccentRowInner({
       <div className="flex gap-4 items-center">
         {/* Desktop: sidebar with label + knob */}
         <div className="hidden lg:flex w-48 items-center gap-2">
-          <span
+          <button
+            type="button"
+            onClick={(e) => {
+              if (e.shiftKey) handleClear();
+            }}
             className={
               'w-16 truncate text-xs text-left'
               + ' font-bold uppercase tracking-wider'
+              + ' bg-transparent border-none cursor-pointer'
               + (isFreeRun
                 ? ' text-orange-400'
                 : ' text-neutral-400')
             }
           >
             Accent
-          </span>
+          </button>
           {/* Spacer matching mute + solo toggle widths */}
           <div className="w-6 h-6" />
           <div className="w-6 h-6" />
