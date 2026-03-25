@@ -250,7 +250,7 @@ export function SequencerProvider({
 
   // ─── Pattern mode state ─────────────────────────────
   const [patternMode, setPatternMode] =
-    useState<PatternMode>('sequential');
+    useState<PatternMode>('direct-jump');
   const [tempState, setTempState] =
     useState<TempState>('off');
   const [homeSnapshot, setHomeSnapshot] =

@@ -860,11 +860,11 @@ describe('URL hash import', () => {
 // H. Pattern mode state
 // -------------------------------------------------------
 describe('pattern mode state', () => {
-  it('initial patternMode is sequential', () => {
+  it('initial patternMode is direct-jump', () => {
     const { result } = renderSequencer();
     expect(
       result.current.state.patternMode
-    ).toBe('sequential');
+    ).toBe('direct-jump');
   });
 
   it('initial tempState is off', () => {
