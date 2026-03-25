@@ -186,6 +186,7 @@ export default function StepGrid({
           onSetTrackLength={setTrackLength}
           onToggleFreeRun={toggleFreeRun}
           onSetGain={setGain}
+          onClearTrack={clearTrack}
         />
       </div>
       {openPopover !== null ? (
