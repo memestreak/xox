@@ -89,11 +89,12 @@ function StepButtonInner({
     }
   }, [longPressActiveRef]);
 
-  const heightClass = mini
-    ? 'h-2.5 lg:h-3' : 'h-8 lg:h-12';
+  const sizeClass = mini
+    ? 'w-4 h-4 lg:w-5 lg:h-5' : 'h-8 lg:h-12';
+  const radiusClass = mini ? 'rounded-full' : 'rounded-sm';
 
   if (isDisabled) {
-    return (
+    const disabledEl = (
       <div
         data-step={stepIndex}
         aria-label={
@@ -101,14 +102,22 @@ function StepButtonInner({
           + ' (inactive)'
         }
         className={
-          heightClass + ' rounded-sm'
+          sizeClass + ' ' + radiusClass
           + ' bg-neutral-900/20 cursor-not-allowed'
-          + (isBeat
+          + (isBeat && !mini
             ? ' border-l-2 border-neutral-800/30'
             : '')
         }
       />
     );
+    if (mini) {
+      return (
+        <div className="flex items-center justify-center">
+          {disabledEl}
+        </div>
+      );
+    }
+    return disabledEl;
   }
 
   let color: string;
@@ -132,7 +141,7 @@ function StepButtonInner({
 
   const longPressHandlers = longPress();
 
-  return (
+  const btn = (
     <Tooltip tooltipKey="step" position="bottom">
       <button
         ref={buttonRef}
@@ -172,14 +181,14 @@ function StepButtonInner({
         }}
         className={
           'relative overflow-hidden'
-          + ' ' + heightClass + ' rounded-sm'
+          + ' ' + sizeClass + ' ' + radiusClass
           + ' transition-colors duration-100'
           + ' motion-safe:transition-transform'
           + ' focus-visible:outline-none'
           + ' focus-visible:ring-2'
           + ' focus-visible:ring-orange-500 '
           + color
-          + (isBeat
+          + (isBeat && !mini
             ? ' border-l-2 border-neutral-700'
             : '')
         }
@@ -242,6 +251,15 @@ function StepButtonInner({
       </button>
     </Tooltip>
   );
+
+  if (mini) {
+    return (
+      <div className="flex items-center justify-center">
+        {btn}
+      </div>
+    );
+  }
+  return btn;
 }
 
 const StepButton = memo(StepButtonInner);

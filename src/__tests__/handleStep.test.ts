@@ -244,16 +244,16 @@ describe('handleStep', () => {
     expect(playedIds).not.toContain('sd');
   });
 
-  it('accent step: gain multiplied by 1.5', async () => {
+  it('accent step: gain multiplied by 2.0', async () => {
     const { mockPlaySound: mp } = await setupAndTrigger({
       activeTracks: ['bd'],
       accentStep0: true,
       gains: { bd: 1.0 },
     });
     expect(mp).toHaveBeenCalledTimes(1);
-    // gain = 1.0^3 * 1.5 = 1.5
+    // gain = 1.0^3 * (1 + 0.5*2) = 2.0
     const gainArg = mp.mock.calls[0][2];
-    expect(gainArg).toBeCloseTo(1.5);
+    expect(gainArg).toBeCloseTo(2.0);
   });
 
   it('non-accent step: gain is cubic only', async () => {
@@ -933,7 +933,7 @@ describe('handleStep parameter locks', () => {
 
   it('accent stacks on locked gain', async () => {
     // bd mixer gain = 1.0, lock = 0.5, accented
-    // Expected: 0.5^3 * 1.5 = 0.1875
+    // Expected: 0.5^3 * (1 + 0.5*2) = 0.25
     const { mockPlaySound: mp } = await setupAndTrigger({
       activeTracks: ['bd'],
       accentStep0: true,
@@ -942,7 +942,7 @@ describe('handleStep parameter locks', () => {
     });
     expect(mp).toHaveBeenCalledTimes(1);
     const gainArg = mp.mock.calls[0][2];
-    expect(gainArg).toBeCloseTo(0.1875);
+    expect(gainArg).toBeCloseTo(0.25);
   });
 
   it('no lock falls back to mixer gain', async () => {

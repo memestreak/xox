@@ -123,13 +123,14 @@ describe('StepButton indicators', () => {
 });
 
 describe('StepButton mini variant', () => {
-  it('renders at reduced height', () => {
+  it('renders as circle', () => {
     const { container } = render(
       <StepButton {...base} mini />
     );
     const btn = container.querySelector('button');
-    expect(btn?.className).toContain('h-2.5');
-    expect(btn?.className).toContain('lg:h-3');
+    expect(btn?.className).toContain('rounded-full');
+    expect(btn?.className).toContain('w-4');
+    expect(btn?.className).toContain('h-4');
     expect(btn?.className).not.toContain('h-8');
   });
 
@@ -171,7 +172,7 @@ describe('StepButton mini variant', () => {
     expect(btn?.className).not.toContain('shadow');
   });
 
-  it('disabled mini renders at mini height', () => {
+  it('disabled mini renders as circle', () => {
     const { container } = render(
       <StepButton
         {...base}
@@ -182,7 +183,8 @@ describe('StepButton mini variant', () => {
     const el = container.querySelector(
       '[data-step]'
     );
-    expect(el?.className).toContain('h-2.5');
+    expect(el?.className).toContain('rounded-full');
+    expect(el?.className).toContain('w-4');
   });
 });
 
