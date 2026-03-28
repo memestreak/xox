@@ -17,7 +17,9 @@ interface MidiContextValue {
   initialized: boolean;
   config: MidiConfig;
   outputs: MIDIOutput[];
-  updateConfig: (partial: Partial<MidiConfig>) => void;
+  updateConfig: (
+    partial: Partial<MidiConfig>
+  ) => void | Promise<void>;
 }
 
 const MidiContext = createContext<
@@ -44,35 +46,40 @@ export function MidiProvider({
     []
   );
 
-  useEffect(() => {
-    let mounted = true;
-
+  const initMidi = useCallback(async () => {
+    if (initialized) return;
     midiEngine.setOnDeviceChange((newOutputs) => {
-      if (mounted) setOutputs(newOutputs);
+      setOutputs(newOutputs);
     });
+    const ok = await midiEngine.init();
+    setAvailable(ok);
+    setInitialized(true);
+    if (ok) {
+      setConfig(midiEngine.getConfig());
+      setOutputs(midiEngine.getOutputs());
+    }
+  }, [initialized]);
 
-    midiEngine.init().then((ok) => {
-      if (!mounted) return;
-      setAvailable(ok);
-      setInitialized(true);
-      if (ok) {
-        setConfig(midiEngine.getConfig());
-        setOutputs(midiEngine.getOutputs());
-      }
-    });
-
+  useEffect(() => {
     return () => {
-      mounted = false;
       midiEngine.setOnDeviceChange(null);
     };
   }, []);
 
   const updateConfig = useCallback(
-    (partial: Partial<MidiConfig>) => {
+    async (partial: Partial<MidiConfig>) => {
+      if (partial.enabled && !initialized) {
+        await initMidi();
+        // If MIDI isn't available after init, don't
+        // persist the enabled flag
+        if (!midiEngine.isAvailable()) {
+          return;
+        }
+      }
       midiEngine.updateConfig(partial);
       setConfig(midiEngine.getConfig());
     },
-    []
+    [initialized, initMidi]
   );
 
   return (

@@ -102,6 +102,10 @@ export class MidiEngine {
     }
   };
 
+  isAvailable(): boolean {
+    return this.access !== null;
+  }
+
   getOutputs(): MIDIOutput[] {
     if (!this.access) return [];
     return Array.from(this.access.outputs.values());
