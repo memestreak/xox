@@ -86,6 +86,22 @@ interface TrackMixerState {
 }
 ```
 
+### TrackState
+
+`freeRun` is removed from `TrackState`. Components that
+need freeRun read it from `config.tracks[id].freeRun`
+directly. TrackState becomes purely mixer-derived:
+
+```typescript
+interface TrackState {
+  id: TrackId;
+  name: string;
+  isMuted: boolean;
+  isSolo: boolean;
+  gain: number;
+}
+```
+
 ### HomeSnapshot
 
 Replaces `steps`, `trigConditions`, `trackLengths`, and
@@ -162,6 +178,37 @@ validator fills in missing tracks with a default
 `{ steps: "0".repeat(patternLength) }` for robustness,
 but presets must be explicit.
 
+## Context API Changes
+
+The SequencerContext no longer exposes `patternLength`
+or `trackLengths` as top-level state values. Consumers
+read `config.tracks` directly and derive lengths:
+
+- Track length: `config.tracks[id].steps.length`
+- Pattern length: `getPatternLength(config.tracks)`
+
+The `currentPattern` memo is removed. Components that
+need pattern data read `config.tracks` directly.
+`selectedPatternId` remains as a separate state value
+for UI highlighting of the active preset.
+
+## Conditions and Locks: No Pruning on Length Change
+
+TrigConditions and parameterLocks are NOT pruned when
+track or pattern length changes. Conditions/locks at
+indices beyond the current step string length are simply
+dormant — the audio loop only visits steps
+`0` through `steps.length - 1`, so out-of-range
+conditions are never evaluated.
+
+This means:
+- Shrinking a track preserves its conditions/locks.
+  Growing it back later reactivates them.
+- `setPatternLength` and `setTrackLength` only need to
+  pad/truncate the step string. No cascading prune logic.
+- The codec validator accepts condition/lock keys in the
+  range 0–63 regardless of step string length.
+
 ## setPattern Behavior
 
 Selecting a preset overwrites `config.tracks` entirely
@@ -176,18 +223,71 @@ Mixer state (gain, mute, solo) remains untouched.
 The `normalizePatternSteps` helper is removed since step
 strings define their own length.
 
-`patternRef.current` (the audio-thread ref) must also be
-updated to use the new `tracks` shape. The audio loop
-reads step data via `pattern.tracks[trackId].steps`
-instead of the old `pattern.steps[trackId]`.
+### Pattern Modes
 
-The `currentPattern` memo, which constructs a synthetic
-Pattern from config state, changes from
-`{ steps: config.steps }` to `{ tracks: config.tracks }`.
+- **sequential**: The boundary check uses the OLD
+  patternLength (from the current config at the time of
+  the boundary step). The pending pattern is applied at
+  `step === oldPatternLength - 1`. The next cycle uses
+  the new pattern's track lengths.
+- **direct-start**: Overwrites config.tracks immediately
+  and resets playhead to step 0.
+- **direct-jump**: Overwrites config.tracks immediately
+  without resetting playhead.
 
-`clearAll` and `clearTrack` actions write
-`freeRun: false` (or undefined) into
-`config.tracks[id]` instead of `config.mixer[id]`.
+### Audio Refs
+
+`patternRef` is removed. The audio loop reads all track
+data from `configRef.current.tracks`. Since setConfig is
+async, there may be a one-tick lag on pattern switch.
+This is acceptable.
+
+### Custom Pattern Detection
+
+Any edit to track data marks the pattern as 'custom':
+toggling steps, toggling freeRun, adding/removing trig
+conditions, adding/removing parameter locks, or changing
+track length. All of these set `selectedPatternId` to
+`'custom'`.
+
+## setPatternLength Behavior
+
+`setPatternLength(N)` has asymmetric grow/shrink
+behavior:
+
+- **Grow** (N > current max): ALL tracks extend to N,
+  padded with '0'. This is uniform — polymetric tracks
+  shorter than N are grown to N.
+- **Shrink** (N < current max): Only tracks longer than
+  N are truncated to N. Tracks already shorter than N
+  are left untouched, preserving polymetric structure.
+
+TrigConditions and parameterLocks are never pruned in
+either direction.
+
+## setTrackLength Behavior
+
+`setTrackLength(trackId, N)` pads or truncates the
+individual track's step string to length N. No pruning
+of conditions/locks. If N exceeds the current inferred
+patternLength, the inferred patternLength grows
+automatically.
+
+## clearAll Behavior
+
+Resets all tracks to 16-step zero-filled strings:
+`{ steps: "0".repeat(16) }`. Clears freeRun,
+trigConditions, and parameterLocks on all tracks.
+Mixer state (gain, mute, solo) is untouched.
+
+## clearTrack Behavior
+
+Resets the individual track to 16-step zeros:
+`{ steps: "0".repeat(16) }`. Clears that track's
+freeRun, trigConditions, and parameterLocks.
+
+If the cleared track was the longest track, the inferred
+patternLength may shrink. This is intentional.
 
 ## configCodec Changes
 
@@ -196,10 +296,18 @@ Pattern from config state, changes from
   `defaultConfig()` when the version is unrecognized (same
   as the existing convention for malformed input)
 - Encoding serializes `tracks` instead of separate fields
+- **URL compaction**: The encoder strips empty/default
+  optional fields per-track before serialization. For each
+  track, `trigConditions`, `parameterLocks`, and `freeRun`
+  are omitted when they are `undefined`/empty/`false`.
+  The decoder fills in defaults for missing fields.
 - Validation consolidated into `validateTracks`:
   validates each track's steps (binary string, 1–64),
-  optional freeRun (boolean), optional trigConditions,
-  optional parameterLocks
+  optional freeRun (boolean), optional trigConditions
+  (keys 0–63, valid StepConditions), optional
+  parameterLocks (keys 0–63, valid StepLocks). Condition
+  and lock keys are NOT validated against step string
+  length.
 - Separate validators `validateSteps`,
   `validateTrackLengths`, `validatePatternLength`,
   `validateTrigConditions`, `validateParameterLocks` are
@@ -209,20 +317,22 @@ Pattern from config state, changes from
 
 All references to removed fields are updated:
 
-| Old                                  | New                                          |
-|--------------------------------------|----------------------------------------------|
-| `config.steps[id]`                   | `config.tracks[id].steps`                    |
-| `config.trackLengths[id]`            | `config.tracks[id].steps.length`             |
-| `config.patternLength`               | `getPatternLength(config.tracks)`            |
-| `config.trigConditions[id]`          | `config.tracks[id].trigConditions`            |
-| `config.parameterLocks[id]`         | `config.tracks[id].parameterLocks`           |
-| `config.mixer[id].freeRun`           | `config.tracks[id].freeRun`                  |
-| `defaultConfig()` separate fields    | `defaultConfig()` builds `tracks`            |
-| `HomeSnapshot.steps`, etc.           | `HomeSnapshot.tracks`                        |
-| `patternRef.current.steps[id]`       | `patternRef.current.tracks[id].steps`        |
-| `trackStates` memo reads mixer freeRun | reads `config.tracks[id].freeRun`          |
-| `currentPattern` memo `steps: ...`   | `tracks: config.tracks`                      |
-| `clearAll`/`clearTrack` mixer freeRun | `config.tracks[id].freeRun`                 |
+| Old                                    | New                                          |
+|----------------------------------------|----------------------------------------------|
+| `config.steps[id]`                     | `config.tracks[id].steps`                    |
+| `config.trackLengths[id]`             | `config.tracks[id].steps.length`             |
+| `config.patternLength`                 | `getPatternLength(config.tracks)`            |
+| `config.trigConditions[id]`           | `config.tracks[id].trigConditions`            |
+| `config.parameterLocks[id]`          | `config.tracks[id].parameterLocks`           |
+| `config.mixer[id].freeRun`            | `config.tracks[id].freeRun`                  |
+| `defaultConfig()` separate fields      | `defaultConfig()` builds `tracks`            |
+| `HomeSnapshot.steps`, etc.             | `HomeSnapshot.tracks`                        |
+| `patternRef.current.steps[id]`        | `configRef.current.tracks[id].steps`         |
+| `trackStates` memo reads mixer freeRun | removed from trackStates                     |
+| `currentPattern` memo                  | removed; use `config.tracks` directly        |
+| `state.patternLength`                  | `getPatternLength(config.tracks)`            |
+| `state.trackLengths`                   | `config.tracks[id].steps.length`             |
+| `clearAll`/`clearTrack` mixer freeRun  | `config.tracks[id].freeRun`                  |
 
 A `getPatternLength` helper is introduced:
 
