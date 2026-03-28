@@ -20,17 +20,16 @@ function AuditionInner() {
   const { togglePlay, setBpm, setPattern } = actions;
 
   const [patternName, setPatternName] = useState('');
+  const [patternId, setPatternId] = useState('');
   const [patternCategory, setPatternCategory] = useState('');
   const [toastMessage, setToastMessage] = useState('');
+  const [waiting, setWaiting] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval>>(
+    null
+  );
 
-  const loadStagingPattern = useCallback(async () => {
-    try {
-      const cacheBuster = `?t=${Date.now()}`;
-      const res = await fetch(
-        `/patterns/staging.json${cacheBuster}`
-      );
-      const staging: StagingPattern = await res.json();
-
+  const applyStagingPattern = useCallback(
+    (staging: StagingPattern) => {
       const pattern: Pattern = {
         id: staging.id,
         name: staging.name,
@@ -40,15 +39,57 @@ function AuditionInner() {
         parameterLocks: staging.parameterLocks,
       };
 
+      setPatternId(staging.id);
       setPatternName(staging.name);
       setPatternCategory(staging.category ?? '');
       setBpm(staging.suggestedBpm);
       setPattern(pattern);
+    },
+    [setBpm, setPattern],
+  );
+
+  const fetchStaging = useCallback(async () => {
+    const res = await fetch(
+      `/patterns/staging.json?t=${Date.now()}`,
+      { cache: 'no-store' },
+    );
+    return (await res.json()) as StagingPattern;
+  }, []);
+
+  const loadStagingPattern = useCallback(async () => {
+    try {
+      const staging = await fetchStaging();
+      applyStagingPattern(staging);
     } catch {
       setToastMessage('Failed to load staging pattern');
       setTimeout(() => setToastMessage(''), 3000);
     }
-  }, [setBpm, setPattern]);
+  }, [applyStagingPattern, fetchStaging]);
+
+  const waitForNextPattern = useCallback(
+    (currentId: string) => {
+      setWaiting(true);
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+      pollingRef.current = setInterval(async () => {
+        try {
+          const staging = await fetchStaging();
+          if (staging.id !== currentId) {
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+            }
+            setWaiting(false);
+            applyStagingPattern(staging);
+          }
+        } catch {
+          // keep polling
+        }
+      }, 1500);
+    },
+    [applyStagingPattern, fetchStaging],
+  );
 
   const hasLoadedRef = useRef<boolean | null>(null);
   if (hasLoadedRef.current == null) {
@@ -147,8 +188,34 @@ function AuditionInner() {
         {/* Action bar */}
         <div className="border-t border-neutral-800 py-3 flex gap-3 items-center">
           <button
+            onClick={() => {
+              setToastMessage(
+                `Approved: ${patternName}`
+              );
+              setTimeout(() => setToastMessage(''), 2000);
+              waitForNextPattern(patternId);
+            }}
+            disabled={waiting}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+          >
+            Approve
+          </button>
+          <button
+            onClick={() => {
+              setToastMessage(
+                `Rejected: ${patternName}`
+              );
+              setTimeout(() => setToastMessage(''), 2000);
+              waitForNextPattern(patternId);
+            }}
+            disabled={waiting}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+          >
+            Reject
+          </button>
+          <button
             onClick={handleApproveEdited}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-sm transition-colors"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-sm transition-colors"
           >
             Approve Edited
           </button>
@@ -156,9 +223,14 @@ function AuditionInner() {
             onClick={loadStagingPattern}
             className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 rounded-lg font-bold text-sm transition-colors"
           >
-            Reload Pattern
+            Reload
           </button>
-          {toastMessage && (
+          {waiting && (
+            <span className="text-sm text-yellow-400 ml-2 animate-pulse">
+              Waiting for next pattern...
+            </span>
+          )}
+          {toastMessage && !waiting && (
             <span className="text-sm text-green-400 ml-2">
               {toastMessage}
             </span>
