@@ -71,13 +71,11 @@ export default function MidiSettings({
   } = midi;
 
   const disabled = !available;
-  const statusMsg = !initialized
-    ? null
-    : !available
-      ? 'MIDI not available'
-      : outputs.length === 0
-        ? 'No MIDI devices detected'
-        : null;
+  const statusMsg = initialized && !available
+    ? 'MIDI not available in this browser'
+    : available && outputs.length === 0
+      ? 'No MIDI devices detected'
+      : null;
 
   return (
     <dialog
@@ -111,7 +109,6 @@ export default function MidiSettings({
           <input
             type="checkbox"
             checked={config.enabled}
-            disabled={disabled}
             onChange={(e) =>
               updateConfig({
                 enabled: e.target.checked,
