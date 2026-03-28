@@ -13,22 +13,26 @@ interface StagingPattern extends Pattern {
   suggestedBpm: number;
 }
 
+interface StagingFile {
+  patterns: StagingPattern[];
+}
+
 function AuditionInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { state, actions, meta } = useSequencer();
   const { isPlaying, bpm, isLoaded } = state;
   const { togglePlay, setBpm, setPattern } = actions;
 
+  const [queue, setQueue] = useState<StagingPattern[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
   const [patternName, setPatternName] = useState('');
-  const [patternId, setPatternId] = useState('');
   const [patternCategory, setPatternCategory] = useState('');
   const [toastMessage, setToastMessage] = useState('');
-  const [waiting, setWaiting] = useState(false);
-  const pollingRef = useRef<ReturnType<typeof setInterval>>(
-    null
-  );
+  const [approved, setApproved] = useState<string[]>([]);
+  const [rejected, setRejected] = useState<string[]>([]);
+  const [edited, setEdited] = useState<string[]>([]);
 
-  const applyStagingPattern = useCallback(
+  const applyPattern = useCallback(
     (staging: StagingPattern) => {
       const pattern: Pattern = {
         id: staging.id,
@@ -38,8 +42,6 @@ function AuditionInner() {
         trigConditions: staging.trigConditions,
         parameterLocks: staging.parameterLocks,
       };
-
-      setPatternId(staging.id);
       setPatternName(staging.name);
       setPatternCategory(staging.category ?? '');
       setBpm(staging.suggestedBpm);
@@ -48,54 +50,61 @@ function AuditionInner() {
     [setBpm, setPattern],
   );
 
-  const fetchStaging = useCallback(async () => {
-    const res = await fetch(
-      `/patterns/staging.json?t=${Date.now()}`,
-      { cache: 'no-store' },
-    );
-    return (await res.json()) as StagingPattern;
-  }, []);
-
-  const loadStagingPattern = useCallback(async () => {
+  const loadQueue = useCallback(async () => {
     try {
-      const staging = await fetchStaging();
-      applyStagingPattern(staging);
+      const res = await fetch(
+        `/patterns/staging.json?t=${Date.now()}`,
+        { cache: 'no-store' },
+      );
+      const data: StagingFile = await res.json();
+      const patterns = data.patterns;
+      setQueue(patterns);
+      setQueueIndex(0);
+      setApproved([]);
+      setRejected([]);
+      setEdited([]);
+      if (patterns.length > 0) {
+        applyPattern(patterns[0]);
+      }
     } catch {
-      setToastMessage('Failed to load staging pattern');
+      setToastMessage('Failed to load staging file');
       setTimeout(() => setToastMessage(''), 3000);
     }
-  }, [applyStagingPattern, fetchStaging]);
-
-  const waitForNextPattern = useCallback(
-    (currentId: string) => {
-      setWaiting(true);
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
-      pollingRef.current = setInterval(async () => {
-        try {
-          const staging = await fetchStaging();
-          if (staging.id !== currentId) {
-            if (pollingRef.current) {
-              clearInterval(pollingRef.current);
-              pollingRef.current = null;
-            }
-            setWaiting(false);
-            applyStagingPattern(staging);
-          }
-        } catch {
-          // keep polling
-        }
-      }, 1500);
-    },
-    [applyStagingPattern, fetchStaging],
-  );
+  }, [applyPattern]);
 
   const hasLoadedRef = useRef<boolean | null>(null);
   if (hasLoadedRef.current == null) {
     hasLoadedRef.current = true;
-    loadStagingPattern();
+    loadQueue();
   }
+
+  const advance = useCallback(
+    (newIndex: number) => {
+      if (newIndex < queue.length) {
+        setQueueIndex(newIndex);
+        applyPattern(queue[newIndex]);
+      }
+    },
+    [queue, applyPattern],
+  );
+
+  const handleApprove = useCallback(() => {
+    const current = queue[queueIndex];
+    if (!current) return;
+    setApproved(prev => [...prev, current.id]);
+    setToastMessage(`Approved: ${current.name}`);
+    setTimeout(() => setToastMessage(''), 2000);
+    advance(queueIndex + 1);
+  }, [queue, queueIndex, advance]);
+
+  const handleReject = useCallback(() => {
+    const current = queue[queueIndex];
+    if (!current) return;
+    setRejected(prev => [...prev, current.id]);
+    setToastMessage(`Rejected: ${current.name}`);
+    setTimeout(() => setToastMessage(''), 2000);
+    advance(queueIndex + 1);
+  }, [queue, queueIndex, advance]);
 
   const handleApproveEdited = useCallback(async () => {
     const { config } = meta;
@@ -125,19 +134,26 @@ function AuditionInner() {
       await navigator.clipboard.writeText(
         JSON.stringify(pattern, null, 2)
       );
-      setToastMessage('Copied to clipboard!');
-      setTimeout(() => setToastMessage(''), 2000);
+      setEdited(prev => [...prev, pattern.id]);
+      setApproved(prev => [...prev, pattern.id]);
+      setToastMessage(
+        `Copied edited ${patternName} — paste to chat`
+      );
+      setTimeout(() => setToastMessage(''), 3000);
+      advance(queueIndex + 1);
     } catch {
       setToastMessage('Clipboard write failed');
       setTimeout(() => setToastMessage(''), 3000);
     }
   }, [meta, state.currentPattern.id, patternName,
-    patternCategory]);
+    patternCategory, advance, queueIndex]);
+
+  const atEnd = queueIndex >= queue.length && queue.length > 0;
 
   return (
     <div className="h-dvh overflow-hidden flex flex-col bg-neutral-950 text-neutral-100 font-sans">
       <div className="max-w-none lg:max-w-4xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-4 flex flex-col flex-1 min-h-0">
-        {/* Header: pattern info */}
+        {/* Header */}
         <div className="border-b border-neutral-800 pb-3 space-y-2">
           <div className="flex justify-between items-center">
             <div>
@@ -151,6 +167,19 @@ function AuditionInner() {
                 {patternCategory && (
                   <span className="ml-2 text-neutral-500">
                     {patternCategory}
+                  </span>
+                )}
+                {queue.length > 0 && (
+                  <span className="ml-3 text-neutral-600 text-xs">
+                    {Math.min(queueIndex + 1, queue.length)} / {queue.length}
+                    {' · '}
+                    {approved.length} approved
+                    {rejected.length > 0 && (
+                      <>{' · '}{rejected.length} rejected</>
+                    )}
+                    {edited.length > 0 && (
+                      <>{' · '}{edited.length} edited</>
+                    )}
                   </span>
                 )}
               </p>
@@ -186,51 +215,72 @@ function AuditionInner() {
         </div>
 
         {/* Action bar */}
-        <div className="border-t border-neutral-800 py-3 flex gap-3 items-center">
+        <div className="border-t border-neutral-800 py-3 flex gap-3 items-center flex-wrap">
+          {atEnd ? (
+            <div className="flex gap-3 items-center">
+              <span className="text-sm text-neutral-400">
+                Batch complete — {approved.length} approved,
+                {' '}{rejected.length} rejected
+                {edited.length > 0 && (
+                  <>, {edited.length} edited</>
+                )}.
+              </span>
+              <button
+                onClick={async () => {
+                  const results = JSON.stringify({
+                    approved,
+                    rejected,
+                    edited,
+                  });
+                  try {
+                    await navigator.clipboard.writeText(
+                      results
+                    );
+                    setToastMessage('Results copied!');
+                    setTimeout(
+                      () => setToastMessage(''), 2000
+                    );
+                  } catch {
+                    setToastMessage('Copy failed');
+                    setTimeout(
+                      () => setToastMessage(''), 3000
+                    );
+                  }
+                }}
+                className="px-3 py-1 bg-orange-600 hover:bg-orange-700 rounded-lg font-bold text-sm transition-colors"
+              >
+                Copy Results
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={handleApprove}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-sm transition-colors"
+              >
+                Approve
+              </button>
+              <button
+                onClick={handleReject}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-sm transition-colors"
+              >
+                Reject
+              </button>
+              <button
+                onClick={handleApproveEdited}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-sm transition-colors"
+              >
+                Approve Edited
+              </button>
+            </>
+          )}
           <button
-            onClick={() => {
-              setToastMessage(
-                `Approved: ${patternName}`
-              );
-              setTimeout(() => setToastMessage(''), 2000);
-              waitForNextPattern(patternId);
-            }}
-            disabled={waiting}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
-          >
-            Approve
-          </button>
-          <button
-            onClick={() => {
-              setToastMessage(
-                `Rejected: ${patternName}`
-              );
-              setTimeout(() => setToastMessage(''), 2000);
-              waitForNextPattern(patternId);
-            }}
-            disabled={waiting}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
-          >
-            Reject
-          </button>
-          <button
-            onClick={handleApproveEdited}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-sm transition-colors"
-          >
-            Approve Edited
-          </button>
-          <button
-            onClick={loadStagingPattern}
+            onClick={loadQueue}
             className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 rounded-lg font-bold text-sm transition-colors"
           >
             Reload
           </button>
-          {waiting && (
-            <span className="text-sm text-yellow-400 ml-2 animate-pulse">
-              Waiting for next pattern...
-            </span>
-          )}
-          {toastMessage && !waiting && (
+          {toastMessage && (
             <span className="text-sm text-green-400 ml-2">
               {toastMessage}
             </span>
