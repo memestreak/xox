@@ -50,7 +50,7 @@ describe('TransportControls pattern picker', () => {
       screen.getByRole('button', { name: /pattern/i })
     );
     expect(
-      screen.getByRole('button', { name: 'Funk' })
+      screen.getByRole('button', { name: 'House' })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Rock' })

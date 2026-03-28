@@ -50,10 +50,10 @@ describe('getCategorizedPatterns', () => {
 
   it('has expected categories', () => {
     const categories = result.map(g => g.category);
-    expect(categories).toContain('Funk');
+    expect(categories).toContain('House');
     expect(categories).toContain('Rock');
-    expect(categories).toContain('Disco');
-    expect(categories).toContain('Other');
+    expect(categories).toContain('Trap');
+    expect(categories).toContain('Afrobeat');
   });
 
   it('categories are sorted alphabetically', () => {
@@ -67,17 +67,20 @@ describe('getCategorizedPatterns', () => {
     expect(withoutOther).toEqual(sorted);
   });
 
-  it('Other is the last category', () => {
+  it('last category is alphabetically last', () => {
     const categories = result.map(g => g.category);
+    const sorted = [...categories].sort(
+      (a, b) => a.localeCompare(b)
+    );
     expect(categories[categories.length - 1]).toBe(
-      'Other'
+      sorted[sorted.length - 1]
     );
   });
 
-  it('accounts for all 137 patterns', () => {
+  it('accounts for all 142 patterns', () => {
     const total = result.reduce(
       (sum, g) => sum + g.patterns.length, 0
     );
-    expect(total).toBe(137);
+    expect(total).toBe(142);
   });
 });
