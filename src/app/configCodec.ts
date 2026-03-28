@@ -6,47 +6,72 @@ import type {
   SequencerConfig,
   StepConditions,
   StepLocks,
+  TrackConfig,
   TrackId,
   TrackMixerState,
 } from './types';
 import { TRACK_IDS } from './types';
 
-const CONFIG_VERSION = 3;
+const CONFIG_VERSION = 4;
 const DEFAULT_KIT_ID = '808';
 const BPM_MIN = 20;
 const BPM_MAX = 300;
 const DEFAULT_BPM = 110;
-const PATTERN_LENGTH_MIN = 1;
-const PATTERN_LENGTH_MAX = 64;
-const DEFAULT_PATTERN_LENGTH = 16;
+const DEFAULT_TRACK_LENGTH = 16;
 
 /**
  * Build the default config from the first kit and pattern.
+ *
+ * Note: patterns.json may still be in the old format
+ * (with `steps` instead of `tracks`), so we handle both.
  */
 export function defaultConfig(): SequencerConfig {
   const firstPattern = patternsData.patterns[0];
   const mixer = {} as Record<TrackId, TrackMixerState>;
-  const trackLengths = {} as Record<TrackId, number>;
+  const tracks = {} as Record<TrackId, TrackConfig>;
   for (const id of TRACK_IDS) {
     mixer[id] = {
       gain: id === 'ac' ? 0.5 : 1.0,
       isMuted: false,
       isSolo: false,
-      freeRun: false,
     };
-    trackLengths[id] = DEFAULT_PATTERN_LENGTH;
+    // Handle old format (steps) or new format (tracks)
+    const patternAny = firstPattern as Record<
+      string, unknown
+    >;
+    if (
+      patternAny.tracks
+      && typeof patternAny.tracks === 'object'
+    ) {
+      const t = (
+        patternAny.tracks as Record<string, unknown>
+      )[id] as { steps: string } | undefined;
+      tracks[id] = {
+        steps: t?.steps ?? '0'.repeat(DEFAULT_TRACK_LENGTH),
+      };
+    } else if (
+      patternAny.steps
+      && typeof patternAny.steps === 'object'
+    ) {
+      const s = (
+        patternAny.steps as Record<string, string>
+      )[id];
+      tracks[id] = {
+        steps: s ?? '0'.repeat(DEFAULT_TRACK_LENGTH),
+      };
+    } else {
+      tracks[id] = {
+        steps: '0'.repeat(DEFAULT_TRACK_LENGTH),
+      };
+    }
   }
   return {
     version: CONFIG_VERSION,
     kitId: kitsData.kits[0].id,
     bpm: DEFAULT_BPM,
-    patternLength: DEFAULT_PATTERN_LENGTH,
-    trackLengths,
-    steps: firstPattern.steps as Record<TrackId, string>,
+    tracks,
     mixer,
     swing: 0,
-    trigConditions: {},
-    parameterLocks: {},
   };
 }
 
@@ -85,26 +110,40 @@ function fromBase64url(str: string): Uint8Array {
  *
  * Pipeline: JSON.stringify -> deflate-raw -> base64url
  *
- * Args:
- *   config: The sequencer configuration to encode.
- *
- * Returns:
- *   A URL-safe base64 encoded string.
+ * Strips empty optional fields per-track to keep URLs small.
  */
 export async function encodeConfig(
   config: SequencerConfig
 ): Promise<string> {
-  const toEncode: Record<string, unknown> = {
-    ...config,
-  };
-  // Strip empty parameterLocks to keep URLs small
-  if (
-    Object.keys(
-      config.parameterLocks ?? {}
-    ).length === 0
-  ) {
-    delete toEncode.parameterLocks;
+  const tracks: Record<string, unknown> = {};
+  for (const id of TRACK_IDS) {
+    const t = config.tracks[id];
+    const compact: Record<string, unknown> = {
+      steps: t.steps,
+    };
+    if (t.freeRun) compact.freeRun = true;
+    if (
+      t.trigConditions
+      && Object.keys(t.trigConditions).length > 0
+    ) {
+      compact.trigConditions = t.trigConditions;
+    }
+    if (
+      t.parameterLocks
+      && Object.keys(t.parameterLocks).length > 0
+    ) {
+      compact.parameterLocks = t.parameterLocks;
+    }
+    tracks[id] = compact;
   }
+  const toEncode = {
+    version: config.version,
+    kitId: config.kitId,
+    bpm: config.bpm,
+    tracks,
+    mixer: config.mixer,
+    swing: config.swing,
+  };
   const json = JSON.stringify(toEncode);
   const stream = new Blob([json]).stream()
     .pipeThrough(
@@ -121,16 +160,7 @@ export async function encodeConfig(
  *
  * Applies defensive validation: unknown kit IDs fall back to
  * "808", BPM is clamped to 20-300, missing fields merge with
- * defaults.
- *
- * Args:
- *   hash: The URL-safe base64 encoded string to decode.
- *
- * Returns:
- *   A validated SequencerConfig.
- *
- * Raises:
- *   Error: If decompression or JSON parsing fails.
+ * defaults. Old version configs return defaults.
  */
 export async function decodeConfig(
   hash: string
@@ -148,9 +178,8 @@ export async function decodeConfig(
 /**
  * Validate and sanitize a raw parsed config object.
  *
- * Merges missing fields from defaults, clamps BPM, and
- * validates the kit ID against known kits. V1 configs
- * without patternLength/trackLengths get defaults.
+ * Rejects old versions (< CONFIG_VERSION) by returning
+ * defaults. Validates all fields defensively.
  */
 function validateConfig(
   raw: unknown
@@ -162,39 +191,28 @@ function validateConfig(
 
   const obj = raw as Record<string, unknown>;
 
+  // Reject old versions
+  if (obj.version !== CONFIG_VERSION) {
+    return defaults;
+  }
+
   const kitId = validateKitId(obj.kitId);
   const bpm = validateBpm(obj.bpm);
-  const patternLength = validatePatternLength(
-    obj.patternLength
-  );
-  const trackLengths = validateTrackLengths(
-    obj.trackLengths, patternLength
-  );
-  const steps = validateSteps(
-    obj.steps, defaults.steps, trackLengths
+  const tracks = validateTracks(
+    obj.tracks, defaults.tracks
   );
   const mixer = validateMixer(
     obj.mixer, defaults.mixer
   );
   const swing = validateSwing(obj.swing);
-  const trigConditions = validateTrigConditions(
-    obj.trigConditions, trackLengths
-  );
-  const parameterLocks = validateParameterLocks(
-    obj.parameterLocks
-  );
 
   return {
     version: CONFIG_VERSION,
     kitId,
     bpm,
-    patternLength,
-    trackLengths,
-    steps,
+    tracks,
     mixer,
     swing,
-    trigConditions,
-    parameterLocks,
   };
 }
 
@@ -215,16 +233,6 @@ function validateBpm(value: unknown): number {
   );
 }
 
-function validatePatternLength(value: unknown): number {
-  if (typeof value !== 'number' || !isFinite(value)) {
-    return DEFAULT_PATTERN_LENGTH;
-  }
-  return Math.max(
-    PATTERN_LENGTH_MIN,
-    Math.min(PATTERN_LENGTH_MAX, Math.round(value))
-  );
-}
-
 const SWING_MIN = 0;
 const SWING_MAX = 100;
 const DEFAULT_SWING = 0;
@@ -239,77 +247,123 @@ function validateSwing(value: unknown): number {
   );
 }
 
-function validateTrackLengths(
+const MAX_STEP_LENGTH = 64;
+const MAX_STEP_INDEX = 63;
+
+/**
+ * Validate all tracks, filling in defaults for missing
+ * tracks.
+ */
+function validateTracks(
   value: unknown,
-  patternLength: number
-): Record<TrackId, number> {
-  const result = {} as Record<TrackId, number>;
-  for (const id of TRACK_IDS) {
-    result[id] = patternLength;
-  }
+  fallbackTracks: Record<TrackId, TrackConfig>
+): Record<TrackId, TrackConfig> {
+  const result = {} as Record<TrackId, TrackConfig>;
   if (value === null || typeof value !== 'object') {
-    return result;
+    return { ...fallbackTracks };
   }
   const obj = value as Record<string, unknown>;
   for (const id of TRACK_IDS) {
-    const v = obj[id];
-    if (typeof v === 'number' && isFinite(v)) {
-      result[id] = Math.max(
-        1, Math.min(patternLength, Math.round(v))
-      );
-    }
+    result[id] = validateSingleTrack(
+      obj[id], fallbackTracks[id]
+    );
   }
   return result;
 }
 
 /**
- * Validate step strings. Accepts 1-64 char binary strings.
- * Normalizes each string to its track's length from
- * trackLengths (pads with '0' or truncates).
+ * Validate a single track config.
+ * - steps: binary string 1-64 chars
+ * - freeRun: optional boolean
+ * - trigConditions: optional map of step index -> condition
+ * - parameterLocks: optional map of step index -> locks
  */
-function validateSteps(
-  value: unknown,
-  fallback: Record<TrackId, string>,
-  trackLengths: Record<TrackId, number>
-): Record<TrackId, string> {
-  if (value === null || typeof value !== 'object') {
-    return normalizeSteps(fallback, trackLengths);
+function validateSingleTrack(
+  raw: unknown,
+  fallback: TrackConfig
+): TrackConfig {
+  if (raw === null || typeof raw !== 'object') {
+    return { ...fallback };
   }
-  const obj = value as Record<string, unknown>;
-  const result = { ...fallback };
-  for (const id of TRACK_IDS) {
-    const s = obj[id];
-    if (
-      typeof s === 'string' &&
-      s.length >= 1 &&
-      s.length <= PATTERN_LENGTH_MAX &&
-      /^[01]+$/.test(s)
-    ) {
-      result[id] = s;
-    }
-  }
-  return normalizeSteps(result, trackLengths);
-}
+  const obj = raw as Record<string, unknown>;
 
-/**
- * Pad or truncate each track's step string to match its
- * track length.
- */
-function normalizeSteps(
-  steps: Record<TrackId, string>,
-  trackLengths: Record<TrackId, number>
-): Record<TrackId, string> {
-  const result = { ...steps };
-  for (const id of TRACK_IDS) {
-    const len = trackLengths[id];
-    const cur = result[id];
-    if (cur.length < len) {
-      result[id] = cur.padEnd(len, '0');
-    } else if (cur.length > len) {
-      result[id] = cur.substring(0, len);
+  // Validate steps
+  let steps: string;
+  if (
+    typeof obj.steps === 'string'
+    && obj.steps.length >= 1
+    && obj.steps.length <= MAX_STEP_LENGTH
+    && /^[01]+$/.test(obj.steps)
+  ) {
+    steps = obj.steps;
+  } else {
+    steps = fallback.steps;
+  }
+
+  const track: TrackConfig = { steps };
+
+  // Validate freeRun
+  if (typeof obj.freeRun === 'boolean' && obj.freeRun) {
+    track.freeRun = true;
+  }
+
+  // Validate trigConditions
+  if (
+    obj.trigConditions !== null
+    && obj.trigConditions !== undefined
+    && typeof obj.trigConditions === 'object'
+  ) {
+    const tcObj = obj.trigConditions as Record<
+      string, unknown
+    >;
+    const validConditions: Record<
+      number, StepConditions
+    > = {};
+    for (const key of Object.keys(tcObj)) {
+      const stepIndex = Number(key);
+      if (
+        !Number.isInteger(stepIndex)
+        || stepIndex < 0
+        || stepIndex > MAX_STEP_INDEX
+      ) continue;
+      const cond = validateSingleCondition(tcObj[key]);
+      if (cond !== null) {
+        validConditions[stepIndex] = cond;
+      }
+    }
+    if (Object.keys(validConditions).length > 0) {
+      track.trigConditions = validConditions;
     }
   }
-  return result;
+
+  // Validate parameterLocks
+  if (
+    obj.parameterLocks !== null
+    && obj.parameterLocks !== undefined
+    && typeof obj.parameterLocks === 'object'
+  ) {
+    const plObj = obj.parameterLocks as Record<
+      string, unknown
+    >;
+    const validLocks: Record<number, StepLocks> = {};
+    for (const key of Object.keys(plObj)) {
+      const stepIndex = Number(key);
+      if (
+        !Number.isInteger(stepIndex)
+        || stepIndex < 0
+        || stepIndex > MAX_STEP_INDEX
+      ) continue;
+      const lock = validateSingleLock(plObj[key]);
+      if (lock !== null) {
+        validLocks[stepIndex] = lock;
+      }
+    }
+    if (Object.keys(validLocks).length > 0) {
+      track.parameterLocks = validLocks;
+    }
+  }
+
+  return track;
 }
 
 const PROB_MIN = 1;
@@ -400,60 +454,6 @@ function validateSingleCondition(
 }
 
 /**
- * Validate trigConditions map. Drops entries with
- * invalid step indices (>= trackLength) or invalid
- * condition objects.
- */
-function validateTrigConditions(
-  value: unknown,
-  trackLengths: Record<TrackId, number>
-): SequencerConfig['trigConditions'] {
-  if (
-    value === null || typeof value !== 'object'
-  ) return {};
-  const obj = value as Record<string, unknown>;
-  const result: SequencerConfig['trigConditions'] = {};
-
-  for (const id of TRACK_IDS) {
-    const trackEntry = obj[id];
-    if (
-      trackEntry === null
-      || typeof trackEntry !== 'object'
-    ) continue;
-
-    const trackLength = trackLengths[id];
-    const stepMap =
-      trackEntry as Record<string, unknown>;
-    const validSteps: Record<
-      number, StepConditions
-    > = {};
-
-    for (const key of Object.keys(stepMap)) {
-      const stepIndex = Number(key);
-      if (
-        !Number.isInteger(stepIndex)
-        || stepIndex < 0
-        || stepIndex >= trackLength
-      ) continue;
-      const cond = validateSingleCondition(
-        stepMap[key]
-      );
-      if (cond !== null) {
-        validSteps[stepIndex] = cond;
-      }
-    }
-
-    if (Object.keys(validSteps).length > 0) {
-      result[id] = validSteps;
-    }
-  }
-
-  return result;
-}
-
-const MAX_STEP_INDEX = 63;
-
-/**
  * Validate a single StepLocks object.
  * Returns null if no valid fields remain.
  */
@@ -475,53 +475,6 @@ function validateSingleLock(
 
   if (Object.keys(sl).length === 0) return null;
   return sl;
-}
-
-/**
- * Validate parameterLocks map. Drops ac track,
- * invalid step indices, and invalid lock objects.
- */
-function validateParameterLocks(
-  value: unknown
-): SequencerConfig['parameterLocks'] {
-  if (
-    value === null || typeof value !== 'object'
-  ) return {};
-  const obj = value as Record<string, unknown>;
-  const result:
-    SequencerConfig['parameterLocks'] = {};
-
-  for (const id of TRACK_IDS) {
-    if (id === 'ac') continue;
-    const trackEntry = obj[id];
-    if (
-      trackEntry === null
-      || typeof trackEntry !== 'object'
-    ) continue;
-
-    const stepMap =
-      trackEntry as Record<string, unknown>;
-    const validSteps: Record<number, StepLocks> = {};
-
-    for (const key of Object.keys(stepMap)) {
-      const stepIndex = Number(key);
-      if (
-        !Number.isInteger(stepIndex)
-        || stepIndex < 0
-        || stepIndex > MAX_STEP_INDEX
-      ) continue;
-      const lock = validateSingleLock(stepMap[key]);
-      if (lock !== null) {
-        validSteps[stepIndex] = lock;
-      }
-    }
-
-    if (Object.keys(validSteps).length > 0) {
-      result[id] = validSteps;
-    }
-  }
-
-  return result;
 }
 
 function validateMixer(
@@ -550,10 +503,6 @@ function validateMixer(
           typeof t.isSolo === 'boolean'
             ? t.isSolo
             : fallback[id].isSolo,
-        freeRun:
-          typeof t.freeRun === 'boolean'
-            ? t.freeRun
-            : fallback[id].freeRun,
       };
     }
   }
