@@ -41,7 +41,7 @@ describe('getCategorizedPatterns', () => {
 
   it('falls back to Other for missing category', () => {
     const noCategory = [
-      { id: 'x', name: 'X', steps: {} },
+      { id: 'x', name: 'X', tracks: {} },
     ] as Pattern[];
     const groups = getCategorizedPatterns(noCategory);
     expect(groups).toHaveLength(1);
