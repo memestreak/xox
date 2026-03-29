@@ -2,7 +2,9 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useSequencer } from '../app/SequencerContext';
 import { TRACK_IDS } from '../app/types';
-import type { TrackId, StepLocks } from '../app/types';
+import type {
+  TrackId, StepLocks, TrackConfig,
+} from '../app/types';
 import patternsData from '../app/data/patterns.json';
 import type { Pattern } from '../app/types';
 import { TestWrapper } from './helpers/sequencer-wrapper';
@@ -84,7 +86,7 @@ async function setupAndTrigger(
   await act(async () => {
     // First, set all tracks to inactive at step 0
     for (const id of TRACK_IDS) {
-      const current = result.current.meta.config.steps[id];
+      const current = result.current.meta.config.tracks[id].steps;
       if (current[0] === '1') {
         result.current.actions.toggleStep(id, 0);
       }
@@ -94,14 +96,14 @@ async function setupAndTrigger(
   // Now activate the tracks we want at step 0
   await act(async () => {
     for (const id of activeTracks) {
-      const current = result.current.meta.config.steps[id];
+      const current = result.current.meta.config.tracks[id].steps;
       if (current[0] === '0') {
         result.current.actions.toggleStep(id, 0);
       }
     }
     // Set accent
     if (accentStep0) {
-      const acCurrent = result.current.meta.config.steps.ac;
+      const acCurrent = result.current.meta.config.tracks.ac.steps;
       if (acCurrent[0] === '0') {
         result.current.actions.toggleStep('ac', 0);
       }
@@ -326,7 +328,7 @@ describe('handleStep swing timing', () => {
       // Clear step 0 for bd, set step 1
       for (const id of TRACK_IDS) {
         const cur =
-          result.current.meta.config.steps[id];
+          result.current.meta.config.tracks[id].steps;
         if (cur[0] === '1') {
           result.current.actions.toggleStep(id, 0);
         }
@@ -335,7 +337,7 @@ describe('handleStep swing timing', () => {
 
     await act(async () => {
       const cur =
-        result.current.meta.config.steps.bd;
+        result.current.meta.config.tracks.bd.steps;
       if (cur[1] === '0') {
         result.current.actions.toggleStep('bd', 1);
       }
@@ -415,7 +417,7 @@ describe('handleStep swing timing', () => {
       result.current.actions.setSwing(100);
       for (const id of TRACK_IDS) {
         const cur =
-          result.current.meta.config.steps[id];
+          result.current.meta.config.tracks[id].steps;
         if (cur[0] === '1') {
           result.current.actions.toggleStep(id, 0);
         }
@@ -424,7 +426,7 @@ describe('handleStep swing timing', () => {
 
     await act(async () => {
       const cur =
-        result.current.meta.config.steps.bd;
+        result.current.meta.config.tracks.bd.steps;
       if (cur[1] === '0') {
         result.current.actions.toggleStep('bd', 1);
       }
@@ -470,7 +472,7 @@ describe('handleStep swing timing', () => {
       result.current.actions.setSwing(50);
       for (const id of TRACK_IDS) {
         const cur =
-          result.current.meta.config.steps[id];
+          result.current.meta.config.tracks[id].steps;
         if (cur[0] === '1') {
           result.current.actions.toggleStep(id, 0);
         }
@@ -479,7 +481,7 @@ describe('handleStep swing timing', () => {
 
     await act(async () => {
       const cur =
-        result.current.meta.config.steps.bd;
+        result.current.meta.config.tracks.bd.steps;
       if (cur[1] === '0') {
         result.current.actions.toggleStep('bd', 1);
       }
@@ -652,7 +654,7 @@ describe('trig conditions in handleStep', () => {
 
       expect(
         result.current.meta.config
-          .trigConditions.bd?.[0]
+          .tracks.bd.trigConditions?.[0]
       ).toEqual({ probability: 50 });
 
       await act(async () => {
@@ -663,12 +665,12 @@ describe('trig conditions in handleStep', () => {
 
       expect(
         result.current.meta.config
-          .trigConditions.bd?.[0]
+          .tracks.bd.trigConditions?.[0]
       ).toBeUndefined();
     }
   );
 
-  it('shortening track prunes conditions beyond length',
+  it('shortening track preserves conditions beyond length as dormant',
     async () => {
       const { result } = renderSequencer();
 
@@ -681,10 +683,12 @@ describe('trig conditions in handleStep', () => {
         result.current.actions.setTrackLength('bd', 8);
       });
 
+      // Condition survives as dormant data even though
+      // the track is now shorter than step 15
       expect(
         result.current.meta.config
-          .trigConditions.bd?.[15]
-      ).toBeUndefined();
+          .tracks.bd.trigConditions?.[15]
+      ).toEqual({ probability: 75 });
     }
   );
 
@@ -703,12 +707,12 @@ describe('trig conditions in handleStep', () => {
 
       expect(
         result.current.meta.config
-          .trigConditions.bd?.[3]
+          .tracks.bd.trigConditions?.[3]
       ).toEqual({ probability: 75 });
     }
   );
 
-  it('shortening pattern length prunes conditions',
+  it('shortening pattern length preserves conditions as dormant',
     async () => {
       const { result } = renderSequencer();
 
@@ -721,10 +725,12 @@ describe('trig conditions in handleStep', () => {
         result.current.actions.setPatternLength(8);
       });
 
+      // Condition survives as dormant data even though
+      // the pattern is now shorter than step 15
       expect(
         result.current.meta.config
-          .trigConditions.bd?.[15]
-      ).toBeUndefined();
+          .tracks.bd.trigConditions?.[15]
+      ).toEqual({ probability: 75 });
     }
   );
 
@@ -741,9 +747,12 @@ describe('trig conditions in handleStep', () => {
         result.current.actions.clearAll();
       });
 
+      // After clearAll, every track resets to bare
+      // { steps: '0'.repeat(16) } with no conditions
       expect(
-        result.current.meta.config.trigConditions
-      ).toEqual({});
+        result.current.meta.config
+          .tracks.bd.trigConditions
+      ).toBeUndefined();
     }
   );
 
@@ -762,9 +771,11 @@ describe('trig conditions in handleStep', () => {
         );
       });
 
+      // Preset patterns have no trigConditions
       expect(
-        result.current.meta.config.trigConditions
-      ).toEqual({});
+        result.current.meta.config
+          .tracks.bd.trigConditions
+      ).toBeUndefined();
     }
   );
 
@@ -775,7 +786,7 @@ describe('trig conditions in handleStep', () => {
       // Turn step 0 of bd on
       await act(async () => {
         const cur =
-          result.current.meta.config.steps.bd;
+          result.current.meta.config.tracks.bd.steps;
         if (cur[0] === '0') {
           result.current.actions.toggleStep('bd', 0);
         }
@@ -797,7 +808,7 @@ describe('trig conditions in handleStep', () => {
       // Condition should persist
       expect(
         result.current.meta.config
-          .trigConditions.bd?.[0]
+          .tracks.bd.trigConditions?.[0]
       ).toEqual({ probability: 50 });
 
       // Toggle step back on
@@ -808,7 +819,7 @@ describe('trig conditions in handleStep', () => {
       // Condition should still be there
       expect(
         result.current.meta.config
-          .trigConditions.bd?.[0]
+          .tracks.bd.trigConditions?.[0]
       ).toEqual({ probability: 50 });
     }
   );
@@ -825,7 +836,7 @@ describe('trig conditions in handleStep', () => {
 
       expect(
         result.current.meta.config
-          .parameterLocks.bd?.[0]
+          .tracks.bd.parameterLocks?.[0]
       ).toEqual({ gain: 0.5 });
 
       await act(async () => {
@@ -834,7 +845,7 @@ describe('trig conditions in handleStep', () => {
 
       expect(
         result.current.meta.config
-          .parameterLocks.bd
+          .tracks.bd.parameterLocks
       ).toBeUndefined();
     }
   );
@@ -979,13 +990,15 @@ describe('handleStep parameter locks', () => {
 function makePattern(
   id: string, bdSteps: string
 ): Pattern {
-  const steps = {} as Record<TrackId, string>;
+  const tracks = {} as Record<TrackId, TrackConfig>;
   for (const tid of TRACK_IDS) {
-    steps[tid] = tid === 'bd'
-      ? bdSteps
-      : '0'.repeat(bdSteps.length);
+    tracks[tid] = {
+      steps: tid === 'bd'
+        ? bdSteps
+        : '0'.repeat(bdSteps.length),
+    };
   }
-  return { id, name: id, steps };
+  return { id, name: id, tracks };
 }
 
 describe('step boundary hooks', () => {
@@ -1030,7 +1043,7 @@ describe('step boundary hooks', () => {
 
     // Pattern should NOT have changed yet
     expect(
-      result.current.state.currentPattern.id
+      result.current.state.selectedPatternId
     ).not.toBe('pending');
 
     // Step through to the last step (15 for 16-step)
@@ -1041,7 +1054,7 @@ describe('step boundary hooks', () => {
     // After last step, pending should be applied
     await waitFor(() => {
       expect(
-        result.current.state.currentPattern.id
+        result.current.state.selectedPatternId
       ).toBe('pending');
     });
 
@@ -1099,7 +1112,7 @@ describe('step boundary hooks', () => {
       result.current.state.tempState
     ).toBe('active');
     expect(
-      result.current.state.currentPattern.id
+      result.current.state.selectedPatternId
     ).toBe('temp');
 
     mockRequestReset.mockClear();
@@ -1116,7 +1129,7 @@ describe('step boundary hooks', () => {
       ).toBe('off');
     });
     expect(
-      result.current.state.currentPattern.id
+      result.current.state.selectedPatternId
     ).toBe('home');
     // Temp revert calls requestReset
     expect(mockRequestReset).toHaveBeenCalled();
