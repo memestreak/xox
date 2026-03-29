@@ -7,16 +7,32 @@ const mockSetPatternLength = vi.fn();
 const mockSetSwing = vi.fn();
 const mockClearAll = vi.fn();
 
+const MOCK_IDS = [
+  'ac','bd','sd','ch','oh','cy','ht','mt','lt','rs','cp','cb',
+] as const;
+
+function makeMockTracks(len = 16) {
+  const t: Record<string, { steps: string }> = {};
+  for (const id of MOCK_IDS) {
+    t[id] = { steps: '0'.repeat(len) };
+  }
+  return t;
+}
+
 vi.mock('../app/SequencerContext', () => ({
   useSequencer: () => ({
     state: {
-      patternLength: 16,
       swing: 0,
     },
     actions: {
       setPatternLength: mockSetPatternLength,
       setSwing: mockSetSwing,
       clearAll: mockClearAll,
+    },
+    meta: {
+      config: {
+        tracks: makeMockTracks(),
+      },
     },
   }),
 }));
