@@ -10,11 +10,12 @@ import { MidiProvider } from './MidiContext';
 import TransportControls from './TransportControls';
 import StepGrid from './StepGrid';
 import PageIndicator from './PageIndicator';
+import { getPatternLength } from './types';
 
 function SequencerInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { state } = useSequencer();
-  const { patternLength } = state;
+  const { meta } = useSequencer();
+  const patternLength = getPatternLength(meta.config.tracks);
 
   const [currentPage, setCurrentPage] = useState(0);
   const [autoFollow, setAutoFollow] = useState(true);

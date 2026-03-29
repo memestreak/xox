@@ -41,22 +41,16 @@ const categories: PatternCategory[] = [
   { category: 'Rock', patterns: rockPatterns },
 ];
 
-const customPattern: Pattern = {
-  id: 'custom',
-  name: 'Custom',
-  steps: { ...emptySteps },
-};
-
 // --------------- helpers ---------------
 
 function renderPicker(
-  currentPattern: Pattern = funkPatterns[0],
+  selectedPatternId: string = funkPatterns[0].id,
   onSelect = vi.fn(),
 ) {
   return render(
     <PatternPicker
       categories={categories}
-      currentPattern={currentPattern}
+      selectedPatternId={selectedPatternId}
       onSelect={onSelect}
     />,
   );
@@ -67,14 +61,14 @@ function renderPicker(
 describe('PatternPicker', () => {
   describe('trigger button', () => {
     it('shows current pattern name', () => {
-      renderPicker(funkPatterns[0]);
+      renderPicker('funk-1');
       expect(
         screen.getByRole('button', { name: /pattern/i }),
       ).toHaveTextContent('Funk 1');
     });
 
     it('shows Custom for custom pattern', () => {
-      renderPicker(customPattern);
+      renderPicker('custom');
       expect(
         screen.getByRole('button', { name: /pattern/i }),
       ).toHaveTextContent('Custom');
@@ -142,7 +136,7 @@ describe('PatternPicker', () => {
 
     it('auto-selects active category on open', async () => {
       const user = userEvent.setup();
-      renderPicker(funkPatterns[0]);
+      renderPicker('funk-1');
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
@@ -155,7 +149,7 @@ describe('PatternPicker', () => {
     it('does not pre-select category for Custom pattern',
       async () => {
         const user = userEvent.setup();
-        renderPicker(customPattern);
+        renderPicker('custom');
         await user.click(
           screen.getByRole('button', { name: /pattern/i }),
         );
@@ -168,7 +162,7 @@ describe('PatternPicker', () => {
 
     it('clicking a pill shows its patterns', async () => {
       const user = userEvent.setup();
-      renderPicker(customPattern);
+      renderPicker('custom');
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
@@ -184,7 +178,7 @@ describe('PatternPicker', () => {
       + ' but is not selected', async () => {
         const user = userEvent.setup();
         // funk-1 is active; open and switch to Rock
-        renderPicker(funkPatterns[0]);
+        renderPicker('funk-1');
         await user.click(
           screen.getByRole('button', { name: /pattern/i }),
         );
@@ -203,7 +197,7 @@ describe('PatternPicker', () => {
     it('selected pill does not have data-has-active',
       async () => {
         const user = userEvent.setup();
-        renderPicker(funkPatterns[0]);
+        renderPicker('funk-1');
         await user.click(
           screen.getByRole('button', { name: /pattern/i }),
         );
@@ -222,7 +216,7 @@ describe('PatternPicker', () => {
     it('calls onSelect with the chosen pattern', async () => {
       const user = userEvent.setup();
       const onSelect = vi.fn();
-      renderPicker(funkPatterns[0], onSelect);
+      renderPicker('funk-1', onSelect);
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
@@ -234,7 +228,7 @@ describe('PatternPicker', () => {
 
     it('modal stays open after selection', async () => {
       const user = userEvent.setup();
-      renderPicker(funkPatterns[0]);
+      renderPicker('funk-1');
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
@@ -248,7 +242,7 @@ describe('PatternPicker', () => {
 
     it('active pattern has aria-selected=true', async () => {
       const user = userEvent.setup();
-      renderPicker(funkPatterns[0]);
+      renderPicker('funk-1');
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
@@ -262,7 +256,7 @@ describe('PatternPicker', () => {
 
     it('inactive patterns have aria-selected=false', async () => {
       const user = userEvent.setup();
-      renderPicker(funkPatterns[0]);
+      renderPicker('funk-1');
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
@@ -278,7 +272,7 @@ describe('PatternPicker', () => {
   describe('footer', () => {
     it('shows active pattern name in footer', async () => {
       const user = userEvent.setup();
-      renderPicker(funkPatterns[0]);
+      renderPicker('funk-1');
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
@@ -289,7 +283,7 @@ describe('PatternPicker', () => {
 
     it('shows Custom in footer for custom pattern', async () => {
       const user = userEvent.setup();
-      renderPicker(customPattern);
+      renderPicker('custom');
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
@@ -302,7 +296,7 @@ describe('PatternPicker', () => {
   describe('scrollbar', () => {
     it('pattern grid has hide-scrollbar class', async () => {
       const user = userEvent.setup();
-      renderPicker(funkPatterns[0]);
+      renderPicker('funk-1');
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );

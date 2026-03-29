@@ -6,110 +6,105 @@ exports[`golden-file tests > defaultConfig() snapshot 1`] = `
   "kitId": "808",
   "mixer": {
     "ac": {
-      "freeRun": false,
       "gain": 0.5,
       "isMuted": false,
       "isSolo": false,
     },
     "bd": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "cb": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "ch": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "cp": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "cy": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "ht": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "lt": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "mt": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "oh": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "rs": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
     "sd": {
-      "freeRun": false,
       "gain": 1,
       "isMuted": false,
       "isSolo": false,
     },
   },
-  "parameterLocks": {},
-  "patternLength": 16,
-  "steps": {
-    "ac": "0000000000000000",
-    "bd": "1000100010001000",
-    "cb": "0000000000000000",
-    "ch": "0000000000000000",
-    "cp": "0000100000001000",
-    "cy": "0000000000000000",
-    "ht": "0000000000000000",
-    "lt": "0000000000000000",
-    "mt": "0000000000000000",
-    "oh": "0010001000100010",
-    "rs": "0000000000000000",
-    "sd": "0000000000000000",
-  },
   "swing": 0,
-  "trackLengths": {
-    "ac": 16,
-    "bd": 16,
-    "cb": 16,
-    "ch": 16,
-    "cp": 16,
-    "cy": 16,
-    "ht": 16,
-    "lt": 16,
-    "mt": 16,
-    "oh": 16,
-    "rs": 16,
-    "sd": 16,
+  "tracks": {
+    "ac": {
+      "steps": "0000000000000000",
+    },
+    "bd": {
+      "steps": "1000100010001000",
+    },
+    "cb": {
+      "steps": "0000000000000000",
+    },
+    "ch": {
+      "steps": "0000000000000000",
+    },
+    "cp": {
+      "steps": "0000100000001000",
+    },
+    "cy": {
+      "steps": "0000000000000000",
+    },
+    "ht": {
+      "steps": "0000000000000000",
+    },
+    "lt": {
+      "steps": "0000000000000000",
+    },
+    "mt": {
+      "steps": "0000000000000000",
+    },
+    "oh": {
+      "steps": "0010001000100010",
+    },
+    "rs": {
+      "steps": "0000000000000000",
+    },
+    "sd": {
+      "steps": "0000000000000000",
+    },
   },
-  "trigConditions": {},
-  "version": 3,
+  "version": 4,
 }
 `;

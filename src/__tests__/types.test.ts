@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { TRACK_IDS } from '../app/types';
+import { TRACK_IDS, getPatternLength } from '../app/types';
 import type {
-  NoteLength, MidiTrackConfig, MidiConfig,
+  NoteLength, MidiTrackConfig, MidiConfig, TrackConfig,
 } from '../app/types';
 
 describe('MIDI types', () => {
@@ -39,6 +39,44 @@ describe('MIDI types', () => {
 
 // Suppress unused-import warning for type-only import
 void (undefined as unknown as MidiTrackConfig);
+
+describe('TrackConfig', () => {
+  it('TrackConfig has expected shape', () => {
+    const tc: TrackConfig = {
+      steps: '1010101010101010',
+    };
+    expect(tc.steps).toBe('1010101010101010');
+    expect(tc.freeRun).toBeUndefined();
+    expect(tc.trigConditions).toBeUndefined();
+    expect(tc.parameterLocks).toBeUndefined();
+
+    const tcFull: TrackConfig = {
+      steps: '10001000100',
+      freeRun: true,
+      trigConditions: { 0: { probability: 50 } },
+      parameterLocks: { 3: { gain: 0.8 } },
+    };
+    expect(tcFull.freeRun).toBe(true);
+  });
+
+  it('getPatternLength returns max step length', () => {
+    const tracks = {
+      ac: { steps: '1010' },
+      bd: { steps: '10101010' },
+      sd: { steps: '101010101010' },
+      ch: { steps: '1010' },
+      oh: { steps: '1010' },
+      cy: { steps: '1010' },
+      ht: { steps: '1010' },
+      mt: { steps: '1010' },
+      lt: { steps: '1010' },
+      rs: { steps: '1010' },
+      cp: { steps: '1010' },
+      cb: { steps: '1010' },
+    };
+    expect(getPatternLength(tracks)).toBe(12);
+  });
+});
 
 describe('TRACK_IDS', () => {
   it('ordering matches snapshot (append-only)', () => {

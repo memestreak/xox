@@ -2,13 +2,12 @@
 
 import { useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { TrackId, TrackPattern } from './types';
+import type { TrackConfig, TrackId, TrackPattern } from './types';
 
 interface UseDragPaintOptions {
   containerRef: RefObject<HTMLDivElement | null>;
   trackOrder: TrackId[];
-  trackLengths: Record<TrackId, number>;
-  steps: Record<TrackId, string>;
+  tracks: Record<TrackId, TrackConfig>;
   onSetStep: (
     trackId: TrackId,
     stepIndex: number,
@@ -132,8 +131,7 @@ function* bresenham(
 export function useDragPaint({
   containerRef,
   trackOrder,
-  trackLengths,
-  steps,
+  tracks,
   onSetStep,
   patterns = [],
   onSetTrackSteps,
@@ -158,7 +156,13 @@ export function useDragPaint({
     escapeHandler: null,
   });
 
-  const stepsAtDown = useRef(steps);
+  const stepsAtDown = useRef(
+    Object.fromEntries(
+      Object.entries(tracks).map(
+        ([id, tc]) => [id, tc.steps]
+      )
+    ) as Record<TrackId, string>
+  );
 
   const trackIndex = useCallback(
     (id: TrackId): number => trackOrder.indexOf(id),
@@ -183,7 +187,7 @@ export function useDragPaint({
         return false;
       }
       const tid = trackOrder[trackIdx];
-      if (stepIdx + pageOffset >= trackLengths[tid]) return false;
+      if (stepIdx + pageOffset >= tracks[tid].steps.length) return false;
       if (
         trackIdx === drag.lastTrackIdx
         && stepIdx === drag.lastStep
@@ -195,7 +199,7 @@ export function useDragPaint({
       onSetStep(tid, stepIdx + pageOffset, drag.paintValue);
       return true;
     },
-    [trackOrder, trackLengths, onSetStep, pageOffset]
+    [trackOrder, tracks, onSetStep, pageOffset]
   );
 
   /**
@@ -243,7 +247,7 @@ export function useDragPaint({
       idx: number
     ): string => {
       const prefix = snapshot.substring(0, startStep);
-      const remaining = trackLengths[trackId] - startStep;
+      const remaining = tracks[trackId].steps.length - startStep;
 
       if (idx === 0) {
         return snapshot;
@@ -257,7 +261,7 @@ export function useDragPaint({
         .padEnd(remaining, '0');
       return prefix + fill;
     },
-    [trackLengths, patterns]
+    [tracks, patterns]
   );
 
   const onPointerDown = useCallback(
@@ -270,9 +274,13 @@ export function useDragPaint({
       if (!hit) return;
 
       const { trackId, stepIndex } = hit;
-      if (stepIndex + pageOffset >= trackLengths[trackId]) return;
+      if (stepIndex + pageOffset >= tracks[trackId].steps.length) return;
 
-      stepsAtDown.current = steps;
+      stepsAtDown.current = Object.fromEntries(
+        Object.entries(tracks).map(
+          ([id, tc]) => [id, tc.steps]
+        )
+      ) as Record<TrackId, string>;
 
       const drag = dragRef.current;
       drag.active = true;
@@ -317,8 +325,7 @@ export function useDragPaint({
           ? '0' : '1';
     },
     [
-      trackLengths,
-      steps,
+      tracks,
       patterns,
       onSetTrackSteps,
       longPressActiveRef,

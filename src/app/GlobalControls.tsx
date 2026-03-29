@@ -4,13 +4,15 @@ import { memo, useCallback } from 'react';
 import Knob from './Knob';
 import { useSequencer } from './SequencerContext';
 import Tooltip from './Tooltip';
+import { getPatternLength } from './types';
 
 /**
  * Global controls section: pattern length, swing, and
  * clear all.
  */
 function GlobalControlsInner() {
-  const { state, actions } = useSequencer();
+  const { state, actions, meta } = useSequencer();
+  const patternLength = getPatternLength(meta.config.tracks);
 
   const handlePatternLength = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -45,7 +47,7 @@ function GlobalControlsInner() {
           <Tooltip tooltipKey="steps">
             <select
               id="global-steps"
-              value={state.patternLength}
+              value={patternLength}
               onChange={handlePatternLength}
               className="bg-neutral-800 border border-neutral-700 rounded p-1 text-xs lg:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors w-12 lg:w-14"
             >

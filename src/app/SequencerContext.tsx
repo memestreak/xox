@@ -16,7 +16,7 @@ import { audioEngine } from './AudioEngine';
 import { midiEngine } from './MidiEngine';
 import { defaultConfig, decodeConfig } from './configCodec';
 import { evaluateCondition } from './trigConditions';
-import { TRACK_IDS } from './types';
+import { TRACK_IDS, getPatternLength } from './types';
 import type {
   HomeSnapshot,
   Kit,
@@ -26,6 +26,7 @@ import type {
   StepConditions,
   StepLocks,
   TempState,
+  TrackConfig,
   TrackId,
   TrackState,
 } from './types';
@@ -68,10 +69,7 @@ const TRACK_NAMES: Record<TrackId, string> = {
 interface SequencerState {
   isPlaying: boolean;
   bpm: number;
-  patternLength: number;
-  trackLengths: Record<TrackId, number>;
   currentKit: Kit;
-  currentPattern: Pattern;
   trackStates: Record<TrackId, TrackState>;
   isLoaded: boolean;
   swing: number;
@@ -79,6 +77,7 @@ interface SequencerState {
   fillMode: 'off' | 'latched' | 'momentary';
   patternMode: PatternMode;
   tempState: TempState;
+  selectedPatternId: string;
 }
 
 interface SequencerActions {
@@ -142,27 +141,6 @@ interface SequencerContextValue {
   state: SequencerState;
   actions: SequencerActions;
   meta: SequencerMeta;
-}
-
-/**
- * Normalize pattern steps to match track lengths
- * (pad with '0' or truncate).
- */
-export function normalizePatternSteps(
-  steps: Record<TrackId, string>,
-  trackLengths: Record<TrackId, number>
-): Record<TrackId, string> {
-  const result = { ...steps };
-  for (const id of TRACK_IDS) {
-    const cur = result[id] ?? '';
-    const len = trackLengths[id];
-    if (cur.length < len) {
-      result[id] = cur.padEnd(len, '0');
-    } else if (cur.length > len) {
-      result[id] = cur.substring(0, len);
-    }
-  }
-  return result;
 }
 
 // ─── Contexts ─────────────────────────────────────────
@@ -299,24 +277,6 @@ export function SequencerProvider({
     return kit ?? kitsData.kits[0];
   }, [config.kitId]);
 
-  const currentPattern = useMemo<Pattern>(() => {
-    if (selectedPatternId === 'custom') {
-      return {
-        id: 'custom',
-        name: 'Custom',
-        steps: config.steps,
-      };
-    }
-    const preset = patternsData.patterns.find(
-      p => p.id === selectedPatternId
-    );
-    return {
-      id: selectedPatternId,
-      name: preset?.name ?? 'Custom',
-      steps: config.steps,
-    };
-  }, [config.steps, selectedPatternId]);
-
   const trackStates = useMemo<
     Record<TrackId, TrackState>
   >(() => {
@@ -331,7 +291,6 @@ export function SequencerProvider({
         gain: m.gain,
         isMuted: m.isMuted,
         isSolo: m.isSolo,
-        freeRun: m.freeRun,
       };
     }
     return result;
@@ -340,7 +299,6 @@ export function SequencerProvider({
   // ─── Audio refs (belt-and-suspenders) ─────────────
 
   const trackStatesRef = useRef(trackStates);
-  const patternRef = useRef(currentPattern);
   const configRef = useRef(config);
   const cycleCountRef = useRef<Record<TrackId, number>>(
     {} as Record<TrackId, number>
@@ -349,10 +307,6 @@ export function SequencerProvider({
   useEffect(() => {
     trackStatesRef.current = trackStates;
   }, [trackStates]);
-
-  useEffect(() => {
-    patternRef.current = currentPattern;
-  }, [currentPattern]);
 
   useEffect(() => {
     configRef.current = config;
@@ -381,8 +335,10 @@ export function SequencerProvider({
   }, [config.bpm]);
 
   useEffect(() => {
-    audioEngine.setPatternLength(config.patternLength);
-  }, [config.patternLength]);
+    audioEngine.setPatternLength(
+      getPatternLength(config.tracks)
+    );
+  }, [config.tracks]);
 
   // ─── Audio step callback ──────────────────────────
 
@@ -393,7 +349,6 @@ export function SequencerProvider({
       stepRef.current = step;
 
       const states = trackStatesRef.current;
-      const pattern = patternRef.current;
       const cfg = configRef.current;
 
       // Swing: offset odd steps forward in time
@@ -410,7 +365,7 @@ export function SequencerProvider({
 
       // Increment cycle count at cycle boundaries
       for (const id of TRACK_IDS) {
-        const len = cfg.trackLengths[id];
+        const len = cfg.tracks[id].steps.length;
         if (total > 0 && total % len === 0) {
           cycleCountRef.current[id] =
             (cycleCountRef.current[id] ?? 0) + 1;
@@ -420,19 +375,19 @@ export function SequencerProvider({
       const trackStep = (
         id: TrackId
       ): number => {
-        const len = cfg.trackLengths[id];
-        return cfg.mixer[id].freeRun
+        const len = cfg.tracks[id].steps.length;
+        return cfg.tracks[id].freeRun
           ? total % len
           : step % len;
       };
 
       const accentStep = trackStep('ac');
       const accentActive =
-        pattern.steps.ac[accentStep] === '1';
+        cfg.tracks.ac.steps[accentStep] === '1';
       let isAccented = false;
       if (accentActive) {
         const accentCond =
-          cfg.trigConditions?.ac?.[accentStep];
+          cfg.tracks.ac.trigConditions?.[accentStep];
         isAccented = evaluateCondition(accentCond, {
           cycleCount:
             cycleCountRef.current.ac ?? 0,
@@ -449,12 +404,12 @@ export function SequencerProvider({
 
         const effectiveStep = trackStep(track.id);
         if (
-          pattern.steps[track.id][effectiveStep]
-            === '1'
+          cfg.tracks[track.id]
+            .steps[effectiveStep] === '1'
         ) {
           const cond =
-            cfg.trigConditions
-              ?.[track.id]?.[effectiveStep];
+            cfg.tracks[track.id]
+              .trigConditions?.[effectiveStep];
           const shouldFire = evaluateCondition(
             cond,
             {
@@ -467,8 +422,8 @@ export function SequencerProvider({
           if (!shouldFire) return;
 
           const locks =
-            cfg.parameterLocks?.[track.id]
-              ?.[effectiveStep];
+            cfg.tracks[track.id]
+              .parameterLocks?.[effectiveStep];
           const baseGain = locks?.gain ?? st.gain;
           const cubic = baseGain ** 3;
           const gain =
@@ -490,30 +445,20 @@ export function SequencerProvider({
       });
 
       // ─── Step boundary: pattern mode hooks ──────
-      if (step === cfg.patternLength - 1) {
+      const patLen = getPatternLength(cfg.tracks);
+      if (step === patLen - 1) {
         // Sequential: apply pending pattern
         const pending = pendingPatternRef.current;
         if (pending) {
-          const normalized = normalizePatternSteps(
-            pending.steps, cfg.trackLengths
-          );
-          patternRef.current = {
-            ...pending,
-            steps: normalized,
-          };
           configRef.current = {
             ...cfg,
-            steps: normalized,
-            trigConditions:
-              pending.trigConditions ?? {},
+            tracks: pending.tracks,
           };
           pendingPatternRef.current = null;
           // Update React state for UI
           setConfig(prev => ({
             ...prev,
-            steps: normalized,
-            trigConditions:
-              pending.trigConditions ?? {},
+            tracks: pending.tracks,
           }));
           setSelectedPatternId(pending.id);
           setPendingPattern(null);
@@ -528,33 +473,20 @@ export function SequencerProvider({
                       // as applying pending
         ) {
           const snap = homeSnapshotRef.current;
-          patternRef.current = {
-            id: snap.selectedPatternId,
-            name: snap.selectedPatternId,
-            steps: snap.steps,
-          };
+          const snapPatLen =
+            getPatternLength(snap.tracks);
           configRef.current = {
             ...cfg,
-            steps: snap.steps,
-            trigConditions: snap.trigConditions,
-            trackLengths: snap.trackLengths,
-            patternLength: snap.patternLength,
+            tracks: snap.tracks,
           };
-          if (
-            snap.patternLength !== cfg.patternLength
-          ) {
-            audioEngine.setPatternLength(
-              snap.patternLength
-            );
+          if (snapPatLen !== patLen) {
+            audioEngine.setPatternLength(snapPatLen);
           }
           audioEngine.requestReset();
           // Update React state
           setConfig(prev => ({
             ...prev,
-            steps: snap.steps,
-            trigConditions: snap.trigConditions,
-            trackLengths: snap.trackLengths,
-            patternLength: snap.patternLength,
+            tracks: snap.tracks,
           }));
           setSelectedPatternId(
             snap.selectedPatternId
@@ -591,10 +523,7 @@ export function SequencerProvider({
         const snap = homeSnapshotRef.current;
         setConfig(prev => ({
           ...prev,
-          steps: snap.steps,
-          trigConditions: snap.trigConditions,
-          trackLengths: snap.trackLengths,
-          patternLength: snap.patternLength,
+          tracks: snap.tracks,
         }));
         setSelectedPatternId(
           snap.selectedPatternId
@@ -620,11 +549,11 @@ export function SequencerProvider({
       audioEngine.start(
         config.bpm,
         handleStep,
-        config.patternLength
+        getPatternLength(config.tracks)
       );
       setIsPlaying(true);
     }
-  }, [isPlaying, config.bpm, config.patternLength,
+  }, [isPlaying, config.bpm, config.tracks,
     handleStep, initCycleCounts]);
 
   useEffect(() => {
@@ -659,19 +588,10 @@ export function SequencerProvider({
 
   const applyPatternNow = useCallback(
     (pattern: Pattern) => {
-      setConfig(prev => {
-        const newSteps = normalizePatternSteps(
-          pattern.steps, prev.trackLengths
-        );
-        return {
-          ...prev,
-          steps: newSteps,
-          trigConditions:
-            pattern.trigConditions ?? {},
-          parameterLocks:
-            pattern.parameterLocks ?? {},
-        };
-      });
+      setConfig(prev => ({
+        ...prev,
+        tracks: pattern.tracks,
+      }));
       setSelectedPatternId(pattern.id);
     },
     []
@@ -690,30 +610,14 @@ export function SequencerProvider({
       // Temp armed: snapshot home, apply via mode,
       // transition to active
       if (ts === 'armed') {
-        setHomeSnapshot({
-          steps: { ...configRef.current.steps },
-          trigConditions: {
-            ...configRef.current.trigConditions,
-          },
+        const snapshot: HomeSnapshot = {
+          tracks: structuredClone(
+            configRef.current.tracks
+          ),
           selectedPatternId,
-          trackLengths: {
-            ...configRef.current.trackLengths,
-          },
-          patternLength:
-            configRef.current.patternLength,
-        });
-        homeSnapshotRef.current = {
-          steps: { ...configRef.current.steps },
-          trigConditions: {
-            ...configRef.current.trigConditions,
-          },
-          selectedPatternId,
-          trackLengths: {
-            ...configRef.current.trackLengths,
-          },
-          patternLength:
-            configRef.current.patternLength,
         };
+        setHomeSnapshot(snapshot);
+        homeSnapshotRef.current = snapshot;
         setTempState('active');
         tempStateRef.current = 'active';
       }
@@ -724,39 +628,16 @@ export function SequencerProvider({
       // Apply based on current mode
       switch (patternMode) {
         case 'sequential': {
-          if (ts === 'armed' || ts === 'active') {
-            // Temp + sequential: still queue
-            setPendingPattern(pattern);
-            pendingPatternRef.current = pattern;
-          } else {
-            setPendingPattern(pattern);
-            pendingPatternRef.current = pattern;
-          }
+          setPendingPattern(pattern);
+          pendingPatternRef.current = pattern;
           break;
         }
         case 'direct-start': {
-          // Update ref synchronously for handleStep
-          const normalized = normalizePatternSteps(
-            pattern.steps,
-            configRef.current.trackLengths
-          );
-          patternRef.current = {
-            ...pattern,
-            steps: normalized,
-          };
           audioEngine.requestReset();
           applyPatternNow(pattern);
           break;
         }
         case 'direct-jump': {
-          const normalized = normalizePatternSteps(
-            pattern.steps,
-            configRef.current.trackLengths
-          );
-          patternRef.current = {
-            ...pattern,
-            steps: normalized,
-          };
           applyPatternNow(pattern);
           break;
         }
@@ -769,12 +650,11 @@ export function SequencerProvider({
   const toggleStep = useCallback(
     (trackId: TrackId, stepIndex: number) => {
       setConfig(prev => {
-        if (
-          stepIndex >= prev.trackLengths[trackId]
-        ) {
+        const track = prev.tracks[trackId];
+        if (stepIndex >= track.steps.length) {
           return prev;
         }
-        const cur = prev.steps[trackId];
+        const cur = track.steps;
         const bit =
           cur[stepIndex] === '1' ? '0' : '1';
         const next =
@@ -783,7 +663,13 @@ export function SequencerProvider({
           cur.substring(stepIndex + 1);
         return {
           ...prev,
-          steps: { ...prev.steps, [trackId]: next },
+          tracks: {
+            ...prev.tracks,
+            [trackId]: {
+              ...track,
+              steps: next,
+            },
+          },
         };
       });
       setSelectedPatternId('custom');
@@ -798,12 +684,11 @@ export function SequencerProvider({
       value: '0' | '1'
     ) => {
       setConfig(prev => {
-        if (
-          stepIndex >= prev.trackLengths[trackId]
-        ) {
+        const track = prev.tracks[trackId];
+        if (stepIndex >= track.steps.length) {
           return prev;
         }
-        const cur = prev.steps[trackId];
+        const cur = track.steps;
         if (cur[stepIndex] === value) return prev;
         const next =
           cur.substring(0, stepIndex) +
@@ -811,7 +696,13 @@ export function SequencerProvider({
           cur.substring(stepIndex + 1);
         return {
           ...prev,
-          steps: { ...prev.steps, [trackId]: next },
+          tracks: {
+            ...prev.tracks,
+            [trackId]: {
+              ...track,
+              steps: next,
+            },
+          },
         };
       });
       setSelectedPatternId('custom');
@@ -822,14 +713,18 @@ export function SequencerProvider({
   const setTrackSteps = useCallback(
     (trackId: TrackId, newSteps: string) => {
       setConfig(prev => {
-        if (newSteps === prev.steps[trackId]) {
+        const track = prev.tracks[trackId];
+        if (newSteps === track.steps) {
           return prev;
         }
         return {
           ...prev,
-          steps: {
-            ...prev.steps,
-            [trackId]: newSteps,
+          tracks: {
+            ...prev.tracks,
+            [trackId]: {
+              ...track,
+              steps: newSteps,
+            },
           },
         };
       });
@@ -842,14 +737,15 @@ export function SequencerProvider({
     (trackId: TrackId) => {
       setConfig(prev => ({
         ...prev,
-        mixer: {
-          ...prev.mixer,
+        tracks: {
+          ...prev.tracks,
           [trackId]: {
-            ...prev.mixer[trackId],
-            freeRun: !prev.mixer[trackId].freeRun,
+            ...prev.tracks[trackId],
+            freeRun: !prev.tracks[trackId].freeRun,
           },
         },
       }));
+      setSelectedPatternId('custom');
     },
     []
   );
@@ -859,67 +755,38 @@ export function SequencerProvider({
       const clamped =
         Math.max(1, Math.min(64, length));
       setConfig(prev => {
-        const newTrackLengths = {
-          ...prev.trackLengths,
-        };
-        const newSteps = { ...prev.steps };
-        const newTrigConds = {
-          ...prev.trigConditions,
-        };
-        const newParamLocks = {
-          ...prev.parameterLocks,
-        };
+        const currentMax =
+          getPatternLength(prev.tracks);
+        const newTracks = {
+          ...prev.tracks,
+        } as Record<TrackId, TrackConfig>;
         for (const id of TRACK_IDS) {
-          if (newTrackLengths[id] > clamped) {
-            newTrackLengths[id] = clamped;
-          } else if (
-            newTrackLengths[id] === prev.patternLength
-          ) {
-            newTrackLengths[id] = clamped;
+          const track = prev.tracks[id];
+          const curLen = track.steps.length;
+          let newLen: number;
+          if (clamped > currentMax) {
+            // Grow: ALL tracks extend to N
+            newLen = clamped;
+          } else {
+            // Shrink: only cap tracks > N
+            newLen = curLen > clamped
+              ? clamped
+              : curLen;
           }
-          const len = newTrackLengths[id];
-          const cur = newSteps[id];
-          if (cur.length < len) {
-            newSteps[id] = cur.padEnd(len, '0');
-          } else if (cur.length > len) {
-            newSteps[id] = cur.substring(0, len);
+          let newSteps = track.steps;
+          if (newSteps.length < newLen) {
+            newSteps = newSteps.padEnd(newLen, '0');
+          } else if (newSteps.length > newLen) {
+            newSteps = newSteps.substring(0, newLen);
           }
-          // Prune conditions beyond new length
-          const trackConds = newTrigConds[id];
-          if (trackConds) {
-            const pruned: Record<
-              number, StepConditions
-            > = {};
-            for (const [k, v] of
-              Object.entries(trackConds)) {
-              if (Number(k) < len) {
-                pruned[Number(k)] = v;
-              }
-            }
-            newTrigConds[id] = pruned;
-          }
-          // Prune locks beyond new length
-          const trackLocks = newParamLocks[id];
-          if (trackLocks) {
-            const pruned: Record<
-              number, StepLocks
-            > = {};
-            for (const [k, v] of
-              Object.entries(trackLocks)) {
-              if (Number(k) < len) {
-                pruned[Number(k)] = v;
-              }
-            }
-            newParamLocks[id] = pruned;
-          }
+          newTracks[id] = {
+            ...track,
+            steps: newSteps,
+          };
         }
         return {
           ...prev,
-          patternLength: clamped,
-          trackLengths: newTrackLengths,
-          steps: newSteps,
-          trigConditions: newTrigConds,
-          parameterLocks: newParamLocks,
+          tracks: newTracks,
         };
       });
       setSelectedPatternId('custom');
@@ -930,69 +797,30 @@ export function SequencerProvider({
   const setTrackLength = useCallback(
     (trackId: TrackId, length: number) => {
       setConfig(prev => {
+        const patLen =
+          getPatternLength(prev.tracks);
         const clamped = Math.max(
           1,
-          Math.min(prev.patternLength, length)
+          Math.min(patLen, length)
         );
-        const cur = prev.steps[trackId];
+        const track = prev.tracks[trackId];
         let newSteps: string;
-        if (cur.length < clamped) {
-          newSteps = cur.padEnd(clamped, '0');
+        if (track.steps.length < clamped) {
+          newSteps =
+            track.steps.padEnd(clamped, '0');
         } else {
-          newSteps = cur.substring(0, clamped);
-        }
-        // Prune conditions beyond new length
-        const trackConds =
-          prev.trigConditions[trackId];
-        let newTrigConditions =
-          prev.trigConditions;
-        if (trackConds) {
-          const pruned: Record<
-            number, StepConditions
-          > = {};
-          for (const [k, v] of
-            Object.entries(trackConds)) {
-            if (Number(k) < clamped) {
-              pruned[Number(k)] = v;
-            }
-          }
-          newTrigConditions = {
-            ...prev.trigConditions,
-            [trackId]: pruned,
-          };
-        }
-        // Prune locks beyond new length
-        const trackLocks =
-          prev.parameterLocks[trackId];
-        let newParameterLocks =
-          prev.parameterLocks;
-        if (trackLocks) {
-          const pruned: Record<
-            number, StepLocks
-          > = {};
-          for (const [k, v] of
-            Object.entries(trackLocks)) {
-            if (Number(k) < clamped) {
-              pruned[Number(k)] = v;
-            }
-          }
-          newParameterLocks = {
-            ...prev.parameterLocks,
-            [trackId]: pruned,
-          };
+          newSteps =
+            track.steps.substring(0, clamped);
         }
         return {
           ...prev,
-          trackLengths: {
-            ...prev.trackLengths,
-            [trackId]: clamped,
+          tracks: {
+            ...prev.tracks,
+            [trackId]: {
+              ...track,
+              steps: newSteps,
+            },
           },
-          steps: {
-            ...prev.steps,
-            [trackId]: newSteps,
-          },
-          trigConditions: newTrigConditions,
-          parameterLocks: newParameterLocks,
         };
       });
       setSelectedPatternId('custom');
@@ -1052,28 +880,16 @@ export function SequencerProvider({
 
   const clearAll = useCallback(() => {
     setConfig(prev => {
-      const newSteps = {} as Record<TrackId, string>;
-      const newTrackLengths = {} as Record<
-        TrackId, number
+      const newTracks = {} as Record<
+        TrackId, TrackConfig
       >;
-      const newMixer = { ...prev.mixer };
       for (const id of TRACK_IDS) {
-        newSteps[id] =
-          '0'.repeat(prev.patternLength);
-        newTrackLengths[id] = prev.patternLength;
-        newMixer[id] = {
-          ...newMixer[id],
-          freeRun: false,
-        };
+        newTracks[id] = { steps: '0'.repeat(16) };
       }
       return {
         ...prev,
-        steps: newSteps,
-        trackLengths: newTrackLengths,
-        mixer: newMixer,
+        tracks: newTracks,
         swing: 0,
-        trigConditions: {},
-        parameterLocks: {},
       };
     });
     setIsLatched(false);
@@ -1090,36 +906,13 @@ export function SequencerProvider({
 
   const clearTrack = useCallback(
     (trackId: TrackId) => {
-      setConfig(prev => {
-        const newTrigConditions = {
-          ...prev.trigConditions,
-        };
-        delete newTrigConditions[trackId];
-        const newParameterLocks = {
-          ...prev.parameterLocks,
-        };
-        delete newParameterLocks[trackId];
-        return {
-          ...prev,
-          steps: {
-            ...prev.steps,
-            [trackId]: '0'.repeat(prev.patternLength),
-          },
-          trackLengths: {
-            ...prev.trackLengths,
-            [trackId]: prev.patternLength,
-          },
-          mixer: {
-            ...prev.mixer,
-            [trackId]: {
-              ...prev.mixer[trackId],
-              freeRun: false,
-            },
-          },
-          trigConditions: newTrigConditions,
-          parameterLocks: newParameterLocks,
-        };
-      });
+      setConfig(prev => ({
+        ...prev,
+        tracks: {
+          ...prev.tracks,
+          [trackId]: { steps: '0'.repeat(16) },
+        },
+      }));
       setSelectedPatternId('custom');
     },
     []
@@ -1204,14 +997,18 @@ export function SequencerProvider({
     ) => {
       setConfig(prev => ({
         ...prev,
-        trigConditions: {
-          ...prev.trigConditions,
+        tracks: {
+          ...prev.tracks,
           [trackId]: {
-            ...prev.trigConditions[trackId],
-            [stepIndex]: conditions,
+            ...prev.tracks[trackId],
+            trigConditions: {
+              ...prev.tracks[trackId].trigConditions,
+              [stepIndex]: conditions,
+            },
           },
         },
       }));
+      setSelectedPatternId('custom');
     },
     []
   );
@@ -1219,23 +1016,31 @@ export function SequencerProvider({
   const clearTrigCondition = useCallback(
     (trackId: TrackId, stepIndex: number) => {
       setConfig(prev => {
+        const track = prev.tracks[trackId];
         const trackConds = {
-          ...prev.trigConditions[trackId],
+          ...track.trigConditions,
         };
         delete trackConds[stepIndex];
-        const newTrigConditions = {
-          ...prev.trigConditions,
-        };
-        if (Object.keys(trackConds).length === 0) {
-          delete newTrigConditions[trackId];
-        } else {
-          newTrigConditions[trackId] = trackConds;
-        }
+        const newTrack = Object.keys(
+          trackConds
+        ).length === 0
+          ? {
+              ...track,
+              trigConditions: undefined,
+            }
+          : {
+              ...track,
+              trigConditions: trackConds,
+            };
         return {
           ...prev,
-          trigConditions: newTrigConditions,
+          tracks: {
+            ...prev.tracks,
+            [trackId]: newTrack,
+          },
         };
       });
+      setSelectedPatternId('custom');
     },
     []
   );
@@ -1248,14 +1053,18 @@ export function SequencerProvider({
     ) => {
       setConfig(prev => ({
         ...prev,
-        parameterLocks: {
-          ...prev.parameterLocks,
+        tracks: {
+          ...prev.tracks,
           [trackId]: {
-            ...prev.parameterLocks[trackId],
-            [stepIndex]: locks,
+            ...prev.tracks[trackId],
+            parameterLocks: {
+              ...prev.tracks[trackId].parameterLocks,
+              [stepIndex]: locks,
+            },
           },
         },
       }));
+      setSelectedPatternId('custom');
     },
     []
   );
@@ -1263,23 +1072,31 @@ export function SequencerProvider({
   const clearParameterLock = useCallback(
     (trackId: TrackId, stepIndex: number) => {
       setConfig(prev => {
+        const track = prev.tracks[trackId];
         const trackLocks = {
-          ...prev.parameterLocks[trackId],
+          ...track.parameterLocks,
         };
         delete trackLocks[stepIndex];
-        const newParameterLocks = {
-          ...prev.parameterLocks,
-        };
-        if (Object.keys(trackLocks).length === 0) {
-          delete newParameterLocks[trackId];
-        } else {
-          newParameterLocks[trackId] = trackLocks;
-        }
+        const newTrack = Object.keys(
+          trackLocks
+        ).length === 0
+          ? {
+              ...track,
+              parameterLocks: undefined,
+            }
+          : {
+              ...track,
+              parameterLocks: trackLocks,
+            };
         return {
           ...prev,
-          parameterLocks: newParameterLocks,
+          tracks: {
+            ...prev.tracks,
+            [trackId]: newTrack,
+          },
         };
       });
+      setSelectedPatternId('custom');
     },
     []
   );
@@ -1332,10 +1149,7 @@ export function SequencerProvider({
     state: {
       isPlaying,
       bpm: config.bpm,
-      patternLength: config.patternLength,
-      trackLengths: config.trackLengths,
       currentKit,
-      currentPattern,
       trackStates,
       isLoaded,
       swing: config.swing,
@@ -1343,6 +1157,7 @@ export function SequencerProvider({
       fillMode,
       patternMode,
       tempState,
+      selectedPatternId,
     },
     actions: {
       togglePlay,

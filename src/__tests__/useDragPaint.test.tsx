@@ -2,7 +2,11 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { useDragPaint } from '../app/useDragPaint';
-import type { TrackId, TrackPattern } from '../app/types';
+import type {
+  TrackId,
+  TrackPattern,
+  TrackConfig,
+} from '../app/types';
 import { TRACK_IDS } from '../app/types';
 
 /**
@@ -101,18 +105,12 @@ function makePointerEvent(
   } as React.PointerEvent<HTMLDivElement>;
 }
 
-function makeDefaultSteps(): Record<TrackId, string> {
-  const s = {} as Record<TrackId, string>;
+function makeDefaultTracks(): Record<TrackId, TrackConfig> {
+  const t = {} as Record<TrackId, TrackConfig>;
   for (const id of TRACK_IDS) {
-    s[id] = '0000000000000000';
+    t[id] = { steps: '0000000000000000' };
   }
-  return s;
-}
-
-function makeDefaultLengths(): Record<TrackId, number> {
-  const l = {} as Record<TrackId, number>;
-  for (const id of TRACK_IDS) l[id] = 16;
-  return l;
+  return t;
 }
 
 function makeDefaultPatterns(): TrackPattern[] {
@@ -142,16 +140,14 @@ describe('useDragPaint', () => {
   });
 
   function renderDragPaint(
-    steps?: Record<TrackId, string>,
-    trackLengths?: Record<TrackId, number>
+    tracksOverride?: Record<TrackId, TrackConfig>
   ) {
     return renderHook(() =>
       useDragPaint({
         containerRef,
         trackOrder: tracks,
-        trackLengths:
-          trackLengths ?? makeDefaultLengths(),
-        steps: steps ?? makeDefaultSteps(),
+        tracks:
+          tracksOverride ?? makeDefaultTracks(),
         onSetStep,
       })
     );
@@ -221,11 +217,11 @@ describe('useDragPaint', () => {
   });
 
   it('drag starting on ON cell erases across tracks', () => {
-    const steps = makeDefaultSteps();
-    steps.bd = '1111111111111111';
-    steps.sd = '1111111111111111';
+    const tc = makeDefaultTracks();
+    tc.bd = { steps: '1111111111111111' };
+    tc.sd = { steps: '1111111111111111' };
 
-    const { result } = renderDragPaint(steps);
+    const { result } = renderDragPaint(tc);
     const h = result.current;
 
     h.onPointerDown(makePointerEvent({
@@ -254,11 +250,11 @@ describe('useDragPaint', () => {
   });
 
   it('cross-track drag keeps paint mode from first cell', () => {
-    const steps = makeDefaultSteps();
-    steps.bd = '1111111111111111';
-    steps.sd = '0000000000000000';
+    const tc = makeDefaultTracks();
+    tc.bd = { steps: '1111111111111111' };
+    tc.sd = { steps: '0000000000000000' };
 
-    const { result } = renderDragPaint(steps);
+    const { result } = renderDragPaint(tc);
     const h = result.current;
 
     // Start on bd[0] (ON) → erase mode
@@ -282,10 +278,10 @@ describe('useDragPaint', () => {
   });
 
   it('touch drag on ON cell infers erase mode', () => {
-    const steps = makeDefaultSteps();
-    steps.bd = '1000000000000000';
+    const tc = makeDefaultTracks();
+    tc.bd = { steps: '1000000000000000' };
 
-    const { result } = renderDragPaint(steps);
+    const { result } = renderDragPaint(tc);
     const h = result.current;
 
     h.onPointerDown(makePointerEvent({
@@ -341,12 +337,10 @@ describe('useDragPaint', () => {
   });
 
   it('drag starting on disabled cell is ignored', () => {
-    const lengths = makeDefaultLengths();
-    lengths.bd = 8;
+    const tc = makeDefaultTracks();
+    tc.bd = { steps: '00000000' };
 
-    const { result } = renderDragPaint(
-      undefined, lengths
-    );
+    const { result } = renderDragPaint(tc);
     const h = result.current;
 
     // Step 10 is disabled (trackLength 8)
@@ -538,17 +532,15 @@ describe('useDragPaint', () => {
     });
 
     function renderDragPaintWithCycling(
-      steps?: Record<TrackId, string>,
-      trackLengths?: Record<TrackId, number>,
+      tracksOverride?: Record<TrackId, TrackConfig>,
       patternOverride?: TrackPattern[]
     ) {
       return renderHook(() =>
         useDragPaint({
           containerRef,
           trackOrder: tracks,
-          trackLengths:
-            trackLengths ?? makeDefaultLengths(),
-          steps: steps ?? makeDefaultSteps(),
+          tracks:
+            tracksOverride ?? makeDefaultTracks(),
           onSetStep,
           patterns: patternOverride ?? patterns,
           onSetTrackSteps,
@@ -608,12 +600,12 @@ describe('useDragPaint', () => {
     it(
       'position 1 clears from click step onward',
       () => {
-        const steps = makeDefaultSteps();
+        const tc = makeDefaultTracks();
         // bd has some ON steps
-        steps.bd = '1111111111111111';
+        tc.bd = { steps: '1111111111111111' };
 
         const { result } = renderDragPaintWithCycling(
-          steps
+          tc
         );
         const h = result.current;
 
@@ -688,11 +680,11 @@ describe('useDragPaint', () => {
         // 3 patterns → 5 total positions (0,1,2,3,4)
         // After position 4 (pattern[2]), wraps to 0
         // floor(100/20) = 5 positions → 5 % 5 = 0
-        const steps = makeDefaultSteps();
-        steps.bd = '1010101010101010';
+        const tc = makeDefaultTracks();
+        tc.bd = { steps: '1010101010101010' };
 
         const { result: r2 } =
-          renderDragPaintWithCycling(steps);
+          renderDragPaintWithCycling(tc);
         const h2 = r2.current;
 
         // 100px → floor(100/20) = 5, 5 % 5 = 0
@@ -720,12 +712,12 @@ describe('useDragPaint', () => {
     it(
       'escape cancels and restores original steps',
       () => {
-        const steps = makeDefaultSteps();
-        steps.bd = '1010101010101010';
-        const snapshot = steps.bd;
+        const tc = makeDefaultTracks();
+        tc.bd = { steps: '1010101010101010' };
+        const snapshot = tc.bd.steps;
 
         const { result } = renderDragPaintWithCycling(
-          steps
+          tc
         );
         const h = result.current;
 
@@ -787,11 +779,11 @@ describe('useDragPaint', () => {
     it(
       'respects track length when applying pattern',
       () => {
-        const lengths = makeDefaultLengths();
-        lengths.bd = 8;
+        const tc = makeDefaultTracks();
+        tc.bd = { steps: '00000000' };
 
         const { result } = renderDragPaintWithCycling(
-          undefined, lengths
+          tc
         );
         const h = result.current;
 
@@ -939,11 +931,10 @@ describe('pageOffset support', () => {
       useDragPaint({
         containerRef: { current: container },
         trackOrder: tracks,
-        trackLengths: { bd: 18, sd: 18 } as Record<TrackId, number>,
-        steps: {
-          bd: '0'.repeat(32),
-          sd: '0'.repeat(32),
-        } as Record<TrackId, string>,
+        tracks: {
+          bd: { steps: '0'.repeat(18) },
+          sd: { steps: '0'.repeat(18) },
+        } as Record<TrackId, TrackConfig>,
         onSetStep,
         pageOffset: 16,
       })

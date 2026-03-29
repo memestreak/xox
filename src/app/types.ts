@@ -35,19 +35,24 @@ export interface StepLocks {
 }
 
 /**
+ * Per-track configuration: steps plus optional
+ * per-step conditions and parameter locks.
+ */
+export interface TrackConfig {
+  steps: string;
+  freeRun?: boolean;
+  trigConditions?: Record<number, StepConditions>;
+  parameterLocks?: Record<number, StepLocks>;
+}
+
+/**
  * Represents a pattern with variable-length step strings.
  */
 export interface Pattern {
   id: string;
   name: string;
   category?: string;
-  steps: Record<TrackId, string>;
-  trigConditions?: Partial<
-    Record<TrackId, Record<number, StepConditions>>
-  >;
-  parameterLocks?: Partial<
-    Record<TrackId, Record<number, StepLocks>>
-  >;
+  tracks: Record<TrackId, TrackConfig>;
 }
 
 /**
@@ -68,7 +73,6 @@ export interface TrackState {
   name: string;
   isMuted: boolean;
   isSolo: boolean;
-  freeRun: boolean;
   gain: number;   // Master volume for this track (0.0 to 1.0)
 }
 
@@ -88,7 +92,6 @@ export interface TrackMixerState {
   gain: number;      // 0.0 - 1.0
   isMuted: boolean;
   isSolo: boolean;
-  freeRun: boolean;
 }
 
 /**
@@ -111,13 +114,8 @@ export type TempState = 'off' | 'armed' | 'active';
  * does not modify it.
  */
 export interface HomeSnapshot {
-  steps: Record<TrackId, string>;
-  trigConditions: Partial<
-    Record<TrackId, Record<number, StepConditions>>
-  >;
+  tracks: Record<TrackId, TrackConfig>;
   selectedPatternId: string;
-  trackLengths: Record<TrackId, number>;
-  patternLength: number;
 }
 
 /**
@@ -131,17 +129,21 @@ export interface SequencerConfig {
   version: number;
   kitId: string;
   bpm: number;
-  patternLength: number;
-  trackLengths: Record<TrackId, number>;
-  steps: Record<TrackId, string>;
+  tracks: Record<TrackId, TrackConfig>;
   mixer: Record<TrackId, TrackMixerState>;
   swing: number;
-  trigConditions: Partial<
-    Record<TrackId, Record<number, StepConditions>>
-  >;
-  parameterLocks: Partial<
-    Record<TrackId, Record<number, StepLocks>>
-  >;
+}
+
+/**
+ * Derive the effective pattern length from tracks.
+ * Returns the longest step string length across all tracks.
+ */
+export function getPatternLength(
+  tracks: Record<TrackId, TrackConfig>
+): number {
+  return Math.max(
+    ...Object.values(tracks).map(t => t.steps.length)
+  );
 }
 
 /** Note length: fixed milliseconds or tempo-relative. */
