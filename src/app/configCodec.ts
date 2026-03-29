@@ -32,6 +32,7 @@ export function defaultConfig(): SequencerConfig {
   for (const id of TRACK_IDS) {
     mixer[id] = {
       gain: id === 'ac' ? 0.5 : 1.0,
+      pan: 0.5,
       isMuted: false,
       isSolo: false,
     };
@@ -473,6 +474,13 @@ function validateSingleLock(
     sl.gain = Math.max(0, Math.min(1, obj.gain));
   }
 
+  if (
+    typeof obj.pan === 'number'
+    && isFinite(obj.pan)
+  ) {
+    sl.pan = Math.max(0, Math.min(1, obj.pan));
+  }
+
   if (Object.keys(sl).length === 0) return null;
   return sl;
 }
@@ -495,6 +503,10 @@ function validateMixer(
           typeof t.gain === 'number' && isFinite(t.gain)
             ? Math.max(0, Math.min(1, t.gain))
             : fallback[id].gain,
+        pan:
+          typeof t.pan === 'number' && isFinite(t.pan)
+            ? Math.max(0, Math.min(1, t.pan))
+            : fallback[id].pan,
         isMuted:
           typeof t.isMuted === 'boolean'
             ? t.isMuted

@@ -32,6 +32,7 @@ export interface StepConditions {
  */
 export interface StepLocks {
   gain?: number; // 0.0–1.0
+  pan?: number;  // 0.0–1.0 (0.5 = center)
 }
 
 /**
@@ -74,6 +75,7 @@ export interface TrackState {
   isMuted: boolean;
   isSolo: boolean;
   gain: number;   // Master volume for this track (0.0 to 1.0)
+  pan: number;    // Stereo pan (0.0 = left, 0.5 = center, 1.0 = right)
 }
 
 /**
@@ -90,6 +92,7 @@ export const TRACK_IDS: readonly TrackId[] = [
  */
 export interface TrackMixerState {
   gain: number;      // 0.0 - 1.0
+  pan: number;       // 0.0 - 1.0 (0.5 = center)
   isMuted: boolean;
   isSolo: boolean;
 }

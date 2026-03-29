@@ -9,6 +9,8 @@ interface KnobProps {
   size?: number;
   centerLabel?: string;
   defaultValue?: number;
+  formatValue?: (v: number) => string;
+  ariaPrefix?: string;
 }
 
 function describeArc(
@@ -52,6 +54,8 @@ function KnobInner({
   size = DEFAULT_SIZE,
   centerLabel,
   defaultValue,
+  formatValue = (v: number) => `${Math.round(v * 100)}%`,
+  ariaPrefix = 'Volume',
 }: KnobProps) {
   const dragRef = useRef<{
     startY: number;
@@ -159,8 +163,8 @@ function KnobInner({
   );
 
   const label = trackName
-    ? `Volume ${trackName}`
-    : 'Volume';
+    ? `${ariaPrefix} ${trackName}`
+    : ariaPrefix;
 
   return (
     <div className="group relative flex items-center justify-center">
@@ -222,7 +226,7 @@ function KnobInner({
         )}
       </svg>
       <div className="absolute bottom-full mb-1 hidden group-hover:block px-1.5 py-0.5 text-[10px] font-bold bg-neutral-800 text-neutral-200 rounded whitespace-nowrap">
-        {Math.round(value * 100)}%
+        {formatValue(value)}
       </div>
     </div>
   );

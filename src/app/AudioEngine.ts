@@ -211,7 +211,10 @@ class AudioEngine {
   /**
    * Plays a specific buffer at a precise point in the future.
    */
-  public playSound(id: TrackId, time: number, gainValue: number) {
+  public playSound(
+    id: TrackId, time: number,
+    gainValue: number, panValue = 0.5
+  ) {
     const buffer = this.buffers.get(id);
     if (!buffer || !this.ctx || !this.masterGain) return;
 
@@ -223,7 +226,16 @@ class AudioEngine {
     trackGain.gain.value = gainValue;
 
     source.connect(trackGain);
-    trackGain.connect(this.masterGain);
+
+    // Insert a StereoPannerNode when not centered
+    if (panValue !== 0.5) {
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = (panValue - 0.5) * 2;
+      trackGain.connect(panner);
+      panner.connect(this.masterGain);
+    } else {
+      trackGain.connect(this.masterGain);
+    }
 
     // Schedule the sound to start at the exact 'time' calculated by the scheduler
     source.start(time);
