@@ -10,6 +10,7 @@ import AccentRow from './AccentRow';
 import StepPopover from './StepPopover';
 import { useDragPaint } from './useDragPaint';
 import type { TrackId, TrackPattern } from './types';
+import { getPatternLength } from './types';
 import trackPatternData from './data/trackPatterns.json';
 
 const TRACK_PATTERNS: TrackPattern[] =
@@ -40,10 +41,7 @@ export default function StepGrid({
   setPage,
 }: StepGridProps) {
   const { state, actions, meta } = useSequencer();
-  const {
-    currentPattern, trackStates,
-    patternLength, trackLengths,
-  } = state;
+  const { trackStates } = state;
   const {
     toggleStep, setStep, setTrackSteps,
     toggleMute, toggleSolo,
@@ -51,6 +49,7 @@ export default function StepGrid({
     clearTrack,
   } = actions;
   const { stepRef, totalStepsRef, config } = meta;
+  const patternLength = getPatternLength(config.tracks);
 
   const longPressActiveRef = useRef<boolean>(false);
   const popoverOpenRef = useRef<boolean>(false);
@@ -59,8 +58,7 @@ export default function StepGrid({
   const dragPaint = useDragPaint({
     containerRef: dragContainerRef,
     trackOrder: TRACK_ORDER,
-    trackLengths,
-    steps: currentPattern.steps,
+    tracks: config.tracks,
     onSetStep: setStep,
     patterns: TRACK_PATTERNS,
     onSetTrackSteps: setTrackSteps,
@@ -138,14 +136,14 @@ export default function StepGrid({
             key={track.id}
             trackId={track.id}
             trackName={track.name}
-            steps={currentPattern.steps[track.id]}
-            trackLength={trackLengths[track.id]}
+            steps={config.tracks[track.id].steps}
+            trackLength={config.tracks[track.id].steps.length}
             patternLength={patternLength}
             pageOffset={pageOffset}
             isMuted={trackStates[track.id].isMuted}
             isSolo={trackStates[track.id].isSolo}
             isFreeRun={
-              trackStates[track.id].freeRun
+              config.tracks[track.id].freeRun ?? false
             }
             gain={trackStates[track.id].gain}
             currentStep={displayStep}
@@ -159,10 +157,10 @@ export default function StepGrid({
             onClearTrack={clearTrack}
             longPressActiveRef={longPressActiveRef}
             trigConditions={
-              config.trigConditions[track.id]
+              config.tracks[track.id].trigConditions
             }
             parameterLocks={
-              config.parameterLocks[track.id]
+              config.tracks[track.id].parameterLocks
             }
             onOpenPopover={(
               trackId: TrackId,
@@ -174,11 +172,11 @@ export default function StepGrid({
           />
         ))}
         <AccentRow
-          steps={currentPattern.steps.ac}
-          trackLength={trackLengths.ac}
+          steps={config.tracks.ac.steps}
+          trackLength={config.tracks.ac.steps.length}
           patternLength={patternLength}
           pageOffset={pageOffset}
-          isFreeRun={trackStates.ac.freeRun}
+          isFreeRun={config.tracks.ac.freeRun ?? false}
           gain={trackStates.ac.gain}
           currentStep={displayStep}
           totalSteps={displayTotal}
@@ -194,14 +192,14 @@ export default function StepGrid({
           trackId={openPopover.trackId}
           stepIndex={openPopover.stepIndex}
           conditions={
-            config.trigConditions[
+            config.tracks[
               openPopover.trackId
-            ]?.[openPopover.stepIndex]
+            ].trigConditions?.[openPopover.stepIndex]
           }
           locks={
-            config.parameterLocks[
+            config.tracks[
               openPopover.trackId
-            ]?.[openPopover.stepIndex]
+            ].parameterLocks?.[openPopover.stepIndex]
           }
           anchorRect={openPopover.anchorRect}
           onClose={() => setOpenPopover(null)}

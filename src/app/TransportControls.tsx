@@ -33,7 +33,7 @@ function TransportControlsInner({
   const { state, actions } = useSequencer();
   const {
     isPlaying, bpm, currentKit,
-    currentPattern, isLoaded,
+    selectedPatternId, isLoaded,
   } = state;
   const {
     togglePlay, setBpm, setKit, setPattern,
@@ -103,7 +103,7 @@ function TransportControlsInner({
             <div className="flex-1 min-w-0">
               <PatternPicker
                 categories={categories}
-                currentPattern={currentPattern}
+                selectedPatternId={selectedPatternId}
                 onSelect={setPattern}
               />
             </div>

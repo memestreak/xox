@@ -11,7 +11,7 @@ import Tooltip from './Tooltip';
 
 interface PatternPickerProps {
   categories: PatternCategory[];
-  currentPattern: Pattern;
+  selectedPatternId: string;
   onSelect: (pattern: Pattern) => void;
 }
 
@@ -23,7 +23,7 @@ interface PatternPickerProps {
  */
 export default function PatternPicker({
   categories,
-  currentPattern,
+  selectedPatternId,
   onSelect,
 }: PatternPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,8 +34,14 @@ export default function PatternPicker({
   const modalRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const isCustom = currentPattern.id === 'custom';
-  const displayName = isCustom ? 'Custom' : currentPattern.name;
+  const isCustom = selectedPatternId === 'custom';
+  // Find the pattern name from categories
+  const matchedPattern = categories
+    .flatMap(g => g.patterns)
+    .find(p => p.id === selectedPatternId);
+  const displayName = isCustom
+    ? 'Custom'
+    : (matchedPattern?.name ?? selectedPatternId);
 
   // Derive initial category when opening (avoids
   // setState-in-effect lint violation). Focus modal
@@ -45,7 +51,7 @@ export default function PatternPicker({
       setSelectedCategory(null);
     } else {
       const cat = categories.find(g =>
-        g.patterns.some(p => p.id === currentPattern.id),
+        g.patterns.some(p => p.id === selectedPatternId),
       );
       setSelectedCategory(cat?.category ?? null);
     }
@@ -73,7 +79,7 @@ export default function PatternPicker({
   }, [isOpen]);
 
   const activeCategory = categories.find(g =>
-    g.patterns.some(p => p.id === currentPattern.id),
+    g.patterns.some(p => p.id === selectedPatternId),
   );
 
   const patternsToShow = selectedCategory
@@ -193,7 +199,7 @@ export default function PatternPicker({
                   >
                     {patternsToShow.map(p => {
                       const isActive =
-                        p.id === currentPattern.id;
+                        p.id === selectedPatternId;
                       return (
                         <button
                           key={p.id}
