@@ -61,13 +61,13 @@ describe('round-trip fidelity', () => {
   it('config with mixed mixer states', async () => {
     const config = defaultConfig();
     config.mixer.bd = {
-      gain: 0.3, isMuted: true, isSolo: false,
+      gain: 0.3, pan: 0.5, isMuted: true, isSolo: false,
     };
     config.mixer.sd = {
-      gain: 0.7, isMuted: false, isSolo: true,
+      gain: 0.7, pan: 0.5, isMuted: false, isSolo: true,
     };
     config.mixer.ch = {
-      gain: 0, isMuted: true, isSolo: true,
+      gain: 0, pan: 0.5, isMuted: true, isSolo: true,
     };
     const hash = await encodeConfig(config);
     const decoded = await decodeConfig(hash);

@@ -15,6 +15,12 @@ import StepButton from './StepButton';
 import Knob from './Knob';
 import Tooltip from './Tooltip';
 
+function formatPan(v: number): string {
+  const pct = Math.round((v - 0.5) * 200);
+  if (pct === 0) return 'C';
+  return pct < 0 ? `L${-pct}` : `R${pct}`;
+}
+
 interface TrackNameButtonProps {
   size: 'sm' | 'lg';
   trackName: string;
@@ -133,6 +139,7 @@ interface TrackRowProps {
   isSolo: boolean;
   isFreeRun: boolean;
   gain: number;
+  pan: number;
   currentStep: number;
   totalSteps: number;
   onToggleStep: (
@@ -141,6 +148,9 @@ interface TrackRowProps {
   onToggleMute: (trackId: TrackId) => void;
   onToggleSolo: (trackId: TrackId) => void;
   onSetGain: (
+    trackId: TrackId, value: number
+  ) => void;
+  onSetPan: (
     trackId: TrackId, value: number
   ) => void;
   onSetTrackLength: (
@@ -177,12 +187,14 @@ function TrackRowInner({
   isSolo,
   isFreeRun,
   gain,
+  pan,
   currentStep,
   totalSteps,
   onToggleStep,
   onToggleMute,
   onToggleSolo,
   onSetGain,
+  onSetPan,
   onSetTrackLength,
   onToggleFreeRun,
   onClearTrack,
@@ -198,6 +210,10 @@ function TrackRowInner({
   const handleSolo = useCallback(
     () => onToggleSolo(trackId),
     [onToggleSolo, trackId]
+  );
+  const handlePan = useCallback(
+    (v: number) => onSetPan(trackId, v),
+    [onSetPan, trackId]
   );
   const handleGain = useCallback(
     (v: number) => onSetGain(trackId, v),
@@ -342,12 +358,23 @@ function TrackRowInner({
             trackName={trackName}
             size={20}
           />
+          <Tooltip tooltipKey="pan">
+            <Knob
+              value={pan}
+              onChange={handlePan}
+              trackName={trackName}
+              size={20}
+              defaultValue={0.5}
+              ariaPrefix="Pan"
+              formatValue={formatPan}
+            />
+          </Tooltip>
         </div>
       </div>
 
       <div className="flex gap-4 items-center">
         {/* Desktop: sidebar */}
-        <div className="hidden lg:flex w-48 items-center gap-2">
+        <div className="hidden lg:flex w-56 items-center gap-2">
           <TrackNameButton
             size="lg"
             trackName={trackName}
@@ -374,6 +401,16 @@ function TrackRowInner({
             onChange={handleGain}
             trackName={trackName}
           />
+          <Tooltip tooltipKey="pan">
+            <Knob
+              value={pan}
+              onChange={handlePan}
+              trackName={trackName}
+              defaultValue={0.5}
+              ariaPrefix="Pan"
+              formatValue={formatPan}
+            />
+          </Tooltip>
         </div>
 
         {/* Step grid with drag handle */}

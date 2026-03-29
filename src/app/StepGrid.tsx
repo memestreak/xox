@@ -45,7 +45,7 @@ export default function StepGrid({
   const {
     toggleStep, setStep, setTrackSteps,
     toggleMute, toggleSolo,
-    setGain, setTrackLength, toggleFreeRun,
+    setGain, setPan, setTrackLength, toggleFreeRun,
     clearTrack,
   } = actions;
   const { stepRef, totalStepsRef, config } = meta;
@@ -146,12 +146,14 @@ export default function StepGrid({
               config.tracks[track.id].freeRun ?? false
             }
             gain={trackStates[track.id].gain}
+            pan={trackStates[track.id].pan}
             currentStep={displayStep}
             totalSteps={displayTotal}
             onToggleStep={toggleStep}
             onToggleMute={toggleMute}
             onToggleSolo={toggleSolo}
             onSetGain={setGain}
+            onSetPan={setPan}
             onSetTrackLength={setTrackLength}
             onToggleFreeRun={toggleFreeRun}
             onClearTrack={clearTrack}

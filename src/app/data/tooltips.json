@@ -17,5 +17,6 @@
   "page": "Jump to page",
   "accentIntensity": "Accent intensity",
   "mode": "Pattern playback mode",
-  "temp": "Temporary mode change while playing"
+  "temp": "Temporary mode change while playing",
+  "pan": "Stereo pan"
 }

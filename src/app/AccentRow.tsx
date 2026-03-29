@@ -188,7 +188,7 @@ function AccentRowInner({
 
       <div className="flex gap-4 items-center">
         {/* Desktop: sidebar with label + knob */}
-        <div className="hidden lg:flex w-48 items-center gap-2">
+        <div className="hidden lg:flex w-56 items-center gap-2">
           <button
             type="button"
             onClick={(e) => {

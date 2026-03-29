@@ -91,6 +91,7 @@ interface SequencerActions {
   toggleMute: (trackId: TrackId) => void;
   toggleSolo: (trackId: TrackId) => void;
   setGain: (trackId: TrackId, value: number) => void;
+  setPan: (trackId: TrackId, value: number) => void;
   toggleFreeRun: (trackId: TrackId) => void;
   setPatternLength: (length: number) => void;
   setTrackLength: (
@@ -289,6 +290,7 @@ export function SequencerProvider({
         id,
         name: TRACK_NAMES[id],
         gain: m.gain,
+        pan: m.pan,
         isMuted: m.isMuted,
         isSolo: m.isSolo,
       };
@@ -430,8 +432,9 @@ export function SequencerProvider({
             isAccented
               ? cubic * (1 + states.ac.gain * 2)
               : cubic;
+          const pan = locks?.pan ?? st.pan;
           audioEngine.playSound(
-            track.id, scheduledTime, gain
+            track.id, scheduledTime, gain, pan
           );
           // MIDI output (convert AudioContext time to
           // performance.now timestamp)
@@ -878,6 +881,22 @@ export function SequencerProvider({
     []
   );
 
+  const setPan = useCallback(
+    (trackId: TrackId, value: number) => {
+      setConfig(prev => ({
+        ...prev,
+        mixer: {
+          ...prev.mixer,
+          [trackId]: {
+            ...prev.mixer[trackId],
+            pan: value,
+          },
+        },
+      }));
+    },
+    []
+  );
+
   const clearAll = useCallback(() => {
     setConfig(prev => {
       const newTracks = {} as Record<
@@ -1170,6 +1189,7 @@ export function SequencerProvider({
       toggleMute,
       toggleSolo,
       setGain,
+      setPan,
       toggleFreeRun,
       setPatternLength,
       setTrackLength,
