@@ -32,9 +32,9 @@ export default function PatternModeSelector() {
   return (
     <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
       <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
-        Mode
+        Pattern Change Mode
       </span>
-      <div className="flex gap-1 items-stretch">
+      <div className="flex gap-2 items-stretch">
         <Tooltip tooltipKey="mode" position="bottom">
         <select
           id="mode-select"
