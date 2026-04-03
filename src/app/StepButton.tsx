@@ -14,6 +14,7 @@ interface StepButtonProps {
   isCurrent: boolean;
   isBeat: boolean;
   isDisabled: boolean;
+  isSelected?: boolean;
   mini?: boolean;
   onToggle: (
     trackId: TrackId, stepIndex: number
@@ -26,6 +27,13 @@ interface StepButtonProps {
     stepIndex: number,
     rect: { top: number; left: number }
   ) => void;
+  onCtrlClick?: (
+    trackId: TrackId, stepIndex: number
+  ) => void;
+  onShiftClick?: (
+    trackId: TrackId, stepIndex: number
+  ) => void;
+  onPlainClick?: () => void;
   longPressActiveRef?: RefObject<boolean>;
 }
 
@@ -43,12 +51,16 @@ function StepButtonInner({
   isCurrent,
   isBeat,
   isDisabled,
+  isSelected,
   mini,
   onToggle,
   gainLock,
   panLock,
   conditions,
   onOpenPopover,
+  onCtrlClick,
+  onShiftClick,
+  onPlainClick,
   longPressActiveRef,
 }: StepButtonProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -159,11 +171,19 @@ function StepButtonInner({
           handlePointerUp();
         }}
         onClick={(e) => {
-          if (e.ctrlKey || e.metaKey) {
+          if (e.shiftKey && onShiftClick) {
             e.preventDefault();
-            openPopover(e.clientY, e.clientX);
+            onShiftClick(trackId, stepIndex);
             return;
           }
+          if (
+            (e.ctrlKey || e.metaKey) && onCtrlClick
+          ) {
+            e.preventDefault();
+            onCtrlClick(trackId, stepIndex);
+            return;
+          }
+          onPlainClick?.();
           handleToggle();
         }}
         onContextMenu={(e) => {
@@ -195,6 +215,8 @@ function StepButtonInner({
           + (isBeat && !mini
             ? ' border-neutral-700'
             : ' border-transparent')
+          + (isSelected
+            ? ' ring-2 ring-blue-400/70' : '')
         }
       >
         {!mini && isActive

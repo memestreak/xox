@@ -310,3 +310,107 @@ describe('StepButton popover on inactive steps', () => {
     }
   );
 });
+
+describe('StepButton selection', () => {
+  it('Ctrl+Click calls onCtrlClick', () => {
+    const onCtrl = vi.fn();
+    render(
+      <StepButton
+        {...base}
+        onCtrlClick={onCtrl}
+        onOpenPopover={vi.fn()}
+      />
+    );
+    fireEvent.click(
+      screen.getByRole('button'),
+      { ctrlKey: true }
+    );
+    expect(onCtrl).toHaveBeenCalledWith('bd', 0);
+  });
+
+  it('Ctrl+Click does not open popover', () => {
+    const onOpen = vi.fn();
+    const onCtrl = vi.fn();
+    render(
+      <StepButton
+        {...base}
+        onCtrlClick={onCtrl}
+        onOpenPopover={onOpen}
+      />
+    );
+    fireEvent.click(
+      screen.getByRole('button'),
+      { ctrlKey: true }
+    );
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('Shift+Click calls onShiftClick', () => {
+    const onShift = vi.fn();
+    render(
+      <StepButton
+        {...base}
+        onShiftClick={onShift}
+      />
+    );
+    fireEvent.click(
+      screen.getByRole('button'),
+      { shiftKey: true }
+    );
+    expect(onShift).toHaveBeenCalledWith('bd', 0);
+  });
+
+  it('plain click calls onPlainClick then toggles',
+    () => {
+      const onPlain = vi.fn();
+      const toggle = vi.fn();
+      render(
+        <StepButton
+          {...base}
+          onToggle={toggle}
+          onPlainClick={onPlain}
+        />
+      );
+      fireEvent.click(screen.getByRole('button'));
+      expect(onPlain).toHaveBeenCalled();
+      expect(toggle).toHaveBeenCalled();
+    }
+  );
+
+  it('isSelected adds ring class', () => {
+    const { container } = render(
+      <StepButton {...base} isSelected />
+    );
+    const btn = container.querySelector('button');
+    expect(btn?.className).toContain('ring-blue-400');
+    expect(btn?.className).toContain('ring-2');
+  });
+
+  it('isSelected=false has no ring class', () => {
+    const { container } = render(
+      <StepButton {...base} isSelected={false} />
+    );
+    const btn = container.querySelector('button');
+    expect(btn?.className).not.toContain(
+      'ring-blue-400'
+    );
+  });
+
+  it('right-click still opens popover with selection',
+    () => {
+      const onOpen = vi.fn();
+      render(
+        <StepButton
+          {...base}
+          isSelected
+          onOpenPopover={onOpen}
+          onCtrlClick={vi.fn()}
+        />
+      );
+      fireEvent.contextMenu(
+        screen.getByRole('button')
+      );
+      expect(onOpen).toHaveBeenCalled();
+    }
+  );
+});
