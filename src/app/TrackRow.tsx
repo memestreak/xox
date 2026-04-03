@@ -84,8 +84,8 @@ function TrackNameButtonInner({
           }}
           className={
             (size === 'sm'
-              ? 'text-base'
-              : 'w-12 truncate text-lg text-left')
+              ? 'text-lg'
+              : 'w-12 truncate text-xl text-left')
             + ' font-bold uppercase tracking-wider font-[family-name:var(--font-orbitron)]'
             + ' rounded px-1 py-0.5 transition-colors'
             + (isFreeRun
@@ -382,37 +382,39 @@ function TrackRowInner({
             onToggleFreeRun={handleFreeRun}
             onClearTrack={handleClearTrack}
           />
-          <TrackToggle
-            variant="mute"
-            active={isMuted}
-            trackName={trackName}
-            size="md"
-            onToggle={handleMute}
-          />
-          <TrackToggle
-            variant="solo"
-            active={isSolo}
-            trackName={trackName}
-            size="md"
-            onToggle={handleSolo}
-          />
-          <div className="ml-1">
+          <div className="flex gap-1">
+            <TrackToggle
+              variant="mute"
+              active={isMuted}
+              trackName={trackName}
+              size="md"
+              onToggle={handleMute}
+            />
+            <TrackToggle
+              variant="solo"
+              active={isSolo}
+              trackName={trackName}
+              size="md"
+              onToggle={handleSolo}
+            />
+          </div>
+          <div className="flex gap-1 ml-1">
             <Knob
               value={gain}
               onChange={handleGain}
               trackName={trackName}
             />
+            <Tooltip tooltipKey="pan">
+              <Knob
+                value={pan}
+                onChange={handlePan}
+                trackName={trackName}
+                defaultValue={0.5}
+                ariaPrefix="Pan"
+                formatValue={formatPan}
+              />
+            </Tooltip>
           </div>
-          <Tooltip tooltipKey="pan">
-            <Knob
-              value={pan}
-              onChange={handlePan}
-              trackName={trackName}
-              defaultValue={0.5}
-              ariaPrefix="Pan"
-              formatValue={formatPan}
-            />
-          </Tooltip>
         </div>
 
         {/* Step grid with drag handle */}

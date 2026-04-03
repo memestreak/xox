@@ -164,7 +164,7 @@ function AccentRowInner({
             if (e.shiftKey) handleClear();
           }}
           className={
-            'text-base font-bold uppercase'
+            'text-lg font-bold uppercase'
             + ' tracking-wider rounded px-1 py-0.5'
             + ' transition-colors cursor-pointer'
             + ' font-[family-name:var(--font-orbitron)]'
@@ -198,7 +198,7 @@ function AccentRowInner({
               if (e.shiftKey) handleClear();
             }}
             className={
-              'w-12 truncate text-lg text-left'
+              'w-12 truncate text-xl text-left'
               + ' font-bold uppercase tracking-wider'
               + ' rounded px-1 py-0.5 transition-colors'
               + ' cursor-pointer'
