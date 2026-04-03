@@ -82,7 +82,7 @@ export default function MidiSettings({
       ref={dialogRef}
       onClose={onClose}
       onClick={handleBackdropClick}
-      className="backdrop:bg-black/60 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl text-neutral-200 p-0 max-w-md w-full"
+      className="m-auto backdrop:bg-black/60 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl text-neutral-200 p-0 max-w-md w-full"
     >
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
