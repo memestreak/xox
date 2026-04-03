@@ -2,9 +2,23 @@ import {
   render, screen, waitFor, fireEvent,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  beforeAll, describe, expect, it, vi,
+} from 'vitest';
 import SettingsPopover from '../app/SettingsPopover';
 import { TestWrapper } from './helpers/sequencer-wrapper';
+
+// jsdom doesn't implement HTMLDialogElement methods
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal =
+    vi.fn(function (this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+    });
+  HTMLDialogElement.prototype.close =
+    vi.fn(function (this: HTMLDialogElement) {
+      this.removeAttribute('open');
+    });
+});
 
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
@@ -43,6 +57,9 @@ describe('SettingsPopover', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument();
     expect(
       screen.getByRole('menuitem', { name: /export url/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: /settings…/i })
     ).toBeInTheDocument();
   });
 
@@ -123,5 +140,19 @@ describe('SettingsPopover', () => {
         screen.getByText('Failed')
       ).toBeInTheDocument();
     });
+  });
+
+  it('clicking Settings… closes popover', async () => {
+    const user = userEvent.setup();
+    renderPopover();
+    await user.click(
+      screen.getByRole('button', { name: /settings/i })
+    );
+    await user.click(
+      screen.getByRole('menuitem', { name: /settings…/i })
+    );
+    expect(
+      screen.queryByRole('menu')
+    ).not.toBeInTheDocument();
   });
 });

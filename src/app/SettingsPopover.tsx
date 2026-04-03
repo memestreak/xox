@@ -8,9 +8,8 @@ import {
 } from 'react';
 import { useSequencer } from './SequencerContext';
 import { encodeConfig } from './configCodec';
-import { useTooltips } from './TooltipContext';
 import Tooltip from './Tooltip';
-import MidiSettings from './MidiSettings';
+import SettingsModal from './SettingsModal';
 
 /**
  * Gear icon button with a dropdown popover for settings.
@@ -21,12 +20,10 @@ import MidiSettings from './MidiSettings';
  */
 export default function SettingsPopover() {
   const { meta } = useSequencer();
-  const {
-    tooltipsEnabled, setTooltipsEnabled,
-  } = useTooltips();
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
-  const [midiOpen, setMidiOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsKey, setSettingsKey] = useState(0);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -113,35 +110,23 @@ export default function SettingsPopover() {
           >
             {feedback || 'Export URL'}
           </button>
-          <label
-            role="menuitem"
-            className="w-full flex items-center justify-between px-4 py-3 text-sm text-neutral-200 hover:bg-neutral-800 transition-colors cursor-pointer"
-          >
-            Show tooltips
-            <input
-              type="checkbox"
-              checked={tooltipsEnabled}
-              onChange={(e) =>
-                setTooltipsEnabled(e.target.checked)
-              }
-              className="accent-orange-500"
-            />
-          </label>
           <button
             role="menuitem"
             onClick={() => {
-              setMidiOpen(true);
+              setSettingsKey((k) => k + 1);
+              setSettingsOpen(true);
               setIsOpen(false);
             }}
             className="w-full text-left px-4 py-3 text-sm text-neutral-200 hover:bg-neutral-800 transition-colors border-t border-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-500"
           >
-            MIDI Settings…
+            Settings…
           </button>
         </div>
       )}
-      <MidiSettings
-        isOpen={midiOpen}
-        onClose={() => setMidiOpen(false)}
+      <SettingsModal
+        key={settingsKey}
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
     </div>
   );
