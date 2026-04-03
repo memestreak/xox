@@ -1167,3 +1167,65 @@ describe('pattern switch logic', () => {
     ).toBe(home.tracks.bd.steps);
   });
 });
+
+// -------------------------------------------------
+// setParameterLock merging
+// -------------------------------------------------
+describe('setParameterLock merging', () => {
+  it('setting gain preserves existing pan lock', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setParameterLock(
+        'bd', 0, { pan: 0.3 }
+      );
+    });
+    act(() => {
+      result.current.actions.setParameterLock(
+        'bd', 0, { gain: 0.7 }
+      );
+    });
+    const locks =
+      result.current.meta.config.tracks.bd
+        .parameterLocks?.[0];
+    expect(locks).toEqual({ pan: 0.3, gain: 0.7 });
+  });
+
+  it('setting pan preserves existing gain lock', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setParameterLock(
+        'bd', 0, { gain: 0.5 }
+      );
+    });
+    act(() => {
+      result.current.actions.setParameterLock(
+        'bd', 0, { pan: 0.8 }
+      );
+    });
+    const locks =
+      result.current.meta.config.tracks.bd
+        .parameterLocks?.[0];
+    expect(locks).toEqual({ gain: 0.5, pan: 0.8 });
+  });
+
+  it(
+    'clearParameterLock removes all locks for step',
+    () => {
+      const { result } = renderSequencer();
+      act(() => {
+        result.current.actions.setParameterLock(
+          'bd', 0, { gain: 0.5, pan: 0.3 }
+        );
+      });
+      act(() => {
+        result.current.actions.clearParameterLock(
+          'bd', 0
+        );
+      });
+      const locks =
+        result.current.meta.config.tracks.bd
+          .parameterLocks;
+      expect(locks).toBeUndefined();
+    }
+  );
+});

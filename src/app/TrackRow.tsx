@@ -483,6 +483,10 @@ function TrackRowInner({
                       parameterLocks?.[globalIdx]
                         ?.gain
                     }
+                    panLock={
+                      parameterLocks?.[globalIdx]
+                        ?.pan
+                    }
                     onOpenPopover={handleOpenPopover}
                     longPressActiveRef={
                       longPressActiveRef

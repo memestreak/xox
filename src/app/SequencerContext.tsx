@@ -1086,7 +1086,11 @@ export function SequencerProvider({
             ...prev.tracks[trackId],
             parameterLocks: {
               ...prev.tracks[trackId].parameterLocks,
-              [stepIndex]: locks,
+              [stepIndex]: {
+                ...prev.tracks[trackId]
+                  .parameterLocks?.[stepIndex],
+                ...locks,
+              },
             },
           },
         },
