@@ -11,10 +11,20 @@ import TransportControls from './TransportControls';
 import StepGrid from './StepGrid';
 import PageIndicator from './PageIndicator';
 import { getPatternLength } from './types';
+import PatternPicker from './PatternPicker';
+import patternsData from './data/patterns.json';
+import { getCategorizedPatterns } from './patternUtils';
+import type { Pattern } from './types';
+
+const categories = getCategorizedPatterns(
+  patternsData.patterns as Pattern[]
+);
 
 function SequencerInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { meta } = useSequencer();
+  const { state, actions, meta } = useSequencer();
+  const { selectedPatternId } = state;
+  const { setPattern } = actions;
   const patternLength = getPatternLength(meta.config.tracks);
 
   const [currentPage, setCurrentPage] = useState(0);
@@ -45,9 +55,21 @@ function SequencerInner() {
         Skip to main content
       </a>
       <div className="max-w-none lg:max-w-4xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-4 flex flex-col flex-1 min-h-0">
-        <TransportControls
-          pageIndicator={pageIndicator}
-        />
+        <PatternPicker
+          categories={categories}
+          selectedPatternId={selectedPatternId}
+          onSelect={setPattern}
+        >
+          {({ trigger, drawer }) => (
+            <>
+              <TransportControls
+                pageIndicator={pageIndicator}
+                patternTrigger={trigger}
+              />
+              {drawer}
+            </>
+          )}
+        </PatternPicker>
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto py-3 lg:py-4 track-scroll-region"
