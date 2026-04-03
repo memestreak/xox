@@ -52,8 +52,19 @@ function renderPicker(
       categories={categories}
       selectedPatternId={selectedPatternId}
       onSelect={onSelect}
-    />,
+    >
+      {({ trigger, drawer }) => (
+        <>
+          {trigger}
+          {drawer}
+        </>
+      )}
+    </PatternPicker>,
   );
+}
+
+function getDrawer() {
+  return screen.getByTestId('pattern-drawer');
 }
 
 // --------------- tests ---------------
@@ -73,14 +84,32 @@ describe('PatternPicker', () => {
         screen.getByRole('button', { name: /pattern/i }),
       ).toHaveTextContent('Custom');
     });
-  });
 
-  describe('modal open/close', () => {
-    it('dialog hidden initially', () => {
+    it('has aria-expanded=false initially', () => {
       renderPicker();
       expect(
-        screen.queryByRole('dialog'),
-      ).not.toBeInTheDocument();
+        screen.getByRole('button', { name: /pattern/i }),
+      ).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('has aria-expanded=true when open', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      await user.click(
+        screen.getByRole('button', { name: /pattern/i }),
+      );
+      expect(
+        screen.getByRole('button', { name: /pattern/i }),
+      ).toHaveAttribute('aria-expanded', 'true');
+    });
+  });
+
+  describe('drawer open/close', () => {
+    it('drawer is aria-hidden initially', () => {
+      renderPicker();
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'true',
+      );
     });
 
     it('opens on trigger click', async () => {
@@ -89,7 +118,9 @@ describe('PatternPicker', () => {
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
+      );
     });
 
     it('closes on Escape', async () => {
@@ -99,23 +130,25 @@ describe('PatternPicker', () => {
         screen.getByRole('button', { name: /pattern/i }),
       );
       await user.keyboard('{Escape}');
-      expect(
-        screen.queryByRole('dialog'),
-      ).not.toBeInTheDocument();
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'true',
+      );
     });
 
-    it('closes on backdrop click', async () => {
+    it('closes on second trigger click', async () => {
       const user = userEvent.setup();
       renderPicker();
-      await user.click(
-        screen.getByRole('button', { name: /pattern/i }),
+      const trigger = screen.getByRole('button', {
+        name: /pattern/i,
+      });
+      await user.click(trigger);
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
       );
-      await user.click(
-        screen.getByTestId('pattern-picker-backdrop'),
+      await user.click(trigger);
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'true',
       );
-      expect(
-        screen.queryByRole('dialog'),
-      ).not.toBeInTheDocument();
     });
   });
 
@@ -140,7 +173,6 @@ describe('PatternPicker', () => {
       await user.click(
         screen.getByRole('button', { name: /pattern/i }),
       );
-      // Funk patterns should be visible
       expect(
         screen.getByRole('option', { name: 'Funk 1' }),
       ).toBeInTheDocument();
@@ -153,7 +185,6 @@ describe('PatternPicker', () => {
         await user.click(
           screen.getByRole('button', { name: /pattern/i }),
         );
-        // No pattern options visible — no category selected
         expect(
           screen.queryByRole('option'),
         ).not.toBeInTheDocument();
@@ -204,7 +235,6 @@ describe('PatternPicker', () => {
         const funkPill = screen.getByRole('button', {
           name: 'Funk',
         });
-        // Funk is both selected and active — no has-active flag
         expect(
           funkPill.getAttribute('data-has-active'),
         ).toBeNull();
@@ -226,7 +256,7 @@ describe('PatternPicker', () => {
       expect(onSelect).toHaveBeenCalledWith(funkPatterns[1]);
     });
 
-    it('modal stays open after selection', async () => {
+    it('drawer stays open after selection', async () => {
       const user = userEvent.setup();
       renderPicker('funk-1');
       await user.click(
@@ -235,9 +265,9 @@ describe('PatternPicker', () => {
       await user.click(
         screen.getByRole('option', { name: 'Funk 2' }),
       );
-      expect(
-        screen.getByRole('dialog'),
-      ).toBeInTheDocument();
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
+      );
     });
 
     it('active pattern has aria-selected=true', async () => {
@@ -266,30 +296,6 @@ describe('PatternPicker', () => {
       expect(inactiveOption).toHaveAttribute(
         'aria-selected', 'false',
       );
-    });
-  });
-
-  describe('footer', () => {
-    it('shows active pattern name in footer', async () => {
-      const user = userEvent.setup();
-      renderPicker('funk-1');
-      await user.click(
-        screen.getByRole('button', { name: /pattern/i }),
-      );
-      expect(
-        screen.getByTestId('active-label'),
-      ).toHaveTextContent('Funk 1');
-    });
-
-    it('shows Custom in footer for custom pattern', async () => {
-      const user = userEvent.setup();
-      renderPicker('custom');
-      await user.click(
-        screen.getByRole('button', { name: /pattern/i }),
-      );
-      expect(
-        screen.getByTestId('active-label'),
-      ).toHaveTextContent('Custom');
     });
   });
 

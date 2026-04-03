@@ -3,24 +3,17 @@
 import { memo } from 'react';
 import type { ReactNode } from 'react';
 import kitsData from './data/kits.json';
-import patternsData from './data/patterns.json';
 import TempoController from './TempoController';
 import SettingsPopover from './SettingsPopover';
 import GlobalControls from './GlobalControls';
 import FillButton from './FillButton';
 import PatternModeSelector from './PatternModeSelector';
 import { useSequencer } from './SequencerContext';
-import PatternPicker from './PatternPicker';
 import Tooltip from './Tooltip';
-import { getCategorizedPatterns } from './patternUtils';
-import type { Pattern } from './types';
-
-const categories = getCategorizedPatterns(
-  patternsData.patterns as Pattern[]
-);
 
 interface TransportControlsProps {
   pageIndicator?: ReactNode;
+  patternTrigger?: ReactNode;
 }
 
 /**
@@ -29,18 +22,19 @@ interface TransportControlsProps {
  */
 function TransportControlsInner({
   pageIndicator,
+  patternTrigger,
 }: TransportControlsProps) {
   const { state, actions } = useSequencer();
   const {
     isPlaying, bpm, currentKit,
-    selectedPatternId, isLoaded,
+    isLoaded,
   } = state;
   const {
-    togglePlay, setBpm, setKit, setPattern,
+    togglePlay, setBpm, setKit,
   } = actions;
 
   return (
-    <header className="bg-neutral-950 safe-area-top safe-area-x border-b border-neutral-800 pb-3 lg:pb-4 space-y-2 lg:space-y-4">
+    <header className="bg-neutral-950 safe-area-top safe-area-x space-y-2 lg:space-y-4">
       {/* Row 1: Logo + BPM + Play */}
       <div className="flex justify-between items-center lg:items-end">
         <h1 className="text-2xl lg:text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">
@@ -101,11 +95,7 @@ function TransportControlsInner({
           </span>
           <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0">
-              <PatternPicker
-                categories={categories}
-                selectedPatternId={selectedPatternId}
-                onSelect={setPattern}
-              />
+              {patternTrigger}
             </div>
             {pageIndicator}
           </div>

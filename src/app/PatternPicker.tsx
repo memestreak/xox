@@ -5,6 +5,7 @@ import {
   useRef,
   useEffect,
 } from 'react';
+import type { ReactNode } from 'react';
 import type { Pattern } from './types';
 import type { PatternCategory } from './patternUtils';
 import Tooltip from './Tooltip';
@@ -13,25 +14,29 @@ interface PatternPickerProps {
   categories: PatternCategory[];
   selectedPatternId: string;
   onSelect: (pattern: Pattern) => void;
+  children: (props: {
+    trigger: ReactNode;
+    drawer: ReactNode;
+  }) => ReactNode;
 }
 
 /**
- * Centered modal pattern picker with category pills
- * (pinned top zone), columns-first pattern grid
- * (scrollable), and footer. Stays open for auditioning.
- * Escape/backdrop/X to close.
+ * Render-prop pattern picker. Exposes a trigger button and
+ * an inline drawer via children function so the parent
+ * controls layout placement.
  */
 export default function PatternPicker({
   categories,
   selectedPatternId,
   onSelect,
+  children,
 }: PatternPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<
     string | null
   >(null);
 
-  const modalRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const isCustom = selectedPatternId === 'custom';
@@ -43,9 +48,6 @@ export default function PatternPicker({
     ? 'Custom'
     : (matchedPattern?.name ?? selectedPatternId);
 
-  // Derive initial category when opening (avoids
-  // setState-in-effect lint violation). Focus modal
-  // directly in the handler (rerender-move-effect-to-event).
   const handleOpen = () => {
     if (isCustom) {
       setSelectedCategory(null);
@@ -56,9 +58,8 @@ export default function PatternPicker({
       setSelectedCategory(cat?.category ?? null);
     }
     setIsOpen(true);
-    // Focus modal after React commits the DOM update
     requestAnimationFrame(() => {
-      modalRef.current?.focus();
+      drawerRef.current?.focus();
     });
   };
 
@@ -94,158 +95,135 @@ export default function PatternPicker({
       )
     : 0;
 
-  return (
-    <>
-      {/* Trigger button */}
-      <Tooltip tooltipKey="pattern">
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={() => isOpen ? handleClose() : handleOpen()}
-          aria-haspopup="dialog"
-          aria-expanded={isOpen}
-          aria-label="Pattern"
-          className="w-full px-3 lg:px-4 py-2 rounded-full
-            font-bold text-sm lg:text-base truncate
-            bg-neutral-800 text-neutral-400
-            hover:text-neutral-200 hover:bg-neutral-700
-            transition-colors
-            focus-visible:outline-none focus-visible:ring-2
-            focus-visible:ring-orange-500
-            focus-visible:ring-offset-2
-            focus-visible:ring-offset-neutral-950"
-        >
-          {displayName}
-        </button>
-      </Tooltip>
-
-      {/* Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 z-40 pointer-events-none flex items-start justify-center pt-4 lg:pt-8">
-          {/* Backdrop */}
-          <div
-            data-testid="pattern-picker-backdrop"
-            className="fixed inset-0 bg-black/60 pointer-events-auto"
-            onClick={handleClose}
-          />
-
-          {/* Panel — swallow Space so it doesn't activate
-               buttons (global Space toggles playback) */}
-          <div
-            ref={modalRef}
-            role="dialog"
-            aria-label="Pattern picker"
-            tabIndex={-1}
-            onKeyDown={(e) => {
-              if (e.code === 'Space') e.preventDefault();
-            }}
-            className="relative z-50 pointer-events-auto
-              w-full max-w-[680px] mx-3
-              flex flex-col max-h-[80vh]
-              bg-neutral-900 border border-neutral-700
-              rounded-xl shadow-2xl
-              focus-visible:outline-none"
-          >
-            {/* Zone 1: Category pills (pinned) */}
-            <div className="p-4 pb-3 flex flex-wrap gap-1.5">
-              {categories.map(group => {
-                const isSelected =
-                  selectedCategory === group.category;
-                const hasActive =
-                  !isSelected &&
-                  activeCategory?.category === group.category;
-                return (
-                  <button
-                    key={group.category}
-                    type="button"
-                    onClick={() =>
-                      setSelectedCategory(
-                        isSelected ? null : group.category,
-                      )
-                    }
-                    data-has-active={hasActive || undefined}
-                    className={`px-3 py-1.5 text-sm
-                      rounded-lg font-medium transition-colors
-                      ${isSelected
-                        ? 'bg-orange-600 text-white'
-                        : hasActive
-                          ? 'bg-neutral-700 text-orange-400 border border-orange-600/40'
-                          : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-neutral-100'
-                      }`}
-                  >
-                    {group.category}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-neutral-800" />
-
-            {/* Zone 2: Pattern grid (scrollable) */}
-            <div className="overflow-y-auto flex-1 p-4 hide-scrollbar">
-              {selectedCategory && patternsToShow.length > 0
-                ? (
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridAutoFlow: 'column',
-                      gridTemplateRows:
-                        `repeat(${rowCount}, auto)`,
-                      gridTemplateColumns:
-                        'repeat(auto-fill, minmax(120px, 1fr))',
-                    }}
-                    className="gap-px"
-                  >
-                    {patternsToShow.map(p => {
-                      const isActive =
-                        p.id === selectedPatternId;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isActive}
-                          onClick={() => onSelect(p)}
-                          className={`text-left px-2 py-1
-                            text-sm rounded transition-colors
-                            ${isActive
-                              ? 'text-orange-400 bg-neutral-800 font-semibold'
-                              : 'text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100'
-                            }`}
-                        >
-                          {p.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )
-                : (
-                  <p className="text-sm text-neutral-500 italic">
-                    Select a category
-                  </p>
-                )}
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-neutral-800
-              px-4 py-2 flex items-center justify-between
-              text-xs text-neutral-500"
-            >
-              <span>
-                Active:{' '}
-                <span
-                  data-testid="active-label"
-                  className="text-orange-400 font-medium"
-                >
-                  {displayName}
-                </span>
-              </span>
-              <span>Esc to close</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+  const trigger = (
+    <Tooltip tooltipKey="pattern">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => isOpen ? handleClose() : handleOpen()}
+        aria-expanded={isOpen}
+        aria-label="Pattern"
+        className={`w-full px-3 lg:px-4 py-2 rounded-full
+          font-bold text-sm lg:text-base truncate
+          transition-colors
+          focus-visible:outline-none focus-visible:ring-2
+          focus-visible:ring-orange-500
+          focus-visible:ring-offset-2
+          focus-visible:ring-offset-neutral-950
+          ${isOpen
+            ? 'bg-orange-600 text-white hover:bg-orange-700'
+            : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'
+          }`}
+      >
+        {isOpen ? `▲ ${displayName}` : displayName}
+      </button>
+    </Tooltip>
   );
+
+  const drawer = (
+    <div
+      data-testid="pattern-drawer"
+      role="region"
+      aria-label="Pattern browser"
+      aria-hidden={!isOpen}
+      className={`overflow-hidden
+        ${isOpen ? 'max-h-[240px] opacity-100 mt-3 lg:mt-4' : 'max-h-0 opacity-0'}
+        motion-safe:transition-all motion-safe:duration-100 ease-out`}
+    >
+      <div
+        ref={drawerRef}
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (e.code === 'Space') e.preventDefault();
+        }}
+        className="h-[240px] flex flex-col
+          bg-neutral-900/50 border border-neutral-800
+          rounded-lg lg:rounded-xl shadow-inner
+          focus-visible:outline-none"
+      >
+        {/* Category pills */}
+        <div className="p-3 pb-2 flex flex-wrap gap-1.5">
+          {categories.map(group => {
+            const isSelected =
+              selectedCategory === group.category;
+            const hasActive =
+              !isSelected &&
+              activeCategory?.category === group.category;
+            return (
+              <button
+                key={group.category}
+                type="button"
+                onClick={() =>
+                  setSelectedCategory(
+                    isSelected ? null : group.category,
+                  )
+                }
+                data-has-active={hasActive || undefined}
+                className={`px-3 py-1.5 text-sm border
+                  rounded-lg font-medium transition-colors
+                  ${isSelected
+                    ? 'bg-orange-600 text-white border-transparent'
+                    : hasActive
+                      ? 'bg-neutral-700 text-orange-400 border-orange-600/40'
+                      : 'bg-neutral-800 text-neutral-300 border-transparent hover:bg-neutral-700 hover:text-neutral-100'
+                  }`}
+              >
+                {group.category}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-neutral-800" />
+
+        {/* Pattern grid (scrollable) */}
+        <div className="overflow-y-auto flex-1 min-h-0 p-3 hide-scrollbar">
+          {selectedCategory && patternsToShow.length > 0
+            ? (
+              <div
+                style={{
+                  display: 'grid',
+                  gridAutoFlow: 'column',
+                  gridTemplateRows:
+                    `repeat(${rowCount}, auto)`,
+                  gridTemplateColumns:
+                    'repeat(auto-fill, minmax(120px, 1fr))',
+                }}
+                className="gap-px"
+              >
+                {patternsToShow.map(p => {
+                  const isActive =
+                    p.id === selectedPatternId;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      onClick={() => onSelect(p)}
+                      className={`text-left px-2 py-1
+                        text-sm rounded transition-colors
+                        ${isActive
+                          ? 'text-orange-400 bg-neutral-800 font-semibold'
+                          : 'text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100'
+                        }`}
+                    >
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )
+            : (
+              <p className="text-sm text-neutral-500 italic">
+                Select a category
+              </p>
+            )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return <>{children({ trigger, drawer })}</>;
 }

@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import TransportControls from '../app/TransportControls';
 import { TestWrapper } from './helpers/sequencer-wrapper';
@@ -17,43 +16,29 @@ vi.mock('../app/AudioEngine', () => ({
 }));
 
 function renderTransport() {
+  const mockTrigger = (
+    <button aria-label="Pattern">Mock Pattern</button>
+  );
   return render(
     <TestWrapper>
-      <TransportControls />
+      <TransportControls patternTrigger={mockTrigger} />
     </TestWrapper>
   );
 }
 
-describe('TransportControls pattern picker', () => {
-  it('shows pattern picker trigger button', () => {
+describe('TransportControls', () => {
+  it('shows pattern trigger button', () => {
     renderTransport();
     expect(
       screen.getByRole('button', { name: /pattern/i })
     ).toBeInTheDocument();
   });
 
-  it('opens modal on trigger click', async () => {
-    const user = userEvent.setup();
+  it('renders pattern trigger in the Pattern box', () => {
     renderTransport();
-    await user.click(
-      screen.getByRole('button', { name: /pattern/i })
-    );
-    expect(
-      screen.getByRole('dialog')
-    ).toBeInTheDocument();
-  });
-
-  it('shows category pills in modal', async () => {
-    const user = userEvent.setup();
-    renderTransport();
-    await user.click(
-      screen.getByRole('button', { name: /pattern/i })
-    );
-    expect(
-      screen.getByRole('button', { name: 'House' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Rock' })
-    ).toBeInTheDocument();
+    const trigger = screen.getByRole('button', {
+      name: /pattern/i,
+    });
+    expect(trigger).toHaveTextContent('Mock Pattern');
   });
 });
