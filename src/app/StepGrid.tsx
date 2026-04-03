@@ -70,6 +70,7 @@ export default function StepGrid({
     startRectDrag,
     updateRectDrag,
     clearSelection,
+    toggleSelected,
   } = useSelection({
     trackOrder: SELECTABLE_TRACKS,
     tracks: config.tracks,
@@ -77,6 +78,7 @@ export default function StepGrid({
     setStep,
     clearTrigCondition,
     clearParameterLock,
+    toggleStep,
   });
 
   // Clear selection on page change
@@ -254,7 +256,7 @@ export default function StepGrid({
             }
             onCtrlClick={ctrlClickCell}
             onShiftClick={shiftClickCell}
-            onPlainClick={clearSelection}
+            onPlainClick={toggleSelected}
           />
         ))}
         <AccentRow
