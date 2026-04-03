@@ -159,20 +159,21 @@ function AccentRowInner({
       <div className="flex items-center gap-2 mb-1 lg:hidden">
         <button
           type="button"
+          title="Accent"
           onClick={(e) => {
             if (e.shiftKey) handleClear();
           }}
           className={
-            'text-[10px] font-bold uppercase'
-            + ' tracking-wider bg-transparent'
-            + ' border-none cursor-pointer'
+            'text-base font-bold uppercase'
+            + ' tracking-wider rounded px-1 py-0.5'
+            + ' transition-colors cursor-pointer'
             + ' font-[family-name:var(--font-orbitron)]'
             + (isFreeRun
               ? ' text-orange-400'
               : ' text-neutral-400')
           }
         >
-          ACCENT
+          AC
         </button>
         <div className="ml-auto">
           <Tooltip tooltipKey="accentIntensity" position="bottom">
@@ -192,32 +193,36 @@ function AccentRowInner({
         <div className="hidden lg:flex w-56 items-center gap-2">
           <button
             type="button"
+            title="Accent"
             onClick={(e) => {
               if (e.shiftKey) handleClear();
             }}
             className={
-              'w-16 truncate text-xs text-left'
+              'w-12 truncate text-lg text-left'
               + ' font-bold uppercase tracking-wider'
-              + ' bg-transparent border-none cursor-pointer'
+              + ' rounded px-1 py-0.5 transition-colors'
+              + ' cursor-pointer'
               + ' font-[family-name:var(--font-orbitron)]'
               + (isFreeRun
                 ? ' text-orange-400'
                 : ' text-neutral-400')
             }
           >
-            ACCENT
+            AC
           </button>
           {/* Spacer matching mute + solo toggle widths */}
           <div className="w-6 h-6" />
           <div className="w-6 h-6" />
-          <Tooltip tooltipKey="accentIntensity" position="bottom">
-            <Knob
-              value={gain}
-              onChange={handleGain}
-              trackName="ACCENT"
-              defaultValue={0.5}
-            />
-          </Tooltip>
+          <div className="ml-1">
+            <Tooltip tooltipKey="accentIntensity" position="bottom">
+              <Knob
+                value={gain}
+                onChange={handleGain}
+                trackName="ACCENT"
+                defaultValue={0.5}
+              />
+            </Tooltip>
+          </div>
         </div>
 
         {/* Step grid with drag handle */}

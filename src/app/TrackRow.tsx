@@ -84,8 +84,8 @@ function TrackNameButtonInner({
           }}
           className={
             (size === 'sm'
-              ? 'text-sm'
-              : 'w-16 truncate text-base text-left')
+              ? 'text-base'
+              : 'w-12 truncate text-lg text-left')
             + ' font-bold uppercase tracking-wider font-[family-name:var(--font-orbitron)]'
             + ' rounded px-1 py-0.5 transition-colors'
             + (isFreeRun
@@ -396,11 +396,13 @@ function TrackRowInner({
             size="md"
             onToggle={handleSolo}
           />
-          <Knob
-            value={gain}
-            onChange={handleGain}
-            trackName={trackName}
-          />
+          <div className="ml-1">
+            <Knob
+              value={gain}
+              onChange={handleGain}
+              trackName={trackName}
+            />
+          </div>
           <Tooltip tooltipKey="pan">
             <Knob
               value={pan}
