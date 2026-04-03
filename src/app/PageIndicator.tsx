@@ -44,10 +44,12 @@ function PageIndicatorInner({
             + ' focus-visible:outline-none'
             + ' focus-visible:ring-2'
             + ' focus-visible:ring-orange-500 '
+            + ' border'
             + (autoFollow
-              ? 'bg-orange-600 text-white'
-              : 'bg-neutral-800'
-                + ' border border-neutral-600'
+              ? ' bg-orange-600 text-white'
+                + ' border-transparent'
+              : ' bg-neutral-800'
+                + ' border-neutral-600'
                 + ' text-neutral-500')
           }
         >

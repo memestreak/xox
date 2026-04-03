@@ -127,7 +127,7 @@ export default function PatternPicker({
       aria-label="Pattern browser"
       aria-hidden={!isOpen}
       className={`overflow-hidden
-        ${isOpen ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}
+        ${isOpen ? 'max-h-[240px] opacity-100 mt-3 lg:mt-4' : 'max-h-0 opacity-0'}
         motion-safe:transition-all motion-safe:duration-100 ease-out`}
     >
       <div
@@ -136,7 +136,7 @@ export default function PatternPicker({
         onKeyDown={(e) => {
           if (e.code === 'Space') e.preventDefault();
         }}
-        className="h-[200px] flex flex-col
+        className="h-[240px] flex flex-col
           bg-neutral-900/50 border border-neutral-800
           rounded-lg lg:rounded-xl shadow-inner
           focus-visible:outline-none"
@@ -159,13 +159,13 @@ export default function PatternPicker({
                   )
                 }
                 data-has-active={hasActive || undefined}
-                className={`px-3 py-1.5 text-sm
+                className={`px-3 py-1.5 text-sm border
                   rounded-lg font-medium transition-colors
                   ${isSelected
-                    ? 'bg-orange-600 text-white'
+                    ? 'bg-orange-600 text-white border-transparent'
                     : hasActive
-                      ? 'bg-neutral-700 text-orange-400 border border-orange-600/40'
-                      : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-neutral-100'
+                      ? 'bg-neutral-700 text-orange-400 border-orange-600/40'
+                      : 'bg-neutral-800 text-neutral-300 border-transparent hover:bg-neutral-700 hover:text-neutral-100'
                   }`}
               >
                 {group.category}

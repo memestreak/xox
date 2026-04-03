@@ -136,3 +136,18 @@ introduces race conditions.
 - Patterns use 16-char binary strings per track
 - Tailwind CSS v4 for styling
 - TypeScript strict mode
+
+## CSS / Layout Rules
+
+- **Conditional borders cause layout shift.** Never add
+  `border` only in one branch of a ternary. Always apply
+  `border` unconditionally and toggle the color instead
+  (e.g., `border-transparent` when invisible). This
+  prevents 1px reflow when state changes.
+- **Always-mounted collapsible panels** (e.g., the pattern
+  drawer) use `max-h-0`/`max-h-[Npx]` with
+  `overflow-hidden` for animation. Don't use `gap` on the
+  parent flex container when a collapsed child is present
+  — gap still applies to 0-height children. Use `mt-*` on
+  the panel (only when open) and on the next sibling
+  instead.

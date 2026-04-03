@@ -72,7 +72,7 @@ function SequencerInner() {
         </PatternPicker>
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto py-3 lg:py-4 track-scroll-region"
+          className="flex-1 overflow-y-auto mt-3 lg:mt-4 pb-3 lg:pb-4 track-scroll-region"
         >
           <StepGrid
             scrollContainerRef={scrollRef}

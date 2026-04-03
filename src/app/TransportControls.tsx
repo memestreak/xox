@@ -34,7 +34,7 @@ function TransportControlsInner({
   } = actions;
 
   return (
-    <header className="bg-neutral-950 safe-area-top safe-area-x border-b border-neutral-800 pb-3 lg:pb-4 space-y-2 lg:space-y-4">
+    <header className="bg-neutral-950 safe-area-top safe-area-x space-y-2 lg:space-y-4">
       {/* Row 1: Logo + BPM + Play */}
       <div className="flex justify-between items-center lg:items-end">
         <h1 className="text-2xl lg:text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">
