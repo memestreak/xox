@@ -53,7 +53,7 @@ interface DragState {
 
 const DRAG_THRESHOLD = 5;
 const CYCLE_THRESHOLD_TOUCH = 10;
-const CYCLE_PX_PER_STEP = 20;
+const CYCLE_PX_PER_STEP = 6;
 
 /**
  * Find the track and step under a point using

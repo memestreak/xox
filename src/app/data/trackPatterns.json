@@ -1,11 +1,6 @@
 {
   "patterns": [
     {
-      "id": "whole-note",
-      "name": "Whole Note",
-      "steps": "1000000000000000"
-    },
-    {
       "id": "half-notes",
       "name": "Half Notes",
       "steps": "1000000010000000"
@@ -21,9 +16,54 @@
       "steps": "1000100010001000"
     },
     {
+      "id": "offbeat-16ths-b",
+      "name": "Offbeat 16ths B",
+      "steps": "0100010001000100"
+    },
+    {
+      "id": "broken-beat",
+      "name": "Broken Beat",
+      "steps": "1000001010001000"
+    },
+    {
+      "id": "skip-kick",
+      "name": "Skip Kick",
+      "steps": "1001000010010000"
+    },
+    {
+      "id": "son-clave-32",
+      "name": "Son Clave 3-2",
+      "steps": "1001001000100100"
+    },
+    {
+      "id": "son-clave-23",
+      "name": "Son Clave 2-3",
+      "steps": "0010010010010010"
+    },
+    {
+      "id": "rumba-clave-32",
+      "name": "Rumba Clave 3-2",
+      "steps": "1001000100100100"
+    },
+    {
       "id": "dotted-eighth",
       "name": "Dotted Eighth",
       "steps": "1001001001001001"
+    },
+    {
+      "id": "double-tresillo",
+      "name": "Double Tresillo",
+      "steps": "1001001010010010"
+    },
+    {
+      "id": "offbeat-16ths-a",
+      "name": "Offbeat 16ths A",
+      "steps": "1000100110001001"
+    },
+    {
+      "id": "shuffle",
+      "name": "Shuffle",
+      "steps": "1001101001011010"
     },
     {
       "id": "eighth-notes",
@@ -36,19 +76,19 @@
       "steps": "0101010101010101"
     },
     {
-      "id": "shuffle",
-      "name": "Shuffle",
-      "steps": "1001101001011010"
-    },
-    {
       "id": "syncopated",
       "name": "Syncopated",
       "steps": "1010011010100110"
     },
     {
-      "id": "sixteenth-notes",
-      "name": "Sixteenth Notes",
-      "steps": "1111111111111111"
+      "id": "garage-shuffle",
+      "name": "Garage Shuffle",
+      "steps": "1001100110011001"
+    },
+    {
+      "id": "cascara",
+      "name": "Cascara",
+      "steps": "1011010110101010"
     }
   ]
 }

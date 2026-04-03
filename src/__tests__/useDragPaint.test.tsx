@@ -614,13 +614,13 @@ describe('useDragPaint', () => {
           clientX: 170, clientY: 16,
           shiftKey: true,
         }));
-        // Drag 25px → floor(25/20) = 1, idx 1 = clear
+        // Drag 7px → floor(7/6) = 1, idx 1 = clear
         h.onPointerMove(makePointerEvent({
-          clientX: 170, clientY: 41,
+          clientX: 170, clientY: 23,
           shiftKey: true,
         }));
         h.onPointerUp(makePointerEvent({
-          clientX: 170, clientY: 41,
+          clientX: 170, clientY: 23,
         }));
 
         // idx 1 = clear from step 4 onward
@@ -687,17 +687,17 @@ describe('useDragPaint', () => {
           renderDragPaintWithCycling(tc);
         const h2 = r2.current;
 
-        // 100px → floor(100/20) = 5, 5 % 5 = 0
+        // 30px → floor(30/6) = 5, 5 % 5 = 0
         // position 0 = snapshot (no change)
         h2.onPointerDown(makePointerEvent({
           clientX: 10, clientY: 16,
           shiftKey: true,
         }));
         h2.onPointerMove(makePointerEvent({
-          clientX: 10, clientY: 116,
+          clientX: 10, clientY: 46,
         }));
         h2.onPointerUp(makePointerEvent({
-          clientX: 10, clientY: 116,
+          clientX: 10, clientY: 46,
         }));
 
         // The last call should be position 0 (snapshot)
