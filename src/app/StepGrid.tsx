@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  useEffect, useRef, useState,
+  useCallback, useEffect, useRef, useState,
 } from 'react';
 import type { RefObject } from 'react';
 import { TRACKS, useSequencer } from './SequencerContext';
@@ -46,9 +46,12 @@ export default function StepGrid({
     toggleStep, setStep, setTrackSteps,
     toggleMute, toggleSolo,
     setGain, setPan, setTrackLength, toggleFreeRun,
-    clearTrack,
+    clearTrack, playPreview,
   } = actions;
-  const { stepRef, totalStepsRef, config } = meta;
+  const {
+    stepRef, totalStepsRef,
+    triggeredTracksRef, config,
+  } = meta;
   const patternLength = getPatternLength(config.tracks);
 
   const longPressActiveRef = useRef<boolean>(false);
@@ -82,8 +85,37 @@ export default function StepGrid({
   // re-render on step ticks.
   const [displayStep, setDisplayStep] = useState(-1);
   const [displayTotal, setDisplayTotal] = useState(0);
+  const [triggeredTracks, setTriggeredTracks] =
+    useState<Set<TrackId>>(new Set());
+  const triggerTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   const autoFollowRef = useRef(autoFollow);
+  const flashTriggered = useCallback(
+    (tracks: Set<TrackId>) => {
+      setTriggeredTracks(tracks);
+      if (triggerTimerRef.current) {
+        clearTimeout(triggerTimerRef.current);
+      }
+      if (tracks.size > 0) {
+        triggerTimerRef.current = setTimeout(
+          () => setTriggeredTracks(new Set()),
+          150
+        );
+      }
+    },
+    []
+  );
+
+  const handlePlayPreview = useCallback(
+    (trackId: TrackId) => {
+      playPreview(trackId);
+      flashTriggered(new Set([trackId]));
+    },
+    [playPreview, flashTriggered]
+  );
+
   useEffect(() => {
     autoFollowRef.current = autoFollow;
   }, [autoFollow]);
@@ -106,6 +138,9 @@ export default function StepGrid({
         setDisplayTotal(
           Math.max(0, curTotal - 1)
         );
+        flashTriggered(
+          new Set(triggeredTracksRef.current)
+        );
         // Auto-follow page
         if (
           autoFollowRef.current
@@ -120,8 +155,13 @@ export default function StepGrid({
     };
 
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [stepRef, totalStepsRef, setPage]);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (triggerTimerRef.current) {
+        clearTimeout(triggerTimerRef.current);
+      }
+    };
+  }, [stepRef, totalStepsRef, triggeredTracksRef, setPage]);
 
   return (
     <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-3 lg:p-6 rounded-xl lg:rounded-2xl border border-neutral-800/50">
@@ -157,6 +197,10 @@ export default function StepGrid({
             onSetTrackLength={setTrackLength}
             onToggleFreeRun={toggleFreeRun}
             onClearTrack={clearTrack}
+            onPlayPreview={handlePlayPreview}
+            isTriggered={
+              triggeredTracks.has(track.id)
+            }
             longPressActiveRef={longPressActiveRef}
             trigConditions={
               config.tracks[track.id].trigConditions

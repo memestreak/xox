@@ -1135,3 +1135,144 @@ describe('step boundary hooks', () => {
     expect(mockRequestReset).toHaveBeenCalled();
   });
 });
+
+// -------------------------------------------------------
+// triggeredTracksRef
+// -------------------------------------------------------
+describe('triggeredTracksRef', () => {
+  beforeEach(() => {
+    mockPlaySound.mockClear();
+    mockStart.mockClear();
+    mockStop.mockClear();
+  });
+
+  it('contains fired track IDs after a step',
+    async () => {
+      const { result } = await setupAndTrigger({
+        activeTracks: ['bd', 'ch'],
+      });
+      const triggered =
+        result.current.meta.triggeredTracksRef
+          .current;
+      expect(triggered.has('bd')).toBe(true);
+      expect(triggered.has('ch')).toBe(true);
+      expect(triggered.has('sd')).toBe(false);
+    }
+  );
+
+  it('is cleared at the start of each step',
+    async () => {
+      const { result } = renderSequencer();
+
+      // Activate bd on step 0, sd on step 1
+      await act(async () => {
+        for (const id of TRACK_IDS) {
+          const s =
+            result.current.meta.config.tracks[id]
+              .steps;
+          if (s[0] === '1')
+            result.current.actions.toggleStep(id, 0);
+          if (s[1] === '1')
+            result.current.actions.toggleStep(id, 1);
+        }
+        result.current.actions.toggleStep('bd', 0);
+        result.current.actions.toggleStep('sd', 1);
+      });
+
+      await act(async () => {
+        result.current.actions.togglePlay();
+      });
+
+      const onStep =
+        mockStart.mock.calls[0][1] as (
+          step: number, time: number
+        ) => void;
+
+      onStep(0, 0.0);
+      expect(
+        result.current.meta.triggeredTracksRef
+          .current.has('bd')
+      ).toBe(true);
+
+      // Step 1: bd should no longer be triggered
+      onStep(1, 0.5);
+      expect(
+        result.current.meta.triggeredTracksRef
+          .current.has('bd')
+      ).toBe(false);
+      expect(
+        result.current.meta.triggeredTracksRef
+          .current.has('sd')
+      ).toBe(true);
+    }
+  );
+
+  it('is cleared when playback stops',
+    async () => {
+      const { result } = await setupAndTrigger({
+        activeTracks: ['bd'],
+      });
+
+      expect(
+        result.current.meta.triggeredTracksRef
+          .current.size
+      ).toBeGreaterThan(0);
+
+      await act(async () => {
+        result.current.actions.togglePlay();
+      });
+
+      expect(
+        result.current.meta.triggeredTracksRef
+          .current.size
+      ).toBe(0);
+    }
+  );
+});
+
+// -------------------------------------------------------
+// playPreview
+// -------------------------------------------------------
+describe('playPreview', () => {
+  beforeEach(() => {
+    mockPlaySound.mockClear();
+  });
+
+  it('plays the track sample immediately',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.playPreview('bd');
+      });
+
+      expect(mockPlaySound).toHaveBeenCalledTimes(1);
+      expect(mockPlaySound.mock.calls[0][0])
+        .toBe('bd');
+    }
+  );
+
+  it('uses the track gain and pan settings',
+    async () => {
+      const { result } = renderSequencer();
+
+      await act(async () => {
+        result.current.actions.setGain('bd', 0.5);
+        result.current.actions.setPan('bd', 0.75);
+      });
+
+      mockPlaySound.mockClear();
+
+      await act(async () => {
+        result.current.actions.playPreview('bd');
+      });
+
+      expect(mockPlaySound).toHaveBeenCalledTimes(1);
+      // gain = 0.5^3 = 0.125
+      expect(mockPlaySound.mock.calls[0][2])
+        .toBeCloseTo(0.125);
+      expect(mockPlaySound.mock.calls[0][3])
+        .toBe(0.75);
+    }
+  );
+});

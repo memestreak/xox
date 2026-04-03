@@ -130,11 +130,13 @@ interface SequencerActions {
   ) => void;
   setPatternMode: (mode: PatternMode) => void;
   toggleTemp: () => void;
+  playPreview: (trackId: TrackId) => void;
 }
 
 interface SequencerMeta {
   stepRef: React.RefObject<number>;
   totalStepsRef: React.RefObject<number>;
+  triggeredTracksRef: React.RefObject<Set<TrackId>>;
   config: SequencerConfig;
 }
 
@@ -216,6 +218,9 @@ export function SequencerProvider({
   const [isLoaded, setIsLoaded] = useState(false);
   const stepRef = useRef<number>(-1);
   const totalStepsRef = useRef<number>(0);
+  const triggeredTracksRef = useRef<Set<TrackId>>(
+    new Set()
+  );
 
   // ─── Fill state ──────────────────────────────────
   const [isLatched, setIsLatched] = useState(false);
@@ -349,6 +354,7 @@ export function SequencerProvider({
       const total = totalStepsRef.current;
       totalStepsRef.current = total + 1;
       stepRef.current = step;
+      triggeredTracksRef.current = new Set();
 
       const states = trackStatesRef.current;
       const cfg = configRef.current;
@@ -436,6 +442,7 @@ export function SequencerProvider({
           audioEngine.playSound(
             track.id, scheduledTime, gain, pan
           );
+          triggeredTracksRef.current.add(track.id);
           // MIDI output (convert AudioContext time to
           // performance.now timestamp)
           const perfTimeMs = performance.now()
@@ -545,6 +552,7 @@ export function SequencerProvider({
       setIsPlaying(false);
       stepRef.current = -1;
       totalStepsRef.current = 0;
+      triggeredTracksRef.current = new Set();
       initCycleCounts();
     } else {
       totalStepsRef.current = 0;
@@ -1162,6 +1170,20 @@ export function SequencerProvider({
     };
   }, [toggleTemp]);
 
+  const playPreview = useCallback(
+    (trackId: TrackId) => {
+      const st = trackStatesRef.current[trackId];
+      const cubic = st.gain ** 3;
+      audioEngine.playSound(
+        trackId,
+        audioEngine.getCurrentTime(),
+        cubic,
+        st.pan
+      );
+    },
+    []
+  );
+
   // ─── Context value ────────────────────────────────
 
   const value: SequencerContextValue = {
@@ -1204,8 +1226,12 @@ export function SequencerProvider({
       clearParameterLock,
       setPatternMode,
       toggleTemp,
+      playPreview,
     },
-    meta: { stepRef, totalStepsRef, config },
+    meta: {
+      stepRef, totalStepsRef,
+      triggeredTracksRef, config,
+    },
   };
 
   return (
