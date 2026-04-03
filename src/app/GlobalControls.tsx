@@ -38,10 +38,10 @@ function GlobalControlsInner() {
 
   return (
     <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
-      <div className="flex items-end gap-2 lg:gap-3">
+      <div className="flex items-stretch gap-2 lg:gap-3">
         {/* Steps dropdown */}
-        <div>
-          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold text-center">
+        <div className="flex flex-col">
+          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
             Steps
           </span>
           <Tooltip tooltipKey="steps">
@@ -64,10 +64,11 @@ function GlobalControlsInner() {
         </div>
 
         {/* Swing knob */}
-        <div className="text-center">
-          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
+        <div className="flex flex-col">
+          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold text-center">
             Swing
           </span>
+          <div className="flex-1" />
           <Tooltip tooltipKey="swing">
             <Knob
               value={state.swing / 100}
@@ -86,7 +87,7 @@ function GlobalControlsInner() {
         <Tooltip tooltipKey="reset">
           <button
             onClick={handleReset}
-            className="h-8 bg-neutral-800 border border-neutral-700 rounded px-1.5 lg:px-2 text-[9px] lg:text-[10px] uppercase tracking-wider font-bold text-neutral-400 hover:text-red-400 hover:border-red-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            className="h-8 self-end bg-neutral-800 border border-neutral-700 rounded px-1.5 lg:px-2 text-[9px] lg:text-[10px] uppercase tracking-wider font-bold text-neutral-400 hover:text-red-400 hover:border-red-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
           >
             Reset
           </button>

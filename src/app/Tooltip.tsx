@@ -56,7 +56,7 @@ export default function Tooltip({
         + ' ' + posClass
         + ' z-50 whitespace-nowrap'
         + ' px-1.5 py-0.5'
-        + ' text-[10px] font-bold normal-case tracking-normal'
+        + ' text-[10px] font-bold normal-case tracking-normal font-[family-name:var(--font-geist-sans)]'
         + ' bg-neutral-800 text-neutral-200'
         + ' rounded'
         + ' opacity-0'

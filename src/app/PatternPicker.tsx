@@ -96,15 +96,15 @@ export default function PatternPicker({
     : 0;
 
   const trigger = (
-    <Tooltip tooltipKey="pattern">
+    <Tooltip tooltipKey="pattern" position="bottom">
       <button
         ref={triggerRef}
         type="button"
         onClick={() => isOpen ? handleClose() : handleOpen()}
         aria-expanded={isOpen}
         aria-label="Pattern"
-        className={`w-full px-3 lg:px-4 py-2 rounded-full
-          font-bold text-sm lg:text-base truncate
+        className={`w-32 lg:w-40 px-3 lg:px-4 py-2 rounded-full
+          font-bold text-xs lg:text-sm font-[family-name:var(--font-orbitron)]
           transition-colors
           focus-visible:outline-none focus-visible:ring-2
           focus-visible:ring-orange-500
@@ -115,7 +115,9 @@ export default function PatternPicker({
             : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'
           }`}
       >
-        {isOpen ? `▲ ${displayName}` : displayName}
+        <span className="block truncate">
+          {isOpen ? `▲ ${displayName}` : displayName}
+        </span>
       </button>
     </Tooltip>
   );
