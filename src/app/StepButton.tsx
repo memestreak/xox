@@ -104,9 +104,10 @@ function StepButtonInner({
         className={
           sizeClass + ' ' + radiusClass
           + ' bg-neutral-900/20 cursor-not-allowed'
+          + ' border-l-2'
           + (isBeat && !mini
-            ? ' border-l-2 border-neutral-800/30'
-            : '')
+            ? ' border-neutral-800/30'
+            : ' border-transparent')
         }
       />
     );
@@ -188,9 +189,10 @@ function StepButtonInner({
           + ' focus-visible:ring-2'
           + ' focus-visible:ring-orange-500 '
           + color
+          + ' border-l-2'
           + (isBeat && !mini
-            ? ' border-l-2 border-neutral-700'
-            : '')
+            ? ' border-neutral-700'
+            : ' border-transparent')
         }
       >
         {!mini && isActive
