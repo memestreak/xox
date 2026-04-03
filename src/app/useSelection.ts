@@ -31,6 +31,10 @@ interface UseSelectionOptions {
   clearParameterLock: (
     trackId: TrackId, stepIndex: number
   ) => void;
+  /** Toggle a single step (flip 0↔1). */
+  toggleStep: (
+    trackId: TrackId, stepIndex: number
+  ) => void;
 }
 
 /**
@@ -74,6 +78,7 @@ export function useSelection({
   setStep,
   clearTrigCondition,
   clearParameterLock,
+  toggleStep,
 }: UseSelectionOptions) {
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set()
@@ -184,6 +189,23 @@ export function useSelection({
     dragOriginRef.current = null;
   }, [setStep, clearTrigCondition, clearParameterLock]);
 
+  const toggleSelected = useCallback(() => {
+    const cur = selectedRef.current;
+    if (cur.size === 0) return false;
+
+    for (const key of cur) {
+      const colonIdx = key.indexOf(':');
+      const tid = key.substring(0, colonIdx) as TrackId;
+      const step = Number(key.substring(colonIdx + 1));
+      toggleStep(tid, step);
+    }
+
+    setSelected(new Set());
+    anchorRef.current = null;
+    dragOriginRef.current = null;
+    return true;
+  }, [toggleStep]);
+
   // Keyboard listener for Escape and Delete/Backspace
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -237,5 +259,6 @@ export function useSelection({
     updateRectDrag,
     clearSelection,
     deleteSelected,
+    toggleSelected,
   };
 }

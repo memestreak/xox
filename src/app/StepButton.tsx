@@ -33,7 +33,7 @@ interface StepButtonProps {
   onShiftClick?: (
     trackId: TrackId, stepIndex: number
   ) => void;
-  onPlainClick?: () => void;
+  onPlainClick?: () => boolean;
   longPressActiveRef?: RefObject<boolean>;
 }
 
@@ -183,7 +183,7 @@ function StepButtonInner({
             onCtrlClick(trackId, stepIndex);
             return;
           }
-          onPlainClick?.();
+          if (onPlainClick?.()) return;
           handleToggle();
         }}
         onContextMenu={(e) => {

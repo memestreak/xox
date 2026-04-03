@@ -335,12 +335,13 @@ export function useDragPaint({
       drag.escapeHandler = null;
       drag.selectionMode = false;
 
-      // Clear selection on normal interaction,
-      // but not when Shift is held (Shift+Click
-      // extends selection via StepButton onClick)
-      if (!e.shiftKey) {
-        onClearSelection?.();
-      }
+      // Selection is cleared when a drag actually starts
+      // (in onPointerMove), not here on pointerdown.
+      // This lets StepButton's click handler act on the
+      // selection before it's cleared (e.g. toggle all
+      // selected cells on plain click).
+      // Shift+click preserves selection (handled in
+      // StepButton onClick).
 
       // Determine if we should enter cycling mode
       const isMouseShift =
@@ -382,7 +383,6 @@ export function useDragPaint({
       popoverOpenRef,
       pageOffset,
       onSelectionStart,
-      onClearSelection,
     ]
   );
 
@@ -451,6 +451,7 @@ export function useDragPaint({
           if (dy < threshold) return;
 
           drag.dragged = true;
+          onClearSelection?.();
           try {
             container.setPointerCapture(drag.pointerId);
           } catch {
@@ -527,6 +528,7 @@ export function useDragPaint({
           return;
         }
         drag.dragged = true;
+        onClearSelection?.();
         try {
           container.setPointerCapture(
             drag.pointerId
@@ -548,7 +550,8 @@ export function useDragPaint({
     },
     [containerRef, paintTo, applyPatternAtIndex,
       patterns, onSetTrackSteps,
-      onSelectionStart, onSelectionUpdate, pageOffset]
+      onSelectionStart, onSelectionUpdate, pageOffset,
+      onClearSelection]
   );
 
   const onPointerUp = useCallback(

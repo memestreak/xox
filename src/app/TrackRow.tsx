@@ -191,7 +191,7 @@ interface TrackRowProps {
   onShiftClick?: (
     trackId: TrackId, stepIndex: number
   ) => void;
-  onPlainClick?: () => void;
+  onPlainClick?: () => boolean;
 }
 
 /**
