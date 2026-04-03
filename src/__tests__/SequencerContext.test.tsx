@@ -67,9 +67,9 @@ describe('derived state', () => {
   it('trackStates names match expected values', () => {
     const { result } = renderSequencer();
     const states = result.current.state.trackStates;
-    expect(states.bd.name).toBe('Kick');
-    expect(states.sd.name).toBe('Snare');
-    expect(states.ac.name).toBe('Accent');
+    expect(states.bd.name).toBe('BD');
+    expect(states.sd.name).toBe('SD');
+    expect(states.ac.name).toBe('ACCENT');
   });
 });
 

@@ -163,7 +163,7 @@ describe('AccentRow', () => {
   it('renders intensity knob', () => {
     render(<AccentRow {...base} />);
     expect(
-      screen.getAllByLabelText('Volume Accent')
+      screen.getAllByLabelText('Volume ACCENT')
         .length
     ).toBeGreaterThanOrEqual(1);
   });
