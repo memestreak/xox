@@ -25,8 +25,10 @@ interface TrackNameButtonProps {
   size: 'sm' | 'lg';
   trackName: string;
   isFreeRun: boolean;
+  isTriggered: boolean;
   onToggleFreeRun: () => void;
   onClearTrack: () => void;
+  onPlayPreview: () => void;
 }
 
 /**
@@ -38,8 +40,10 @@ function TrackNameButtonInner({
   size,
   trackName,
   isFreeRun,
+  isTriggered,
   onToggleFreeRun,
   onClearTrack,
+  onPlayPreview,
 }: TrackNameButtonProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -75,11 +79,21 @@ function TrackNameButtonInner({
       <Tooltip tooltipKey="trackName">
         <button
           ref={size === 'lg' ? nameRef : undefined}
-          onClick={(e: React.MouseEvent) => {
+          onMouseDown={(e: React.MouseEvent) => {
+            if (e.button !== 0) return;
             if (e.shiftKey) {
               onClearTrack();
               return;
             }
+            if (e.metaKey || e.ctrlKey) {
+              setMenuOpen(v => !v);
+              return;
+            }
+            onPlayPreview();
+          }}
+          onTouchStart={() => onPlayPreview()}
+          onContextMenu={(e: React.MouseEvent) => {
+            e.preventDefault();
             setMenuOpen(v => !v);
           }}
           className={
@@ -88,11 +102,13 @@ function TrackNameButtonInner({
               : 'w-12 truncate text-xl text-left')
             + ' font-bold uppercase tracking-wider font-[family-name:var(--font-orbitron)]'
             + ' rounded px-1 py-0.5 transition-colors'
-            + (isFreeRun
-              ? ' text-orange-400 bg-orange-400/10'
-              : ' text-neutral-400'
-                + ' hover:text-neutral-200'
-                + ' hover:bg-neutral-800/50')
+            + (isTriggered
+              ? ' text-orange-300 bg-orange-400/25'
+              : isFreeRun
+                ? ' text-orange-400 bg-orange-400/10'
+                : ' text-neutral-400'
+                  + ' hover:text-neutral-200'
+                  + ' hover:bg-neutral-800/50')
           }
         >
           {trackName}
@@ -158,6 +174,8 @@ interface TrackRowProps {
   ) => void;
   onToggleFreeRun: (trackId: TrackId) => void;
   onClearTrack: (trackId: TrackId) => void;
+  onPlayPreview: (trackId: TrackId) => void;
+  isTriggered: boolean;
   trigConditions?: Record<number, StepConditions>;
   parameterLocks?: Record<number, StepLocks>;
   onOpenPopover?: (
@@ -198,6 +216,8 @@ function TrackRowInner({
   onSetTrackLength,
   onToggleFreeRun,
   onClearTrack,
+  onPlayPreview,
+  isTriggered,
   trigConditions,
   parameterLocks,
   onOpenPopover,
@@ -226,6 +246,10 @@ function TrackRowInner({
   const handleClearTrack = useCallback(
     () => onClearTrack(trackId),
     [onClearTrack, trackId]
+  );
+  const handlePlayPreview = useCallback(
+    () => onPlayPreview(trackId),
+    [onPlayPreview, trackId]
   );
 
   // ─── Drag handle state ─────────────────────────
@@ -334,8 +358,10 @@ function TrackRowInner({
           size="sm"
           trackName={trackName}
           isFreeRun={isFreeRun}
+          isTriggered={isTriggered}
           onToggleFreeRun={handleFreeRun}
           onClearTrack={handleClearTrack}
+          onPlayPreview={handlePlayPreview}
         />
         <div className="flex gap-1 ml-auto items-center">
           <TrackToggle
@@ -379,8 +405,10 @@ function TrackRowInner({
             size="lg"
             trackName={trackName}
             isFreeRun={isFreeRun}
+            isTriggered={isTriggered}
             onToggleFreeRun={handleFreeRun}
             onClearTrack={handleClearTrack}
+            onPlayPreview={handlePlayPreview}
           />
           <div className="flex gap-1">
             <TrackToggle
