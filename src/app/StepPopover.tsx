@@ -8,6 +8,7 @@ import { useSequencer } from './SequencerContext';
 import { CYCLE_OPTIONS } from './trigConditions';
 import ProbabilitySlider from './ProbabilitySlider';
 import RangeSlider from './RangeSlider';
+import PanSlider from './PanSlider';
 import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
@@ -63,6 +64,13 @@ export default function StepPopover({
       : 100
   );
   const gainTouched = useRef(false);
+
+  const [panValue, setPanValue] = useState(
+    locks?.pan !== undefined
+      ? Math.round(locks.pan * 100)
+      : 50
+  );
+  const panTouched = useRef(false);
 
   const updateConditions = useCallback(
     (
@@ -129,6 +137,19 @@ export default function StepPopover({
         trackId,
         stepIndex,
         { gain: v / 100 }
+      );
+    },
+    [actions, trackId, stepIndex]
+  );
+
+  const handlePanChange = useCallback(
+    (v: number) => {
+      setPanValue(v);
+      panTouched.current = true;
+      actions.setParameterLock(
+        trackId,
+        stepIndex,
+        { pan: v / 100 }
       );
     },
     [actions, trackId, stepIndex]
@@ -371,6 +392,8 @@ export default function StepPopover({
             );
             setGainValue(100);
             gainTouched.current = false;
+            setPanValue(50);
+            panTouched.current = false;
           }}
           disabled={locks === undefined}
           className={
@@ -403,6 +426,19 @@ export default function StepPopover({
           max={100}
           onChange={handleGainChange}
           label="Gain"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <div className={
+          'text-[10px] uppercase tracking-wider'
+          + ' text-neutral-500'
+        }>
+          Pan
+        </div>
+        <PanSlider
+          value={panValue}
+          onChange={handlePanChange}
         />
       </div>
 

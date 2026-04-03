@@ -66,6 +66,7 @@ async function setupAndTrigger(
     soloTracks?: TrackId[];
     muteTracks?: TrackId[];
     gains?: Partial<Record<TrackId, number>>;
+    pans?: Partial<Record<TrackId, number>>;
     parameterLocks?: Partial<
       Record<TrackId, Record<number, StepLocks>>
     >;
@@ -77,6 +78,7 @@ async function setupAndTrigger(
     soloTracks = [],
     muteTracks = [],
     gains = {},
+    pans = {},
     parameterLocks = {},
   } = options;
 
@@ -120,6 +122,9 @@ async function setupAndTrigger(
     }
     for (const [id, value] of Object.entries(gains)) {
       result.current.actions.setGain(id as TrackId, value);
+    }
+    for (const [id, value] of Object.entries(pans)) {
+      result.current.actions.setPan(id as TrackId, value);
     }
     for (const [trackId, stepMap] of
       Object.entries(parameterLocks)) {
@@ -979,6 +984,41 @@ describe('handleStep parameter locks', () => {
     expect(mp).toHaveBeenCalledTimes(1);
     const gainArg = mp.mock.calls[0][2];
     expect(gainArg).toBeCloseTo(0);
+  });
+
+  it('pan lock overrides mixer pan', async () => {
+    // bd mixer pan = 0.8, but lock = 0.2
+    const { mockPlaySound: mp } = await setupAndTrigger({
+      activeTracks: ['bd'],
+      pans: { bd: 0.8 },
+      parameterLocks: { bd: { 0: { pan: 0.2 } } },
+    });
+    expect(mp).toHaveBeenCalledTimes(1);
+    const panArg = mp.mock.calls[0][3];
+    expect(panArg).toBeCloseTo(0.2);
+  });
+
+  it('pan lock at center produces 0.5', async () => {
+    // bd mixer pan = 1.0, lock = 0.5
+    const { mockPlaySound: mp } = await setupAndTrigger({
+      activeTracks: ['bd'],
+      pans: { bd: 1.0 },
+      parameterLocks: { bd: { 0: { pan: 0.5 } } },
+    });
+    expect(mp).toHaveBeenCalledTimes(1);
+    const panArg = mp.mock.calls[0][3];
+    expect(panArg).toBeCloseTo(0.5);
+  });
+
+  it('no pan lock falls back to mixer pan', async () => {
+    // bd mixer pan = 0.3, no lock
+    const { mockPlaySound: mp } = await setupAndTrigger({
+      activeTracks: ['bd'],
+      pans: { bd: 0.3 },
+    });
+    expect(mp).toHaveBeenCalledTimes(1);
+    const panArg = mp.mock.calls[0][3];
+    expect(panArg).toBeCloseTo(0.3);
   });
 });
 

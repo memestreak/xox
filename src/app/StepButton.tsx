@@ -19,6 +19,7 @@ interface StepButtonProps {
     trackId: TrackId, stepIndex: number
   ) => void;
   gainLock?: number;
+  panLock?: number;
   conditions?: StepConditions;
   onOpenPopover?: (
     trackId: TrackId,
@@ -45,6 +46,7 @@ function StepButtonInner({
   mini,
   onToggle,
   gainLock,
+  panLock,
   conditions,
   onOpenPopover,
   longPressActiveRef,
@@ -208,6 +210,45 @@ function StepButtonInner({
                 background: 'rgba(255,255,255,0.85)',
               }}
             />
+          ) : null}
+        {!mini && isActive
+          && panLock !== undefined
+          ? (
+            panLock === 0.5
+              ? (
+                <span
+                  data-testid="pan-bar"
+                  className="absolute top-0 h-[2px]"
+                  style={{
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '2px',
+                    background:
+                      'rgba(255,255,255,0.85)',
+                  }}
+                />
+              )
+              : (
+                <span
+                  data-testid="pan-bar"
+                  className="absolute top-0 h-[2px]"
+                  style={{
+                    ...(panLock < 0.5
+                      ? {
+                        right: '50%',
+                        width:
+                          `${(0.5 - panLock) * 100}%`,
+                      }
+                      : {
+                        left: '50%',
+                        width:
+                          `${(panLock - 0.5) * 100}%`,
+                      }),
+                    background:
+                      'rgba(255,255,255,0.85)',
+                  }}
+                />
+              )
           ) : null}
         {!mini && isActive && conditions?.fill
           ? (
