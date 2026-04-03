@@ -184,6 +184,14 @@ interface TrackRowProps {
     rect: { top: number; left: number }
   ) => void;
   longPressActiveRef?: RefObject<boolean>;
+  selectedSteps?: Set<number>;
+  onCtrlClick?: (
+    trackId: TrackId, stepIndex: number
+  ) => void;
+  onShiftClick?: (
+    trackId: TrackId, stepIndex: number
+  ) => void;
+  onPlainClick?: () => void;
 }
 
 /**
@@ -222,6 +230,10 @@ function TrackRowInner({
   parameterLocks,
   onOpenPopover,
   longPressActiveRef,
+  selectedSteps,
+  onCtrlClick,
+  onShiftClick,
+  onPlainClick,
 }: TrackRowProps) {
   const handleMute = useCallback(
     () => onToggleMute(trackId),
@@ -350,6 +362,18 @@ function TrackRowInner({
     [onOpenPopover, pageOffset]
   );
 
+  const handleCtrlClick = useCallback(
+    (tid: TrackId, localStep: number) =>
+      onCtrlClick?.(tid, localStep + pageOffset),
+    [onCtrlClick, pageOffset]
+  );
+
+  const handleShiftClick = useCallback(
+    (tid: TrackId, localStep: number) =>
+      onShiftClick?.(tid, localStep + pageOffset),
+    [onShiftClick, pageOffset]
+  );
+
   return (
     <div>
       {/* Mobile: track name + M/S above grid */}
@@ -476,6 +500,10 @@ function TrackRowInner({
                     isBeat={globalIdx % 4 === 0}
                     isDisabled={disabled}
                     onToggle={handleToggleStep}
+                    isSelected={
+                      selectedSteps?.has(globalIdx)
+                      ?? false
+                    }
                     conditions={
                       trigConditions?.[globalIdx]
                     }
@@ -488,6 +516,9 @@ function TrackRowInner({
                         ?.pan
                     }
                     onOpenPopover={handleOpenPopover}
+                    onCtrlClick={handleCtrlClick}
+                    onShiftClick={handleShiftClick}
+                    onPlainClick={onPlainClick}
                     longPressActiveRef={
                       longPressActiveRef
                     }

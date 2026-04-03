@@ -18,6 +18,13 @@ interface UseDragPaintOptions {
   longPressActiveRef?: RefObject<boolean>;
   popoverOpenRef?: RefObject<boolean>;
   pageOffset?: number;
+  onSelectionStart?: (
+    trackId: TrackId, step: number
+  ) => void;
+  onSelectionUpdate?: (
+    trackId: TrackId, step: number
+  ) => void;
+  onClearSelection?: () => void;
 }
 
 interface CellHit {
@@ -40,6 +47,8 @@ interface DragState {
   cycleSnapshot: string;
   cyclePatternIdx: number;
   escapeHandler: ((e: KeyboardEvent) => void) | null;
+  selectionMode: boolean;
+  selectionHit: CellHit | null;
 }
 
 const DRAG_THRESHOLD = 5;
@@ -138,6 +147,9 @@ export function useDragPaint({
   longPressActiveRef,
   popoverOpenRef,
   pageOffset = 0,
+  onSelectionStart,
+  onSelectionUpdate,
+  onClearSelection,
 }: UseDragPaintOptions) {
   const dragRef = useRef<DragState>({
     active: false,
@@ -154,6 +166,8 @@ export function useDragPaint({
     cycleSnapshot: '',
     cyclePatternIdx: -1,
     escapeHandler: null,
+    selectionMode: false,
+    selectionHit: null,
   });
 
   const stepsAtDown = useRef(
@@ -271,6 +285,34 @@ export function useDragPaint({
       const hit = cellFromPoint(
         e.clientX, e.clientY
       );
+
+      // Selection mode: Ctrl/Cmd held — can start
+      // from empty space between rows
+      if (
+        (e.ctrlKey || e.metaKey)
+        && onSelectionStart
+      ) {
+        const drag = dragRef.current;
+        drag.active = true;
+        drag.dragged = false;
+        drag.startX = e.clientX;
+        drag.startY = e.clientY;
+        drag.pointerId = e.pointerId;
+        drag.lastTrackIdx = -1;
+        drag.lastStep = -1;
+        drag.escapeHandler = null;
+        drag.selectionMode = true;
+        drag.cyclingMode = false;
+        drag.selectionHit = hit
+          ? {
+              trackId: hit.trackId,
+              stepIndex: hit.stepIndex + pageOffset,
+            }
+          : null;
+        e.preventDefault();
+        return;
+      }
+
       if (!hit) return;
 
       const { trackId, stepIndex } = hit;
@@ -291,6 +333,14 @@ export function useDragPaint({
       drag.lastTrackIdx = -1;
       drag.lastStep = -1;
       drag.escapeHandler = null;
+      drag.selectionMode = false;
+
+      // Clear selection on normal interaction,
+      // but not when Shift is held (Shift+Click
+      // extends selection via StepButton onClick)
+      if (!e.shiftKey) {
+        onClearSelection?.();
+      }
 
       // Determine if we should enter cycling mode
       const isMouseShift =
@@ -331,6 +381,8 @@ export function useDragPaint({
       longPressActiveRef,
       popoverOpenRef,
       pageOffset,
+      onSelectionStart,
+      onClearSelection,
     ]
   );
 
@@ -342,6 +394,50 @@ export function useDragPaint({
 
       const container = containerRef.current;
       if (!container) return;
+
+      // Selection mode branch
+      if (drag.selectionMode) {
+        if (!drag.dragged) {
+          const dx = e.clientX - drag.startX;
+          const dy = e.clientY - drag.startY;
+          if (
+            Math.sqrt(dx * dx + dy * dy)
+            < DRAG_THRESHOLD
+          ) {
+            return;
+          }
+          drag.dragged = true;
+          try {
+            container.setPointerCapture(
+              drag.pointerId
+            );
+          } catch {
+            // Pointer may already be captured or lost
+          }
+          // Start the selection rectangle from the
+          // initial pointerDown hit (if any)
+          if (drag.selectionHit && onSelectionStart) {
+            onSelectionStart(
+              drag.selectionHit.trackId,
+              drag.selectionHit.stepIndex
+            );
+          }
+        }
+
+        const hit = cellFromPoint(
+          e.clientX, e.clientY
+        );
+        if (hit) {
+          const globalStep =
+            hit.stepIndex + (pageOffset ?? 0);
+          if (onSelectionUpdate) {
+            onSelectionUpdate(
+              hit.trackId, globalStep
+            );
+          }
+        }
+        return;
+      }
 
       // Cycling mode branch
       if (drag.cyclingMode) {
@@ -451,7 +547,8 @@ export function useDragPaint({
       if (hit) paintTo(hit, drag);
     },
     [containerRef, paintTo, applyPatternAtIndex,
-      patterns, onSetTrackSteps]
+      patterns, onSetTrackSteps,
+      onSelectionStart, onSelectionUpdate, pageOffset]
   );
 
   const onPointerUp = useCallback(
@@ -459,6 +556,33 @@ export function useDragPaint({
       const drag = dragRef.current;
       if (!drag.active) return;
       if (e.pointerId !== drag.pointerId) return;
+
+      // Selection mode cleanup
+      if (drag.selectionMode) {
+        const wasDragged = drag.dragged;
+        drag.active = false;
+        drag.dragged = false;
+        drag.selectionMode = false;
+
+        const container = containerRef.current;
+        if (container) {
+          try {
+            container.releasePointerCapture(
+              drag.pointerId
+            );
+          } catch {
+            // Already released
+          }
+          if (wasDragged) {
+            container.addEventListener(
+              'click',
+              (evt) => evt.stopPropagation(),
+              { once: true, capture: true }
+            );
+          }
+        }
+        return;
+      }
 
       // Cycling mode cleanup
       if (drag.cyclingMode) {

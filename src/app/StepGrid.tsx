@@ -9,6 +9,7 @@ import TrackRow from './TrackRow';
 import AccentRow from './AccentRow';
 import StepPopover from './StepPopover';
 import { useDragPaint } from './useDragPaint';
+import { useSelection } from './useSelection';
 import type { TrackId, TrackPattern } from './types';
 import { getPatternLength } from './types';
 import trackPatternData from './data/trackPatterns.json';
@@ -20,6 +21,10 @@ const TRACK_ORDER: TrackId[] = [
   ...TRACKS.map(t => t.id),
   'ac' as TrackId,
 ];
+
+/** Track order for selection (no accent row). */
+const SELECTABLE_TRACKS: TrackId[] =
+  TRACKS.map(t => t.id);
 
 interface StepGridProps {
   scrollContainerRef: RefObject<HTMLDivElement | null>;
@@ -47,6 +52,7 @@ export default function StepGrid({
     toggleMute, toggleSolo,
     setGain, setPan, setTrackLength, toggleFreeRun,
     clearTrack, playPreview,
+    clearTrigCondition, clearParameterLock,
   } = actions;
   const {
     stepRef, totalStepsRef,
@@ -56,6 +62,31 @@ export default function StepGrid({
 
   const longPressActiveRef = useRef<boolean>(false);
   const popoverOpenRef = useRef<boolean>(false);
+
+  const {
+    selectedByTrack,
+    ctrlClickCell,
+    shiftClickCell,
+    startRectDrag,
+    updateRectDrag,
+    clearSelection,
+  } = useSelection({
+    trackOrder: SELECTABLE_TRACKS,
+    tracks: config.tracks,
+    popoverOpenRef,
+    setStep,
+    clearTrigCondition,
+    clearParameterLock,
+  });
+
+  // Clear selection on page change
+  const prevPageRef = useRef(pageOffset);
+  useEffect(() => {
+    if (prevPageRef.current !== pageOffset) {
+      prevPageRef.current = pageOffset;
+      clearSelection();
+    }
+  }, [pageOffset, clearSelection]);
 
   const dragContainerRef = useRef<HTMLDivElement>(null);
   const dragPaint = useDragPaint({
@@ -68,6 +99,9 @@ export default function StepGrid({
     longPressActiveRef,
     popoverOpenRef,
     pageOffset,
+    onSelectionStart: startRectDrag,
+    onSelectionUpdate: updateRectDrag,
+    onClearSelection: clearSelection,
   });
 
   const [openPopover, setOpenPopover] = useState<{
@@ -169,7 +203,7 @@ export default function StepGrid({
         ref={dragContainerRef}
         style={{ touchAction: 'none' }}
         {...dragPaint}
-        className="space-y-2 lg:space-y-4"
+        className="space-y-2 lg:space-y-4 select-none"
       >
         {TRACKS.map(track => (
           <TrackRow
@@ -215,6 +249,12 @@ export default function StepGrid({
             ) => setOpenPopover({
               trackId, stepIndex, anchorRect: rect,
             })}
+            selectedSteps={
+              selectedByTrack.get(track.id)
+            }
+            onCtrlClick={ctrlClickCell}
+            onShiftClick={shiftClickCell}
+            onPlainClick={clearSelection}
           />
         ))}
         <AccentRow
