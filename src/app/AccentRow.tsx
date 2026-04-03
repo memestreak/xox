@@ -166,19 +166,20 @@ function AccentRowInner({
             'text-[10px] font-bold uppercase'
             + ' tracking-wider bg-transparent'
             + ' border-none cursor-pointer'
+            + ' font-[family-name:var(--font-orbitron)]'
             + (isFreeRun
               ? ' text-orange-400'
               : ' text-neutral-400')
           }
         >
-          Accent
+          ACCENT
         </button>
         <div className="ml-auto">
           <Tooltip tooltipKey="accentIntensity" position="bottom">
             <Knob
               value={gain}
               onChange={handleGain}
-              trackName="Accent"
+              trackName="ACCENT"
               size={20}
               defaultValue={0.5}
             />
@@ -198,12 +199,13 @@ function AccentRowInner({
               'w-16 truncate text-xs text-left'
               + ' font-bold uppercase tracking-wider'
               + ' bg-transparent border-none cursor-pointer'
+              + ' font-[family-name:var(--font-orbitron)]'
               + (isFreeRun
                 ? ' text-orange-400'
                 : ' text-neutral-400')
             }
           >
-            Accent
+            ACCENT
           </button>
           {/* Spacer matching mute + solo toggle widths */}
           <div className="w-6 h-6" />
@@ -212,7 +214,7 @@ function AccentRowInner({
             <Knob
               value={gain}
               onChange={handleGain}
-              trackName="Accent"
+              trackName="ACCENT"
               defaultValue={0.5}
             />
           </Tooltip>

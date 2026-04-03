@@ -35,33 +35,33 @@ import type {
  * Track definitions for the sequencer grid (excludes accent).
  */
 export const TRACKS: { id: TrackId; name: string }[] = [
-  { id: 'bd', name: 'Kick' },
-  { id: 'sd', name: 'Snare' },
-  { id: 'ch', name: 'C-Hat' },
-  { id: 'oh', name: 'O-Hat' },
-  { id: 'cy', name: 'Cymbal' },
-  { id: 'ht', name: 'Hi-Tom' },
-  { id: 'mt', name: 'Mid-Tom' },
-  { id: 'lt', name: 'Low-Tom' },
-  { id: 'rs', name: 'Rimshot' },
-  { id: 'cp', name: 'Clap' },
-  { id: 'cb', name: 'Cowbell' },
+  { id: 'bd', name: 'BD' },
+  { id: 'sd', name: 'SD' },
+  { id: 'ch', name: 'CH' },
+  { id: 'oh', name: 'OH' },
+  { id: 'cy', name: 'CY' },
+  { id: 'ht', name: 'HT' },
+  { id: 'mt', name: 'MT' },
+  { id: 'lt', name: 'LT' },
+  { id: 'rs', name: 'RS' },
+  { id: 'cp', name: 'CP' },
+  { id: 'cb', name: 'CB' },
 ];
 
 /** Map of TrackId to display name (includes accent). */
 const TRACK_NAMES: Record<TrackId, string> = {
-  ac: 'Accent',
-  bd: 'Kick',
-  sd: 'Snare',
-  ch: 'C-Hat',
-  oh: 'O-Hat',
-  cy: 'Cymbal',
-  ht: 'Hi-Tom',
-  mt: 'Mid-Tom',
-  lt: 'Low-Tom',
-  rs: 'Rimshot',
-  cp: 'Clap',
-  cb: 'Cowbell',
+  ac: 'ACCENT',
+  bd: 'BD',
+  sd: 'SD',
+  ch: 'CH',
+  oh: 'OH',
+  cy: 'CY',
+  ht: 'HT',
+  mt: 'MT',
+  lt: 'LT',
+  rs: 'RS',
+  cp: 'CP',
+  cb: 'CB',
 };
 
 // ─── Interfaces ──────────────────────────────────────

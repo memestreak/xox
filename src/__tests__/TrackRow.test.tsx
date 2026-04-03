@@ -8,7 +8,7 @@ const noop = vi.fn();
 function renderTrackRow(overrides = {}) {
   const defaults = {
     trackId: 'bd' as TrackId,
-    trackName: 'Kick',
+    trackName: 'BD',
     steps: '1010101010101010'
       + '0101010101010101',
     trackLength: 32,
@@ -36,7 +36,7 @@ describe('TrackRow with pageOffset', () => {
   it('page 1 shows first 16 steps', () => {
     renderTrackRow({ pageOffset: 0 });
     const buttons = screen.getAllByRole('button', {
-      name: /Kick step/,
+      name: /BD step/,
     });
     // steps[0]='1', so first button is pressed
     expect(
@@ -51,7 +51,7 @@ describe('TrackRow with pageOffset', () => {
   it('page 2 shows steps 17-32', () => {
     renderTrackRow({ pageOffset: 16 });
     const buttons = screen.getAllByRole('button', {
-      name: /Kick step/,
+      name: /BD step/,
     });
     // steps[16]='0' (from second half '0101...')
     expect(
@@ -69,7 +69,7 @@ describe('TrackRow with pageOffset', () => {
       pageOffset: 16,
     });
     const allSteps = screen.getAllByLabelText(
-      /Kick step/
+      /BD step/
     );
     expect(allSteps.length).toBe(16);
     // Step 25 (index 8) should be inactive

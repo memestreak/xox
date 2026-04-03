@@ -15,7 +15,7 @@ beforeEach(() => {
 
 const base = {
   trackId: 'bd' as const,
-  trackName: 'Kick',
+  trackName: 'BD',
   steps: '1010101010101010',
   trackLength: 16,
   patternLength: 16,
@@ -38,7 +38,7 @@ describe('TrackEndBar', () => {
   it('right-click calls onToggleFreeRun', () => {
     render(<TrackRow {...base} />);
     const slider = screen.getByRole('slider', {
-      name: 'Kick length',
+      name: 'BD length',
     });
     fireEvent.contextMenu(slider);
     expect(base.onToggleFreeRun).toHaveBeenCalledWith(
@@ -52,7 +52,7 @@ describe('TrackEndBar', () => {
     () => {
       render(<TrackRow {...base} />);
       const slider = screen.getByRole('slider', {
-        name: 'Kick length',
+        name: 'BD length',
       });
       // Start a drag via pointerDown
       fireEvent.pointerDown(slider, {
@@ -123,11 +123,11 @@ describe('TrackEndBar', () => {
         <TrackRow {...base} trackLength={12} />
       );
       const slider = screen.getByRole('slider', {
-      name: 'Kick length',
+      name: 'BD length',
     });
       expect(
         slider.getAttribute('aria-label')
-      ).toBe('Kick length');
+      ).toBe('BD length');
       expect(
         slider.getAttribute('aria-valuemin')
       ).toBe('1');

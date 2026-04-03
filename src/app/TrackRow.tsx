@@ -84,9 +84,9 @@ function TrackNameButtonInner({
           }}
           className={
             (size === 'sm'
-              ? 'text-[10px]'
-              : 'w-16 truncate text-xs text-left')
-            + ' font-bold uppercase tracking-wider'
+              ? 'text-sm'
+              : 'w-16 truncate text-base text-left')
+            + ' font-bold uppercase tracking-wider font-[family-name:var(--font-orbitron)]'
             + ' rounded px-1 py-0.5 transition-colors'
             + (isFreeRun
               ? ' text-orange-400 bg-orange-400/10'

@@ -5,7 +5,7 @@ import StepButton from '../app/StepButton';
 
 const base = {
   trackId: 'bd' as const,
-  trackName: 'Kick',
+  trackName: 'BD',
   stepIndex: 0,
   isActive: true,
   isCurrent: false,
