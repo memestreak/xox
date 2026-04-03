@@ -211,9 +211,11 @@ function AccentRowInner({
             AC
           </button>
           {/* Spacer matching mute + solo toggle widths */}
-          <div className="w-6 h-6" />
-          <div className="w-6 h-6" />
-          <div className="ml-1">
+          <div className="flex gap-1">
+            <div className="w-6 h-6" />
+            <div className="w-6 h-6" />
+          </div>
+          <div className="flex gap-1 ml-1">
             <Tooltip tooltipKey="accentIntensity" position="bottom">
               <Knob
                 value={gain}

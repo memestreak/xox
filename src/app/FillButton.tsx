@@ -60,6 +60,7 @@ export default function FillButton() {
       className={
         'self-stretch px-2 lg:px-3 rounded-full'
         + ' font-bold text-sm lg:text-base'
+        + ' font-[family-name:var(--font-orbitron)]'
         + ' border border-orange-700'
         + ' transition-colors'
         + ' focus-visible:outline-none'
