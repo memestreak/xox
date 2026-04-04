@@ -48,6 +48,10 @@ function SequencerInner() {
     />
   );
 
+  const liveMessage = state.isPlaying
+    ? `Playing at ${state.bpm} BPM`
+    : 'Stopped';
+
   return (
     <div className="h-dvh overflow-hidden flex flex-col bg-neutral-950 text-neutral-100 font-sans">
       <a
@@ -56,6 +60,13 @@ function SequencerInner() {
       >
         Skip to main content
       </a>
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveMessage}
+      </div>
       <div className="max-w-none lg:max-w-4xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-4 flex flex-col flex-1 min-h-0">
         <PatternPicker
           categories={categories}
