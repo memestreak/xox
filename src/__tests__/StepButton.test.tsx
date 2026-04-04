@@ -360,20 +360,44 @@ describe('StepButton selection', () => {
     expect(onShift).toHaveBeenCalledWith('bd', 0);
   });
 
-  it('plain click calls onPlainClick then toggles',
+  it('plain click on unselected clears selection and toggles',
     () => {
       const onPlain = vi.fn();
+      const onClear = vi.fn();
       const toggle = vi.fn();
       render(
         <StepButton
           {...base}
           onToggle={toggle}
           onPlainClick={onPlain}
+          onClearSelection={onClear}
+        />
+      );
+      fireEvent.click(screen.getByRole('button'));
+      expect(onPlain).not.toHaveBeenCalled();
+      expect(onClear).toHaveBeenCalled();
+      expect(toggle).toHaveBeenCalled();
+    }
+  );
+
+  it('plain click on selected cell toggles selection',
+    () => {
+      const onPlain = vi.fn();
+      const onClear = vi.fn();
+      const toggle = vi.fn();
+      render(
+        <StepButton
+          {...base}
+          isSelected
+          onToggle={toggle}
+          onPlainClick={onPlain}
+          onClearSelection={onClear}
         />
       );
       fireEvent.click(screen.getByRole('button'));
       expect(onPlain).toHaveBeenCalled();
-      expect(toggle).toHaveBeenCalled();
+      expect(onClear).not.toHaveBeenCalled();
+      expect(toggle).not.toHaveBeenCalled();
     }
   );
 

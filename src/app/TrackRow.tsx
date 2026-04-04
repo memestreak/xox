@@ -192,6 +192,7 @@ interface TrackRowProps {
     trackId: TrackId, stepIndex: number
   ) => void;
   onPlainClick?: () => boolean;
+  onClearSelection?: () => void;
 }
 
 /**
@@ -234,6 +235,7 @@ function TrackRowInner({
   onCtrlClick,
   onShiftClick,
   onPlainClick,
+  onClearSelection,
 }: TrackRowProps) {
   const handleMute = useCallback(
     () => onToggleMute(trackId),
@@ -519,6 +521,9 @@ function TrackRowInner({
                     onCtrlClick={handleCtrlClick}
                     onShiftClick={handleShiftClick}
                     onPlainClick={onPlainClick}
+                    onClearSelection={
+                      onClearSelection
+                    }
                     longPressActiveRef={
                       longPressActiveRef
                     }

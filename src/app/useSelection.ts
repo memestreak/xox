@@ -200,9 +200,6 @@ export function useSelection({
       toggleStep(tid, step);
     }
 
-    setSelected(new Set());
-    anchorRef.current = null;
-    dragOriginRef.current = null;
     return true;
   }, [toggleStep]);
 

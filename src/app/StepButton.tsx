@@ -34,6 +34,7 @@ interface StepButtonProps {
     trackId: TrackId, stepIndex: number
   ) => void;
   onPlainClick?: () => boolean;
+  onClearSelection?: () => void;
   longPressActiveRef?: RefObject<boolean>;
 }
 
@@ -61,6 +62,7 @@ function StepButtonInner({
   onCtrlClick,
   onShiftClick,
   onPlainClick,
+  onClearSelection,
   longPressActiveRef,
 }: StepButtonProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -183,7 +185,12 @@ function StepButtonInner({
             onCtrlClick(trackId, stepIndex);
             return;
           }
-          if (onPlainClick?.()) return;
+          if (isSelected) {
+            onPlainClick?.();
+            return;
+          }
+          // Clicking outside the selection clears it
+          onClearSelection?.();
           handleToggle();
         }}
         onContextMenu={(e) => {
