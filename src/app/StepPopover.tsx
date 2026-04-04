@@ -6,9 +6,13 @@ import {
 import type { RefObject } from 'react';
 import { useSequencer } from './SequencerContext';
 import { CYCLE_OPTIONS } from './trigConditions';
-import ProbabilitySlider from './ProbabilitySlider';
-import RangeSlider from './RangeSlider';
-import PanSlider from './PanSlider';
+import ProbabilityEditor from './ProbabilityEditor';
+import CycleEditor from './CycleEditor';
+import FillConditionEditor from './FillConditionEditor';
+import {
+  GainLockEditor,
+  PanLockEditor,
+} from './StepLockEditors';
 import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
@@ -20,19 +24,15 @@ interface StepPopoverProps {
   locks?: StepLocks;
   anchorRect?: { top: number; left: number };
   onClose: () => void;
-  scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  scrollContainerRef?: RefObject<
+    HTMLDivElement | null
+  >;
 }
 
 /**
- * Popover for editing per-step trig conditions.
- * Shows probability slider and cycle dropdown.
- *
- * Args:
- *   trackId: Track this condition belongs to
- *   stepIndex: Step index (0-based)
- *   conditions: Current conditions
- *   anchorRect: Position anchor
- *   onClose: Called when popover should close
+ * Popover for editing per-step trig conditions and
+ * parameter locks. Orchestrates sub-editors for
+ * probability, cycle, fill, gain, and pan.
  */
 export default function StepPopover({
   trackId,
@@ -72,6 +72,7 @@ export default function StepPopover({
   );
   const panTouched = useRef(false);
 
+  // ─── Condition sync ───────────────────────────
   const updateConditions = useCallback(
     (
       prob: number,
@@ -113,8 +114,7 @@ export default function StepPopover({
   );
 
   const handleCycleChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const v = e.target.value;
+    (v: string) => {
       setCycleValue(v);
       updateConditions(probability, v, fillValue);
     },
@@ -129,14 +129,13 @@ export default function StepPopover({
     [updateConditions, probability, cycleValue]
   );
 
+  // ─── Lock handlers ────────────────────────────
   const handleGainChange = useCallback(
     (v: number) => {
       setGainValue(v);
       gainTouched.current = true;
       actions.setParameterLock(
-        trackId,
-        stepIndex,
-        { gain: v / 100 }
+        trackId, stepIndex, { gain: v / 100 }
       );
     },
     [actions, trackId, stepIndex]
@@ -147,14 +146,13 @@ export default function StepPopover({
       setPanValue(v);
       panTouched.current = true;
       actions.setParameterLock(
-        trackId,
-        stepIndex,
-        { pan: v / 100 }
+        trackId, stepIndex, { pan: v / 100 }
       );
     },
     [actions, trackId, stepIndex]
   );
 
+  // ─── Dismiss effects ─────────────────────────
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       if (
@@ -208,8 +206,7 @@ export default function StepPopover({
     );
   }, [anchorRect, onClose, scrollContainerRef]);
 
-  // Flip popover above anchor if it would overflow
-  // the viewport bottom.
+  // ─── Flip above if overflowing ────────────────
   const [flippedTop, setFlippedTop] = useState<
     number | null
   >(null);
@@ -218,17 +215,13 @@ export default function StepPopover({
     if (!el || !anchorRect) return;
     const rect = el.getBoundingClientRect();
     if (rect.bottom > window.innerHeight - 8) {
-      // 8px margin from viewport edge.
-      // anchorRect.top is button.bottom + 4,
-      // so button.bottom = anchorRect.top - 4.
-      // Place popover above: button.bottom - 4 - gap
-      // - popoverHeight.
       const above =
         anchorRect.top - 4 - 4 - rect.height;
       setFlippedTop(Math.max(8, above));
     }
   }, [anchorRect]);
 
+  // ─── Render ───────────────────────────────────
   return (
     <div
       ref={popoverRef}
@@ -245,6 +238,7 @@ export default function StepPopover({
         left: `${anchorRect.left}px`,
       } : undefined}
     >
+      {/* Header */}
       <div className={
         'flex items-center justify-between'
       }>
@@ -282,100 +276,23 @@ export default function StepPopover({
         </button>
       </div>
 
-      <div className="space-y-1">
-        <div className={
-          'text-[10px] uppercase tracking-wider'
-          + ' text-neutral-500'
-        }>
-          Probability
-        </div>
-        <ProbabilitySlider
-          value={probability}
-          onChange={handleProbChange}
-        />
-      </div>
-
-      <div className="space-y-1">
-        <div className={
-          'text-[10px] uppercase tracking-wider'
-          + ' text-neutral-500'
-        }>
-          Cycle
-        </div>
-        <select
-          value={cycleValue}
-          onChange={handleCycleChange}
-          className={
-            'w-full bg-neutral-800'
-            + ' text-neutral-200'
-            + ' text-sm rounded px-2 py-1.5'
-            + ' border border-neutral-700'
-            + ' focus-visible:outline-none'
-            + ' focus-visible:ring-2'
-            + ' focus-visible:ring-orange-500'
-          }
-        >
-          {CYCLE_OPTIONS.map(opt => (
-            <option key={opt.label} value={opt.label}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="space-y-1">
-        <div className={
-          'text-[10px] uppercase tracking-wider'
-          + ' text-neutral-500'
-        }>
-          Fill
-        </div>
-        <div
-          className="flex gap-1"
-          role="radiogroup"
-          aria-label="Fill condition"
-        >
-          {([
-            ['none', 'None'],
-            ['fill', 'FILL'],
-            ['!fill', '!FILL'],
-          ] as const).map(([val, label]) => (
-            <button
-              key={val}
-              role="radio"
-              aria-checked={fillValue === val}
-              onClick={() => handleFillChange(val)}
-              className={
-                'flex-1 text-xs py-1 rounded'
-                + ' border transition-colors'
-                + (fillValue === val
-                  ? val === 'fill'
-                    ? ' bg-orange-600'
-                      + ' border-orange-500'
-                      + ' text-white'
-                    : val === '!fill'
-                      ? ' bg-neutral-700'
-                        + ' border-neutral-600'
-                        + ' text-neutral-200'
-                      : ' bg-neutral-800'
-                        + ' border-neutral-600'
-                        + ' text-neutral-200'
-                  : ' bg-neutral-900'
-                    + ' border-neutral-700'
-                    + ' text-neutral-400'
-                    + ' hover:bg-neutral-800')
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <ProbabilityEditor
+        value={probability}
+        onChange={handleProbChange}
+      />
+      <CycleEditor
+        value={cycleValue}
+        onChange={handleCycleChange}
+      />
+      <FillConditionEditor
+        value={fillValue}
+        onChange={handleFillChange}
+      />
 
       {/* Divider */}
       <div className="border-t border-neutral-700" />
 
-      {/* Locks section */}
+      {/* Locks header */}
       <div className={
         'flex items-center justify-between'
       }>
@@ -413,35 +330,14 @@ export default function StepPopover({
         </button>
       </div>
 
-      <div className="space-y-1">
-        <div className={
-          'text-[10px] uppercase tracking-wider'
-          + ' text-neutral-500'
-        }>
-          Gain
-        </div>
-        <RangeSlider
-          value={gainValue}
-          min={0}
-          max={100}
-          onChange={handleGainChange}
-          label="Gain"
-        />
-      </div>
-
-      <div className="space-y-1">
-        <div className={
-          'text-[10px] uppercase tracking-wider'
-          + ' text-neutral-500'
-        }>
-          Pan
-        </div>
-        <PanSlider
-          value={panValue}
-          onChange={handlePanChange}
-        />
-      </div>
-
+      <GainLockEditor
+        value={gainValue}
+        onChange={handleGainChange}
+      />
+      <PanLockEditor
+        value={panValue}
+        onChange={handlePanChange}
+      />
     </div>
   );
 }
