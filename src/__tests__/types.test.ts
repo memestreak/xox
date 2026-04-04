@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { TRACK_IDS, getPatternLength } from '../app/types';
+import {
+  TRACK_IDS, getPatternLength,
+  cellKey, parseCellKey,
+} from '../app/types';
 import type {
   NoteLength, MidiTrackConfig, MidiConfig, TrackConfig,
 } from '../app/types';
@@ -75,6 +78,31 @@ describe('TrackConfig', () => {
       cb: { steps: '1010' },
     };
     expect(getPatternLength(tracks)).toBe(12);
+  });
+});
+
+describe('cellKey / parseCellKey', () => {
+  it('cellKey creates expected format', () => {
+    expect(cellKey('bd', 3)).toBe('bd:3');
+    expect(cellKey('ac', 0)).toBe('ac:0');
+  });
+
+  it('parseCellKey round-trips with cellKey', () => {
+    const key = cellKey('sd', 15);
+    const parsed = parseCellKey(key);
+    expect(parsed.trackId).toBe('sd');
+    expect(parsed.step).toBe(15);
+  });
+
+  it('parseCellKey throws on invalid key', () => {
+    expect(() => parseCellKey('invalid'))
+      .toThrow('Invalid cell key');
+  });
+
+  it('parseCellKey handles two-char track IDs', () => {
+    const parsed = parseCellKey('ch:7');
+    expect(parsed.trackId).toBe('ch');
+    expect(parsed.step).toBe(7);
   });
 });
 

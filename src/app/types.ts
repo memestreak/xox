@@ -149,6 +149,32 @@ export function getPatternLength(
   );
 }
 
+/**
+ * Create a cell key string from track ID and step.
+ */
+export function cellKey(
+  trackId: TrackId, step: number
+): string {
+  return `${trackId}:${step}`;
+}
+
+/**
+ * Parse a cell key string into track ID and step.
+ * Throws if the key is malformed.
+ */
+export function parseCellKey(
+  key: string
+): { trackId: TrackId; step: number } {
+  const idx = key.indexOf(':');
+  if (idx === -1) {
+    throw new Error(`Invalid cell key: ${key}`);
+  }
+  return {
+    trackId: key.substring(0, idx) as TrackId,
+    step: Number(key.substring(idx + 1)),
+  };
+}
+
 /** Note length: fixed milliseconds or tempo-relative. */
 export type NoteLength =
   | { type: 'fixed'; ms: number }
