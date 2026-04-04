@@ -4,6 +4,9 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import type { RefObject } from 'react';
+import {
+  cellKey, parseCellKey,
+} from '../types';
 import type { TrackConfig, TrackId } from '../types';
 
 interface SelectionAnchor {
@@ -64,7 +67,7 @@ function computeRect(
     const len = tracks[tid].steps.length;
     for (let s = minStep; s <= maxStep; s++) {
       if (s < len) {
-        result.add(`${tid}:${s}`);
+        result.add(cellKey(tid, s));
       }
     }
   }
@@ -109,7 +112,7 @@ export function useSelection({
   const ctrlClickCell = useCallback(
     (trackId: TrackId, step: number) => {
       setSelected(prev => {
-        const key = `${trackId}:${step}`;
+        const key = cellKey(trackId, step);
         const next = new Set(prev);
         if (next.has(key)) {
           next.delete(key);
@@ -128,7 +131,9 @@ export function useSelection({
       const anchor = anchorRef.current;
       if (!anchor) {
         // No anchor yet — treat as single select
-        setSelected(new Set([`${trackId}:${step}`]));
+        setSelected(
+          new Set([cellKey(trackId, step)])
+        );
         anchorRef.current = { trackId, step };
         return;
       }
@@ -147,7 +152,9 @@ export function useSelection({
     (trackId: TrackId, step: number) => {
       dragOriginRef.current = { trackId, step };
       anchorRef.current = { trackId, step };
-      setSelected(new Set([`${trackId}:${step}`]));
+      setSelected(
+        new Set([cellKey(trackId, step)])
+      );
     },
     []
   );
@@ -176,9 +183,7 @@ export function useSelection({
     if (cur.size === 0) return;
 
     for (const key of cur) {
-      const colonIdx = key.indexOf(':');
-      const tid = key.substring(0, colonIdx) as TrackId;
-      const step = Number(key.substring(colonIdx + 1));
+      const { trackId: tid, step } = parseCellKey(key);
       setStep(tid, step, '0');
       clearTrigCondition(tid, step);
       clearParameterLock(tid, step);
@@ -194,9 +199,7 @@ export function useSelection({
     if (cur.size === 0) return false;
 
     for (const key of cur) {
-      const colonIdx = key.indexOf(':');
-      const tid = key.substring(0, colonIdx) as TrackId;
-      const step = Number(key.substring(colonIdx + 1));
+      const { trackId: tid, step } = parseCellKey(key);
       toggleStep(tid, step);
     }
 
@@ -238,9 +241,7 @@ export function useSelection({
   const selectedByTrack = useMemo(() => {
     const map = new Map<TrackId, Set<number>>();
     for (const key of selected) {
-      const colonIdx = key.indexOf(':');
-      const tid = key.substring(0, colonIdx) as TrackId;
-      const step = Number(key.substring(colonIdx + 1));
+      const { trackId: tid, step } = parseCellKey(key);
       if (!map.has(tid)) map.set(tid, new Set());
       map.get(tid)!.add(step);
     }
