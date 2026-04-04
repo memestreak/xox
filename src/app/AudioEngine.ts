@@ -1,6 +1,7 @@
 "use client";
 
 import { TrackId } from './types';
+import { LOOKAHEAD_MS, SCHEDULE_AHEAD_S } from './constants';
 
 // Minimal silent WAV (8-bit mono, 7 samples at 44100 Hz).
 // Playing this via an <audio> element forces iOS to switch
@@ -38,8 +39,8 @@ class AudioEngine {
   // Scheduler Configuration
   private bpm: number = 110;
   private patternLength: number = 16;
-  private lookahead: number = 25.0;       // How often to call the scheduler (ms)
-  private scheduleAheadTime: number = 0.1; // How far ahead to schedule audio (s)
+  private lookahead: number = LOOKAHEAD_MS;
+  private scheduleAheadTime: number = SCHEDULE_AHEAD_S;
 
   /**
    * Callback triggered when a step passes.

@@ -7,6 +7,9 @@ import {
   LongPressEventType, useLongPress,
 } from 'use-long-press';
 import type { TrackId } from './types';
+import {
+  LONG_PRESS_MS, ENDBAR_LONG_PRESS_CANCEL_PX,
+} from './constants';
 import StepButton from './StepButton';
 import Knob from './Knob';
 import Tooltip from './Tooltip';
@@ -86,8 +89,8 @@ function AccentRowInner({
     },
     {
       detect: LongPressEventType.Touch,
-      threshold: 500,
-      cancelOnMovement: 1,
+      threshold: LONG_PRESS_MS,
+      cancelOnMovement: ENDBAR_LONG_PRESS_CANCEL_PX,
     }
   );
 

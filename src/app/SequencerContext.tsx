@@ -16,6 +16,11 @@ import { audioEngine } from './AudioEngine';
 import { midiEngine } from './MidiEngine';
 import { defaultConfig, decodeConfig } from './configCodec';
 import { evaluateCondition } from './trigConditions';
+import {
+  ACCENT_GAIN_MULTIPLIER,
+  GAIN_EXPONENT,
+  MAX_PATTERN_LENGTH,
+} from './constants';
 import { TRACK_IDS, getPatternLength } from './types';
 import type {
   HomeSnapshot,
@@ -433,10 +438,10 @@ export function SequencerProvider({
             cfg.tracks[track.id]
               .parameterLocks?.[effectiveStep];
           const baseGain = locks?.gain ?? st.gain;
-          const cubic = baseGain ** 3;
+          const cubic = baseGain ** GAIN_EXPONENT;
           const gain =
             isAccented
-              ? cubic * (1 + states.ac.gain * 2)
+              ? cubic * (1 + states.ac.gain * ACCENT_GAIN_MULTIPLIER)
               : cubic;
           const pan = locks?.pan ?? st.pan;
           audioEngine.playSound(
@@ -764,7 +769,7 @@ export function SequencerProvider({
   const setPatternLength = useCallback(
     (length: number) => {
       const clamped =
-        Math.max(1, Math.min(64, length));
+        Math.max(1, Math.min(MAX_PATTERN_LENGTH, length));
       setConfig(prev => {
         const currentMax =
           getPatternLength(prev.tracks);
@@ -1177,7 +1182,7 @@ export function SequencerProvider({
   const playPreview = useCallback(
     (trackId: TrackId) => {
       const st = trackStatesRef.current[trackId];
-      const cubic = st.gain ** 3;
+      const cubic = st.gain ** GAIN_EXPONENT;
       audioEngine.playSound(
         trackId,
         audioEngine.getCurrentTime(),

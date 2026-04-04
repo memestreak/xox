@@ -10,6 +10,9 @@ import {
 import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
+import {
+  LONG_PRESS_MS, ENDBAR_LONG_PRESS_CANCEL_PX,
+} from './constants';
 import TrackToggle from './TrackToggle';
 import StepButton from './StepButton';
 import Knob from './Knob';
@@ -277,8 +280,8 @@ function TrackRowInner({
     },
     {
       detect: LongPressEventType.Touch,
-      threshold: 500,
-      cancelOnMovement: 1,
+      threshold: LONG_PRESS_MS,
+      cancelOnMovement: ENDBAR_LONG_PRESS_CANCEL_PX,
     }
   );
 

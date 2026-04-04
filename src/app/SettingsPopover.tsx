@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useSequencer } from './SequencerContext';
 import { encodeConfig } from './configCodec';
+import { FEEDBACK_TIMEOUT_MS } from './constants';
 import Tooltip from './Tooltip';
 import SettingsModal from './SettingsModal';
 
@@ -66,10 +67,10 @@ export default function SettingsPopover() {
       );
       await navigator.clipboard.writeText(url);
       setFeedback('Copied!');
-      setTimeout(() => setFeedback(''), 1500);
+      setTimeout(() => setFeedback(''), FEEDBACK_TIMEOUT_MS);
     } catch {
       setFeedback('Failed');
-      setTimeout(() => setFeedback(''), 1500);
+      setTimeout(() => setFeedback(''), FEEDBACK_TIMEOUT_MS);
     }
   }, [meta.config]);
 

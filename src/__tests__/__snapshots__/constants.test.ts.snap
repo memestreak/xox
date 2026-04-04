@@ -1,0 +1,24 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`constants snapshot 1`] = `
+{
+  "ACCENT_GAIN_MULTIPLIER": 2,
+  "BPM_MAX": 300,
+  "BPM_MIN": 20,
+  "CYCLE_PX_PER_STEP": 6,
+  "CYCLE_THRESHOLD_TOUCH_PX": 10,
+  "DEFAULT_BPM": 110,
+  "DEFAULT_TRACK_LENGTH": 16,
+  "DRAG_THRESHOLD_PX": 5,
+  "ENDBAR_LONG_PRESS_CANCEL_PX": 1,
+  "FEEDBACK_TIMEOUT_MS": 1500,
+  "GAIN_EXPONENT": 3,
+  "LONG_PRESS_CANCEL_PX": 5,
+  "LONG_PRESS_MS": 500,
+  "LOOKAHEAD_MS": 25,
+  "MAX_PATTERN_LENGTH": 64,
+  "SCHEDULE_AHEAD_S": 0.1,
+  "SWING_MAX": 100,
+  "TRIGGER_FLASH_MS": 150,
+}
+`;

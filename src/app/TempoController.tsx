@@ -2,9 +2,10 @@
 
 import { useCallback, useRef } from 'react';
 import Tooltip from './Tooltip';
+import { BPM_MIN, BPM_MAX } from './constants';
 
-export const MIN_BPM = 20;
-export const MAX_BPM = 300;
+export const MIN_BPM = BPM_MIN;
+export const MAX_BPM = BPM_MAX;
 
 interface TempoControllerProps {
   bpm: number;
