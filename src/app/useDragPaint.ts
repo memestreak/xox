@@ -3,6 +3,11 @@
 import { useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
 import type { TrackConfig, TrackId, TrackPattern } from './types';
+import {
+  DRAG_THRESHOLD_PX,
+  CYCLE_THRESHOLD_TOUCH_PX,
+  CYCLE_PX_PER_STEP,
+} from './constants';
 
 interface UseDragPaintOptions {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -51,9 +56,9 @@ interface DragState {
   selectionHit: CellHit | null;
 }
 
-const DRAG_THRESHOLD = 5;
-const CYCLE_THRESHOLD_TOUCH = 10;
-const CYCLE_PX_PER_STEP = 6;
+// Local aliases for brevity in gesture logic
+const DRAG_THRESHOLD = DRAG_THRESHOLD_PX;
+const CYCLE_THRESHOLD_TOUCH = CYCLE_THRESHOLD_TOUCH_PX;
 
 /**
  * Find the track and step under a point using

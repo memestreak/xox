@@ -4,6 +4,7 @@ import { memo, useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
 import { useLongPress } from 'use-long-press';
 import type { StepConditions, TrackId } from './types';
+import { LONG_PRESS_MS, LONG_PRESS_CANCEL_PX } from './constants';
 import Tooltip from './Tooltip';
 
 interface StepButtonProps {
@@ -94,8 +95,8 @@ function StepButtonInner({
       openPopover();
     },
     {
-      threshold: 500,
-      cancelOnMovement: 5,
+      threshold: LONG_PRESS_MS,
+      cancelOnMovement: LONG_PRESS_CANCEL_PX,
     }
   );
 

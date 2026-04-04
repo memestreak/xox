@@ -11,13 +11,16 @@ import type {
   TrackMixerState,
 } from './types';
 import { TRACK_IDS } from './types';
+import {
+  BPM_MIN,
+  BPM_MAX,
+  DEFAULT_BPM,
+  DEFAULT_TRACK_LENGTH,
+  SWING_MAX,
+} from './constants';
 
 const CONFIG_VERSION = 4;
 const DEFAULT_KIT_ID = '808';
-const BPM_MIN = 20;
-const BPM_MAX = 300;
-const DEFAULT_BPM = 110;
-const DEFAULT_TRACK_LENGTH = 16;
 
 /**
  * Build the default config from the first kit and pattern.
@@ -235,7 +238,7 @@ function validateBpm(value: unknown): number {
 }
 
 const SWING_MIN = 0;
-const SWING_MAX = 100;
+
 const DEFAULT_SWING = 0;
 
 function validateSwing(value: unknown): number {

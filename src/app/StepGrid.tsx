@@ -12,6 +12,7 @@ import { useDragPaint } from './useDragPaint';
 import { useSelection } from './useSelection';
 import type { TrackId, TrackPattern } from './types';
 import { getPatternLength } from './types';
+import { TRIGGER_FLASH_MS } from './constants';
 import trackPatternData from './data/trackPatterns.json';
 
 const TRACK_PATTERNS: TrackPattern[] =
@@ -137,7 +138,7 @@ export default function StepGrid({
       if (tracks.size > 0) {
         triggerTimerRef.current = setTimeout(
           () => setTriggeredTracks(new Set()),
-          150
+          TRIGGER_FLASH_MS
         );
       }
     },
