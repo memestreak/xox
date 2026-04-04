@@ -137,6 +137,26 @@ introduces race conditions.
 - Tailwind CSS v4 for styling
 - TypeScript strict mode
 
+## Multi-PR Workflow
+
+When shipping multiple related PRs that touch overlapping
+files, **chain branches sequentially** — each branching
+from the previous — rather than all from `main`. Merge in
+order. This avoids rebase/conflict churn after each merge.
+
+If PRs are truly independent (no file overlap), branching
+from `main` is fine.
+
+## Testing Gotchas
+
+- **jsdom lacks `document.elementFromPoint`.** Tests that
+  mock it must define the function first:
+  ```ts
+  if (!document.elementFromPoint) {
+    document.elementFromPoint = () => null;
+  }
+  ```
+
 ## CSS / Layout Rules
 
 - **Conditional borders cause layout shift.** Never add
