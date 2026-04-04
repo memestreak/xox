@@ -15,9 +15,8 @@ import patternsData from './data/patterns.json';
 import { audioEngine } from './AudioEngine';
 import { midiEngine } from './MidiEngine';
 import { defaultConfig, decodeConfig } from './configCodec';
-import { evaluateCondition } from './trigConditions';
+import { computeStep } from './computeStep';
 import {
-  ACCENT_GAIN_MULTIPLIER,
   GAIN_EXPONENT,
   MAX_PATTERN_LENGTH,
 } from './constants';
@@ -369,161 +368,74 @@ export function SequencerProvider({
 
   const handleStep = useCallback(
     (step: number, time: number) => {
-      const total = totalStepsRef.current;
-      totalStepsRef.current = total + 1;
       stepRef.current = step;
-      triggeredTracksRef.current = new Set();
 
-      const states = trackStatesRef.current;
-      const cfg = configRef.current;
-
-      // Swing: offset odd steps forward in time
-      const halfStep =
-        (60 / cfg.bpm) * 0.25 / 2;
-      const swingOffset = step % 2 === 1
-        ? (cfg.swing / 100) * 0.7 * halfStep
-        : 0;
-      const scheduledTime = time + swingOffset;
-
-      const anySolo = Object.values(states).some(
-        t => t.isSolo
-      );
-
-      // Increment cycle count at cycle boundaries
-      for (const id of TRACK_IDS) {
-        const len = cfg.tracks[id].steps.length;
-        if (total > 0 && total % len === 0) {
-          cycleCountRef.current[id] =
-            (cycleCountRef.current[id] ?? 0) + 1;
-        }
-      }
-
-      const trackStep = (
-        id: TrackId
-      ): number => {
-        const len = cfg.tracks[id].steps.length;
-        return cfg.tracks[id].freeRun
-          ? total % len
-          : step % len;
-      };
-
-      const accentStep = trackStep('ac');
-      const accentActive =
-        cfg.tracks.ac.steps[accentStep] === '1';
-      let isAccented = false;
-      if (accentActive) {
-        const accentCond =
-          cfg.tracks.ac.trigConditions?.[accentStep];
-        isAccented = evaluateCondition(accentCond, {
-          cycleCount:
-            cycleCountRef.current.ac ?? 0,
-          fillActive: fillActiveRef.current,
-        });
-      }
-
-      TRACKS.forEach(track => {
-        const st = states[track.id];
-        const audible = anySolo
-          ? st.isSolo
-          : !st.isMuted;
-        if (!audible) return;
-
-        const effectiveStep = trackStep(track.id);
-        if (
-          cfg.tracks[track.id]
-            .steps[effectiveStep] === '1'
-        ) {
-          const cond =
-            cfg.tracks[track.id]
-              .trigConditions?.[effectiveStep];
-          const shouldFire = evaluateCondition(
-            cond,
-            {
-              cycleCount:
-                cycleCountRef.current[track.id]
-                  ?? 0,
-              fillActive: fillActiveRef.current,
-            }
-          );
-          if (!shouldFire) return;
-
-          const locks =
-            cfg.tracks[track.id]
-              .parameterLocks?.[effectiveStep];
-          const baseGain = locks?.gain ?? st.gain;
-          const cubic = baseGain ** GAIN_EXPONENT;
-          const gain =
-            isAccented
-              ? cubic * (1 + states.ac.gain * ACCENT_GAIN_MULTIPLIER)
-              : cubic;
-          const pan = locks?.pan ?? st.pan;
-          audioEngine.playSound(
-            track.id, scheduledTime, gain, pan
-          );
-          triggeredTracksRef.current.add(track.id);
-          // MIDI output (convert AudioContext time to
-          // performance.now timestamp)
-          const perfTimeMs = performance.now()
-            + (scheduledTime
-              - audioEngine.getCurrentTime()) * 1000;
-          midiEngine.sendNote(
-            track.id, perfTimeMs, gain
-          );
-        }
+      const result = computeStep(step, time, {
+        trackStates: trackStatesRef.current,
+        config: configRef.current,
+        totalSteps: totalStepsRef.current,
+        cycleCounts: cycleCountRef.current,
+        fillActive: fillActiveRef.current,
+        pendingPattern: pendingPatternRef.current,
+        tempState: tempStateRef.current,
+        homeSnapshot: homeSnapshotRef.current,
       });
 
-      // ─── Step boundary: pattern mode hooks ──────
-      const patLen = getPatternLength(cfg.tracks);
-      if (step === patLen - 1) {
-        // Sequential: apply pending pattern
-        const pending = pendingPatternRef.current;
-        if (pending) {
-          configRef.current = {
-            ...cfg,
-            tracks: pending.tracks,
-          };
-          pendingPatternRef.current = null;
-          // Update React state for UI
-          setConfig(prev => ({
-            ...prev,
-            tracks: pending.tracks,
-          }));
-          setSelectedPatternId(pending.id);
-          setPendingPattern(null);
-          // No requestReset — natural wrap
-        }
+      // Apply pure results to refs
+      totalStepsRef.current = result.totalSteps;
+      cycleCountRef.current = result.cycleCounts;
+      triggeredTracksRef.current =
+        result.triggeredTracks;
 
-        // Temp revert
-        if (
-          tempStateRef.current === 'active'
-          && homeSnapshotRef.current
-          && !pending // Don't revert on same step
-                      // as applying pending
-        ) {
-          const snap = homeSnapshotRef.current;
-          const snapPatLen =
-            getPatternLength(snap.tracks);
-          configRef.current = {
-            ...cfg,
-            tracks: snap.tracks,
-          };
-          if (snapPatLen !== patLen) {
-            audioEngine.setPatternLength(snapPatLen);
-          }
-          audioEngine.requestReset();
-          // Update React state
-          setConfig(prev => ({
-            ...prev,
-            tracks: snap.tracks,
-          }));
-          setSelectedPatternId(
-            snap.selectedPatternId
-          );
-          setTempState('off');
-          tempStateRef.current = 'off';
-          setHomeSnapshot(null);
-          homeSnapshotRef.current = null;
+      // Play sounds and send MIDI
+      for (const [trackId, scheduledTime, gain, pan]
+        of result.sounds) {
+        audioEngine.playSound(
+          trackId, scheduledTime, gain, pan
+        );
+        const perfTimeMs = performance.now()
+          + (scheduledTime
+            - audioEngine.getCurrentTime()) * 1000;
+        midiEngine.sendNote(
+          trackId, perfTimeMs, gain
+        );
+      }
+
+      // Interpret pattern mode signals
+      if (result.applyPending) {
+        const { config: newCfg, patternId } =
+          result.applyPending;
+        configRef.current = newCfg;
+        pendingPatternRef.current = null;
+        setConfig(prev => ({
+          ...prev,
+          tracks: newCfg.tracks,
+        }));
+        setSelectedPatternId(patternId);
+        setPendingPattern(null);
+      }
+
+      if (result.revertTemp) {
+        const {
+          config: newCfg,
+          selectedPatternId: snapPatId,
+          patternLength: snapPatLen,
+          needsReset,
+        } = result.revertTemp;
+        configRef.current = newCfg;
+        if (needsReset) {
+          audioEngine.setPatternLength(snapPatLen);
         }
+        audioEngine.requestReset();
+        setConfig(prev => ({
+          ...prev,
+          tracks: newCfg.tracks,
+        }));
+        setSelectedPatternId(snapPatId);
+        setTempState('off');
+        tempStateRef.current = 'off';
+        setHomeSnapshot(null);
+        homeSnapshotRef.current = null;
       }
     },
     []
