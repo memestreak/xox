@@ -257,6 +257,7 @@ export default function StepGrid({
             onCtrlClick={ctrlClickCell}
             onShiftClick={shiftClickCell}
             onPlainClick={toggleSelected}
+            onClearSelection={clearSelection}
           />
         ))}
         <AccentRow
