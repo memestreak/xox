@@ -37,8 +37,8 @@ function TransportControlsInner({
     <header className="bg-neutral-950 safe-area-top safe-area-x space-y-2 lg:space-y-4">
       {/* Row 1: Logo + BPM + Play */}
       <div className="flex justify-between items-center lg:items-end">
-        <h1 className="text-2xl lg:text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">
-          XOX
+        <h1 className="text-2xl lg:text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600 font-[family-name:var(--font-orbitron)]">
+          X0X
         </h1>
         <div className="flex gap-2 lg:gap-4 items-center lg:items-end">
           <TempoController bpm={bpm} setBpm={setBpm} />
