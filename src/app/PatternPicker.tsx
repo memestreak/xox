@@ -134,6 +134,8 @@ export default function PatternPicker({
     >
       <div
         ref={drawerRef}
+        role="listbox"
+        aria-label="Pattern list"
         tabIndex={-1}
         onKeyDown={(e) => {
           if (e.code === 'Space') e.preventDefault();

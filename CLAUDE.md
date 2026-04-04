@@ -19,7 +19,7 @@ XOX is a 16-step drum sequencer. Next.js 16 App Router with
 static export to Cloudflare Pages. All app code lives in
 `src/app/`.
 
-Two-layer design:
+Three-layer design:
 
 **AudioEngine (`src/app/AudioEngine.ts`)** — Singleton managing
 the Web Audio API. Implements a look-ahead scheduler (25ms timer,
@@ -27,15 +27,21 @@ the Web Audio API. Implements a look-ahead scheduler (25ms timer,
 and caches kit samples as AudioBuffers. Core loop:
 `scheduler()` → `advanceStep()` → `playSound()`.
 
+**computeStep (`src/app/computeStep.ts`)** — Pure function
+for step computation. Takes `ComputeStepDeps` (track states,
+config, cycle counts, fill state, pattern mode refs) and
+returns `ComputeStepResult` (sounds to play, triggered tracks,
+pattern transition signals). No side effects.
+
 **SequencerContext (`src/app/SequencerContext.tsx`)** — React
-context provider managing all state. Split into two internal
-contexts for render isolation: ConfigContext (serializable
-state via `SequencerConfig`) and TransientContext (playback/UI).
-Consumer API is `useSequencer()` returning `{ state, actions,
-meta }`. Uses `requestAnimationFrame` for visual step sync.
-Solo/mute priority: if any track is soloed, only soloed tracks
-play; otherwise non-muted tracks play. Accented steps play at
-1.5x gain.
+context orchestrator composing four focused hooks. Split into
+two internal contexts for render isolation: ConfigContext
+(serializable state via `SequencerConfig`) and TransientContext
+(playback/UI). Consumer API is `useSequencer()` returning
+`{ state, actions, meta }`. Uses `requestAnimationFrame` for
+visual step sync. Solo/mute priority: if any track is soloed,
+only soloed tracks play; otherwise non-muted tracks play.
+Accented steps play at 1.5x gain.
 
 **SequencerConfig (`src/app/types.ts`)** — Canonical type for
 all persistable state (kit, BPM, steps, mixer). Single source
@@ -45,9 +51,35 @@ of truth for serializable configuration.
 `SequencerConfig` as compressed JSON + base64url for URL hash
 sharing. Uses `CompressionStream('deflate-raw')`.
 
+**Hooks (`src/app/hooks/`)** — All custom hooks live here:
+- `useFillMode.ts` — fill latch/momentary state, F-key
+- `usePatternMode.ts` — pattern mode state machine, temp
+- `useTrackConfig.ts` — all track/mixer config actions
+- `usePlayback.ts` — audio engine, handleStep, spacebar
+- `useSelection.ts` — multi-step selection (Ctrl/Shift)
+- `useDragPaint.ts` — pointer drag gestures on the grid
+
+Every hook that manages resettable state must expose a
+`reset()` method. The orchestrator's `clearAll` composes
+all hook resets.
+
+**Component decomposition:**
+- `TrackRow.tsx` → `TrackNameButton.tsx`,
+  `TrackMixer.tsx`, `TrackEndBar.tsx`
+- `StepButton.tsx` → `stepColors.ts`, `StepBadges.tsx`
+- `StepPopover.tsx` → `ProbabilityEditor.tsx`,
+  `CycleEditor.tsx`, `FillConditionEditor.tsx`,
+  `StepLockEditors.tsx`
+- `AccentRow.tsx` shares `TrackEndBar` and `trackUtils`
+
 Supporting files:
 - `types.ts` — `TrackId`, `Kit`, `Pattern`, `TrackState`,
-  `SequencerConfig`, `TrackMixerState` types
+  `SequencerConfig`, `TrackMixerState` types;
+  `cellKey()`/`parseCellKey()` for selection identifiers
+- `constants.ts` — all timing, threshold, and tuning
+  values (import from here, not inline literals)
+- `trackUtils.ts` — `computeEffectiveStep`, `formatPan`
+- `trigConditions.ts` — `evaluateCondition` for trig gating
 - `TempoController.tsx` — BPM input (clamped 20-300)
 - `SettingsPopover.tsx` — Gear icon settings menu with Export
 - `data/kits.json` — Kit definitions (id, name, folder path)
@@ -66,13 +98,19 @@ Test areas:
   field validation
 - `configCodec.golden.test.ts` — backward-compatible
   serialization (golden hashes, base64url safety)
-- `types.test.ts` — TRACK_IDS ordering snapshot
+- `types.test.ts` — TRACK_IDS ordering, cellKey/parseCellKey
 - `SequencerContext.test.tsx` — state actions, derived
   state, pattern state machine, URL hash import
-- `handleStep.test.ts` — solo/mute priority, accent gain
+- `computeStep.test.ts` — pure unit tests: swing,
+  solo/mute, trig conditions, accent, parameter locks,
+  cycle counts, pattern boundary signals
+- `computeStep.integration.test.ts` — ref-threading
+  wiring between SequencerContext and computeStep
 - `audioEngine.test.ts` — timing math, step wrapping
-- UI tests — SettingsPopover, TransportControls,
-  TempoController
+- `trackUtils.test.ts` — computeEffectiveStep, formatPan
+- UI tests — TrackRow, AccentRow, TrackEndBar,
+  StepButton, StepPopover, SettingsPopover,
+  TransportControls, TempoController
 
 Run `npm test` after any logic change. Run `npm test --
 -u` to update snapshots after intentional format changes.
@@ -156,6 +194,33 @@ from `main` is fine.
     document.elementFromPoint = () => null;
   }
   ```
+
+## Error Boundaries
+
+- Top-level `ErrorBoundary` wraps the entire
+  `SequencerProvider` in `Sequencer.tsx`
+- `StepGrid.tsx` wraps `StepPopover` in a boundary
+- `TransportControls.tsx` wraps `PatternPicker` in a
+  boundary
+- `StatusBanner` shows kit load errors and MIDI
+  unavailability (uses `role="alert"`)
+
+## Accessibility
+
+- `globals.css` disables animations under
+  `@media (prefers-reduced-motion: reduce)`
+- `eslint-plugin-jsx-a11y` enforces a11y rules at
+  error severity
+- `StepPopover` has `aria-modal`, manual focus trap,
+  auto-focus, and focus restore
+- `TrackNameButton` menu has `role="menu"`,
+  `aria-haspopup`, `aria-expanded`, Escape dismiss
+- `TransportControls` play/stop has `aria-label` and
+  `aria-pressed`
+- `Sequencer` has `aria-live="polite"` for transport
+  state announcements
+- New components must include `aria-label` on
+  interactive elements and keyboard navigation
 
 ## CSS / Layout Rules
 

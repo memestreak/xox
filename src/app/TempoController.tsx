@@ -60,6 +60,7 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
         name="bpm"
         type="number"
         inputMode="numeric"
+        aria-label="BPM"
         autoComplete="off"
         value={bpm}
         min={MIN_BPM}
