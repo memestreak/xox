@@ -8,6 +8,7 @@ import { TRACKS, useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
 import AccentRow from './AccentRow';
 import StepPopover from './StepPopover';
+import ErrorBoundary from './ErrorBoundary';
 import { useDragPaint } from './useDragPaint';
 import { useSelection } from './useSelection';
 import type { TrackId, TrackPattern } from './types';
@@ -278,6 +279,9 @@ export default function StepGrid({
         />
       </div>
       {openPopover !== null ? (
+        <ErrorBoundary
+          onError={() => setOpenPopover(null)}
+        >
         <StepPopover
           trackId={openPopover.trackId}
           stepIndex={openPopover.stepIndex}
@@ -295,6 +299,7 @@ export default function StepGrid({
           onClose={() => setOpenPopover(null)}
           scrollContainerRef={scrollContainerRef}
         />
+        </ErrorBoundary>
       ) : null}
     </div>
   );

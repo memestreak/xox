@@ -47,6 +47,7 @@ class AudioEngine {
    * Useful for syncing UI visuals or triggering sounds in the React component.
    */
   public onStep: (step: number, time: number) => void = () => {};
+  public onLoadError: (message: string) => void = () => {};
 
   constructor() {}
 
@@ -121,6 +122,9 @@ class AudioEngine {
         this.buffers.set(id, audioBuffer);
       } catch (e) {
         console.error(`Failed to load ${id} for kit ${kitFolder}`, e);
+        this.onLoadError(
+          `Failed to load ${id} sample for kit "${kitFolder}"`
+        );
       }
     });
 
