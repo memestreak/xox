@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { useDragPaint } from '../app/useDragPaint';
+import { useDragPaint } from '../app/hooks/useDragPaint';
 import type {
   TrackId,
   TrackPattern,

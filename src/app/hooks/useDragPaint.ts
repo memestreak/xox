@@ -2,14 +2,14 @@
 
 import { useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { TrackConfig, TrackId, TrackPattern } from './types';
+import type { TrackConfig, TrackId, TrackPattern } from '../types';
 import {
   DRAG_THRESHOLD_PX,
   CYCLE_THRESHOLD_TOUCH_PX,
   CYCLE_PX_PER_STEP,
-} from './constants';
-import { cellFromPoint, bresenham } from './gridUtils';
-import type { CellHit } from './gridUtils';
+} from '../constants';
+import { cellFromPoint, bresenham } from '../gridUtils';
+import type { CellHit } from '../gridUtils';
 
 interface UseDragPaintOptions {
   containerRef: RefObject<HTMLDivElement | null>;

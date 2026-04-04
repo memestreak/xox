@@ -7,24 +7,17 @@ import {
   useEffect,
   useCallback,
   useRef,
-  useMemo,
   type ReactNode,
 } from 'react';
-import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
-import { audioEngine } from './AudioEngine';
-import { midiEngine } from './MidiEngine';
 import { defaultConfig, decodeConfig } from './configCodec';
-import { computeStep } from './computeStep';
-import {
-  GAIN_EXPONENT,
-  MAX_PATTERN_LENGTH,
-} from './constants';
-import { TRACK_IDS, getPatternLength } from './types';
+import { TRACK_IDS } from './types';
+import { useFillMode } from './hooks/useFillMode';
+import { usePatternMode } from './hooks/usePatternMode';
+import { useTrackConfig } from './hooks/useTrackConfig';
+import { usePlayback } from './hooks/usePlayback';
 import type {
-  HomeSnapshot,
   Kit,
-  Pattern,
   PatternMode,
   SequencerConfig,
   StepConditions,
@@ -36,7 +29,8 @@ import type {
 } from './types';
 
 /**
- * Track definitions for the sequencer grid (excludes accent).
+ * Track definitions for the sequencer grid
+ * (excludes accent).
  */
 export const TRACKS: { id: TrackId; name: string }[] = [
   { id: 'bd', name: 'BD' },
@@ -51,22 +45,6 @@ export const TRACKS: { id: TrackId; name: string }[] = [
   { id: 'cp', name: 'CP' },
   { id: 'cb', name: 'CB' },
 ];
-
-/** Map of TrackId to display name (includes accent). */
-const TRACK_NAMES: Record<TrackId, string> = {
-  ac: 'ACCENT',
-  bd: 'BD',
-  sd: 'SD',
-  ch: 'CH',
-  oh: 'OH',
-  cy: 'CY',
-  ht: 'HT',
-  mt: 'MT',
-  lt: 'LT',
-  rs: 'RS',
-  cp: 'CP',
-  cb: 'CB',
-};
 
 // ─── Interfaces ──────────────────────────────────────
 
@@ -89,7 +67,9 @@ interface SequencerActions {
   togglePlay: () => void;
   setBpm: (bpm: number) => void;
   setKit: (kit: Kit) => void;
-  setPattern: (pattern: Pattern) => void;
+  setPattern: (
+    pattern: import('./types').Pattern
+  ) => void;
   toggleStep: (
     trackId: TrackId, stepIndex: number
   ) => void;
@@ -154,7 +134,7 @@ interface SequencerContextValue {
 
 // ─── Contexts ─────────────────────────────────────────
 
-/** Config context: serializable state that changes on edits. */
+/** Config context: serializable state. */
 const ConfigContext = createContext<{
   config: SequencerConfig;
   setConfig: React.Dispatch<
@@ -179,20 +159,21 @@ const TransientContext = createContext<{
   stepRef: React.RefObject<number>;
 } | null>(null);
 
-/** Combined context for the public useSequencer() hook. */
+/** Combined context for public useSequencer() hook. */
 const SequencerContext = createContext<
   SequencerContextValue | null
 >(null);
 
 /**
- * Hook to access sequencer context. Throws if used outside
- * SequencerProvider.
+ * Hook to access sequencer context. Throws if used
+ * outside SequencerProvider.
  */
 export function useSequencer(): SequencerContextValue {
   const ctx = useContext(SequencerContext);
   if (!ctx) {
     throw new Error(
-      'useSequencer must be used within SequencerProvider'
+      'useSequencer must be used within'
+        + ' SequencerProvider'
     );
   }
   return ctx;
@@ -203,72 +184,30 @@ interface SequencerProviderProps {
 }
 
 /**
- * Provides all sequencer state, actions, and audio engine
- * integration to the component tree.
- *
- * Internally split into ConfigContext (serializable state)
- * and TransientContext (playback/UI) for render isolation.
+ * Orchestrator: composes focused hooks and provides
+ * the unified sequencer context. The public
+ * useSequencer() API (state, actions, meta) is
+ * unchanged.
  */
 export function SequencerProvider({
   children,
 }: SequencerProviderProps) {
-  // ─── Config state ─────────────────────────────────
+  // ─── Shared config state ─────────────────────
   const [config, setConfig] = useState<SequencerConfig>(
     defaultConfig
   );
   const [selectedPatternId, setSelectedPatternId] =
     useState(patternsData.patterns[0].id);
 
-  // ─── Transient state ──────────────────────────────
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [loadError, setLoadError] =
-    useState<string | null>(null);
-  const stepRef = useRef<number>(-1);
-  const totalStepsRef = useRef<number>(0);
-  const triggeredTracksRef = useRef<Set<TrackId>>(
-    new Set()
-  );
-
-  // ─── Fill state ──────────────────────────────────
-  const [isLatched, setIsLatched] = useState(false);
-  const [isHeld, setIsHeld] = useState(false);
-  const fillActiveRef = useRef(false);
-  const isFillActive = isLatched || isHeld;
-  const fillMode: 'off' | 'latched' | 'momentary' =
-    isHeld ? 'momentary'
-      : isLatched ? 'latched'
-        : 'off';
-
-  // ─── Pattern mode state ─────────────────────────────
-  const [patternMode, setPatternMode] =
-    useState<PatternMode>('direct-jump');
-  const [tempState, setTempState] =
-    useState<TempState>('off');
-  const [homeSnapshot, setHomeSnapshot] =
-    useState<HomeSnapshot | null>(null);
-  const [pendingPattern, setPendingPattern] =
-    useState<Pattern | null>(null);
-
-  const tempStateRef = useRef<TempState>('off');
-  const homeSnapshotRef =
-    useRef<HomeSnapshot | null>(null);
-  const pendingPatternRef =
-    useRef<Pattern | null>(null);
-
+  // Shared refs owned by orchestrator (breaks
+  // circular deps between hooks)
+  const configRef = useRef(config);
+  const isPlayingRef = useRef(false);
   useEffect(() => {
-    tempStateRef.current = tempState;
-  }, [tempState]);
+    configRef.current = config;
+  }, [config]);
 
-  useEffect(() => {
-    homeSnapshotRef.current = homeSnapshot;
-  }, [homeSnapshot]);
-
-  useEffect(() => {
-    pendingPatternRef.current = pendingPattern;
-  }, [pendingPattern]);
-
-  // ─── Import config from URL hash on mount ─────────
+  // ─── URL hash import on mount ────────────────
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (!hash) return;
@@ -282,559 +221,38 @@ export function SequencerProvider({
       });
   }, []);
 
-  // ─── Derived state via useMemo ────────────────────
+  // ─── Compose hooks ───────────────────────────
+  const fill = useFillMode();
 
-  const currentKit = useMemo<Kit>(() => {
-    const kit = kitsData.kits.find(
-      k => k.id === config.kitId
-    );
-    return kit ?? kitsData.kits[0];
-  }, [config.kitId]);
+  const trackConfig = useTrackConfig({
+    setConfig,
+    setSelectedPatternId,
+  });
 
-  const trackStates = useMemo<
-    Record<TrackId, TrackState>
-  >(() => {
-    const result = {} as Record<TrackId, TrackState>;
-    for (const id of Object.keys(
-      config.mixer
-    ) as TrackId[]) {
-      const m = config.mixer[id];
-      result[id] = {
-        id,
-        name: TRACK_NAMES[id],
-        gain: m.gain,
-        pan: m.pan,
-        isMuted: m.isMuted,
-        isSolo: m.isSolo,
-      };
-    }
-    return result;
-  }, [config.mixer]);
+  const pm = usePatternMode({
+    configRef,
+    isPlayingRef,
+    selectedPatternId,
+    setConfig,
+    setSelectedPatternId,
+  });
 
-  // ─── Audio refs (belt-and-suspenders) ─────────────
+  const playback = usePlayback({
+    config,
+    configRef,
+    isPlayingRef,
+    setConfig,
+    setSelectedPatternId,
+    fillActiveRef: fill.fillActiveRef,
+    pendingPatternRef: pm.pendingPatternRef,
+    tempStateRef: pm.tempStateRef,
+    homeSnapshotRef: pm.homeSnapshotRef,
+    cycleCountRef: trackConfig.cycleCountRef,
+    initCycleCounts: trackConfig.initCycleCounts,
+    patternModeReset: pm.reset,
+  });
 
-  const trackStatesRef = useRef(trackStates);
-  const configRef = useRef(config);
-  const cycleCountRef = useRef<Record<TrackId, number>>(
-    {} as Record<TrackId, number>
-  );
-
-  useEffect(() => {
-    trackStatesRef.current = trackStates;
-  }, [trackStates]);
-
-  useEffect(() => {
-    configRef.current = config;
-  }, [config]);
-
-  // ─── Effects ──────────────────────────────────────
-
-  useEffect(() => {
-    audioEngine.onLoadError = (msg) =>
-      setLoadError(msg);
-    return () => {
-      audioEngine.onLoadError = () => {};
-    };
-  }, []);
-
-  useEffect(() => {
-    const load = async () => {
-      setIsLoaded(false);
-      setLoadError(null);
-      await audioEngine.preloadKit(currentKit.folder);
-      setIsLoaded(true);
-    };
-    load();
-  }, [currentKit]);
-
-  useEffect(() => {
-    return () => {
-      audioEngine.stop();
-    };
-  }, []);
-
-  useEffect(() => {
-    audioEngine.setBpm(config.bpm);
-    midiEngine.setBpm(config.bpm);
-  }, [config.bpm]);
-
-  useEffect(() => {
-    audioEngine.setPatternLength(
-      getPatternLength(config.tracks)
-    );
-  }, [config.tracks]);
-
-  // ─── Audio step callback ──────────────────────────
-
-  const handleStep = useCallback(
-    (step: number, time: number) => {
-      stepRef.current = step;
-
-      const result = computeStep(step, time, {
-        trackStates: trackStatesRef.current,
-        config: configRef.current,
-        totalSteps: totalStepsRef.current,
-        cycleCounts: cycleCountRef.current,
-        fillActive: fillActiveRef.current,
-        pendingPattern: pendingPatternRef.current,
-        tempState: tempStateRef.current,
-        homeSnapshot: homeSnapshotRef.current,
-      });
-
-      // Apply pure results to refs
-      totalStepsRef.current = result.totalSteps;
-      cycleCountRef.current = result.cycleCounts;
-      triggeredTracksRef.current =
-        result.triggeredTracks;
-
-      // Play sounds and send MIDI
-      for (const [trackId, scheduledTime, gain, pan]
-        of result.sounds) {
-        audioEngine.playSound(
-          trackId, scheduledTime, gain, pan
-        );
-        const perfTimeMs = performance.now()
-          + (scheduledTime
-            - audioEngine.getCurrentTime()) * 1000;
-        midiEngine.sendNote(
-          trackId, perfTimeMs, gain
-        );
-      }
-
-      // Interpret pattern mode signals
-      if (result.applyPending) {
-        const { config: newCfg, patternId } =
-          result.applyPending;
-        configRef.current = newCfg;
-        pendingPatternRef.current = null;
-        setConfig(prev => ({
-          ...prev,
-          tracks: newCfg.tracks,
-        }));
-        setSelectedPatternId(patternId);
-        setPendingPattern(null);
-      }
-
-      if (result.revertTemp) {
-        const {
-          config: newCfg,
-          selectedPatternId: snapPatId,
-          patternLength: snapPatLen,
-          needsReset,
-        } = result.revertTemp;
-        configRef.current = newCfg;
-        if (needsReset) {
-          audioEngine.setPatternLength(snapPatLen);
-        }
-        audioEngine.requestReset();
-        setConfig(prev => ({
-          ...prev,
-          tracks: newCfg.tracks,
-        }));
-        setSelectedPatternId(snapPatId);
-        setTempState('off');
-        tempStateRef.current = 'off';
-        setHomeSnapshot(null);
-        homeSnapshotRef.current = null;
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (isPlaying) {
-      audioEngine.onStep = handleStep;
-    }
-  }, [handleStep, isPlaying]);
-
-  // ─── Actions ──────────────────────────────────────
-
-  const initCycleCounts = useCallback(() => {
-    const counts = {} as Record<TrackId, number>;
-    for (const id of TRACK_IDS) { counts[id] = 0; }
-    cycleCountRef.current = counts;
-  }, []);
-
-  const togglePlay = useCallback(() => {
-    if (isPlaying) {
-      // Revert temp if active
-      if (tempStateRef.current === 'active'
-          && homeSnapshotRef.current) {
-        const snap = homeSnapshotRef.current;
-        setConfig(prev => ({
-          ...prev,
-          tracks: snap.tracks,
-        }));
-        setSelectedPatternId(
-          snap.selectedPatternId
-        );
-      }
-      // Clear all pattern mode transient state
-      setTempState('off');
-      tempStateRef.current = 'off';
-      setHomeSnapshot(null);
-      homeSnapshotRef.current = null;
-      setPendingPattern(null);
-      pendingPatternRef.current = null;
-
-      audioEngine.stop();
-      midiEngine.stop();
-      setIsPlaying(false);
-      stepRef.current = -1;
-      totalStepsRef.current = 0;
-      triggeredTracksRef.current = new Set();
-      initCycleCounts();
-    } else {
-      totalStepsRef.current = 0;
-      initCycleCounts();
-      audioEngine.start(
-        config.bpm,
-        handleStep,
-        getPatternLength(config.tracks)
-      );
-      setIsPlaying(true);
-    }
-  }, [isPlaying, config.bpm, config.tracks,
-    handleStep, initCycleCounts]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isLoaded) return;
-      if (event.code !== 'Space') return;
-      const target = event.target as HTMLElement;
-      const tag = target?.tagName;
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT'
-      ) return;
-      event.preventDefault();
-      togglePlay();
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () =>
-      document.removeEventListener(
-        'keydown',
-        handleKeyDown
-      );
-  }, [togglePlay, isLoaded]);
-
-  const setBpm = useCallback((v: number) => {
-    setConfig(prev => ({ ...prev, bpm: v }));
-  }, []);
-
-  const setKit = useCallback((kit: Kit) => {
-    setConfig(prev => ({ ...prev, kitId: kit.id }));
-  }, []);
-
-  const applyPatternNow = useCallback(
-    (pattern: Pattern) => {
-      setConfig(prev => ({
-        ...prev,
-        tracks: pattern.tracks,
-      }));
-      setSelectedPatternId(pattern.id);
-    },
-    []
-  );
-
-  const setPattern = useCallback(
-    (pattern: Pattern) => {
-      // When stopped, always apply immediately
-      if (!isPlaying) {
-        applyPatternNow(pattern);
-        return;
-      }
-
-      const ts = tempStateRef.current;
-
-      // Temp armed: snapshot home, apply via mode,
-      // transition to active
-      if (ts === 'armed') {
-        const snapshot: HomeSnapshot = {
-          tracks: structuredClone(
-            configRef.current.tracks
-          ),
-          selectedPatternId,
-        };
-        setHomeSnapshot(snapshot);
-        homeSnapshotRef.current = snapshot;
-        setTempState('active');
-        tempStateRef.current = 'active';
-      }
-
-      // Temp active: replace temp pattern, keep home
-      // (no additional snapshot needed)
-
-      // Apply based on current mode
-      switch (patternMode) {
-        case 'sequential': {
-          setPendingPattern(pattern);
-          pendingPatternRef.current = pattern;
-          break;
-        }
-        case 'direct-start': {
-          audioEngine.requestReset();
-          applyPatternNow(pattern);
-          break;
-        }
-        case 'direct-jump': {
-          applyPatternNow(pattern);
-          break;
-        }
-      }
-    },
-    [isPlaying, patternMode, selectedPatternId,
-      applyPatternNow]
-  );
-
-  const toggleStep = useCallback(
-    (trackId: TrackId, stepIndex: number) => {
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
-        if (stepIndex >= track.steps.length) {
-          return prev;
-        }
-        const cur = track.steps;
-        const bit =
-          cur[stepIndex] === '1' ? '0' : '1';
-        const next =
-          cur.substring(0, stepIndex) +
-          bit +
-          cur.substring(stepIndex + 1);
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: {
-              ...track,
-              steps: next,
-            },
-          },
-        };
-      });
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const setStep = useCallback(
-    (
-      trackId: TrackId,
-      stepIndex: number,
-      value: '0' | '1'
-    ) => {
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
-        if (stepIndex >= track.steps.length) {
-          return prev;
-        }
-        const cur = track.steps;
-        if (cur[stepIndex] === value) return prev;
-        const next =
-          cur.substring(0, stepIndex) +
-          value +
-          cur.substring(stepIndex + 1);
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: {
-              ...track,
-              steps: next,
-            },
-          },
-        };
-      });
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const setTrackSteps = useCallback(
-    (trackId: TrackId, newSteps: string) => {
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
-        if (newSteps === track.steps) {
-          return prev;
-        }
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: {
-              ...track,
-              steps: newSteps,
-            },
-          },
-        };
-      });
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const toggleFreeRun = useCallback(
-    (trackId: TrackId) => {
-      setConfig(prev => ({
-        ...prev,
-        tracks: {
-          ...prev.tracks,
-          [trackId]: {
-            ...prev.tracks[trackId],
-            freeRun: !prev.tracks[trackId].freeRun,
-          },
-        },
-      }));
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const setPatternLength = useCallback(
-    (length: number) => {
-      const clamped =
-        Math.max(1, Math.min(MAX_PATTERN_LENGTH, length));
-      setConfig(prev => {
-        const currentMax =
-          getPatternLength(prev.tracks);
-        const newTracks = {
-          ...prev.tracks,
-        } as Record<TrackId, TrackConfig>;
-        for (const id of TRACK_IDS) {
-          const track = prev.tracks[id];
-          const curLen = track.steps.length;
-          let newLen: number;
-          if (clamped > currentMax) {
-            // Grow: ALL tracks extend to N
-            newLen = clamped;
-          } else {
-            // Shrink: only cap tracks > N
-            newLen = curLen > clamped
-              ? clamped
-              : curLen;
-          }
-          let newSteps = track.steps;
-          if (newSteps.length < newLen) {
-            newSteps = newSteps.padEnd(newLen, '0');
-          } else if (newSteps.length > newLen) {
-            newSteps = newSteps.substring(0, newLen);
-          }
-          newTracks[id] = {
-            ...track,
-            steps: newSteps,
-          };
-        }
-        return {
-          ...prev,
-          tracks: newTracks,
-        };
-      });
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const setTrackLength = useCallback(
-    (trackId: TrackId, length: number) => {
-      setConfig(prev => {
-        const patLen =
-          getPatternLength(prev.tracks);
-        const clamped = Math.max(
-          1,
-          Math.min(patLen, length)
-        );
-        const track = prev.tracks[trackId];
-        let newSteps: string;
-        if (track.steps.length < clamped) {
-          newSteps =
-            track.steps.padEnd(clamped, '0');
-        } else {
-          newSteps =
-            track.steps.substring(0, clamped);
-        }
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: {
-              ...track,
-              steps: newSteps,
-            },
-          },
-        };
-      });
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const toggleMute = useCallback(
-    (trackId: TrackId) => {
-      setConfig(prev => ({
-        ...prev,
-        mixer: {
-          ...prev.mixer,
-          [trackId]: {
-            ...prev.mixer[trackId],
-            isMuted: !prev.mixer[trackId].isMuted,
-          },
-        },
-      }));
-      cycleCountRef.current[trackId] = 0;
-    },
-    []
-  );
-
-  const toggleSolo = useCallback(
-    (trackId: TrackId) => {
-      setConfig(prev => ({
-        ...prev,
-        mixer: {
-          ...prev.mixer,
-          [trackId]: {
-            ...prev.mixer[trackId],
-            isSolo: !prev.mixer[trackId].isSolo,
-          },
-        },
-      }));
-      cycleCountRef.current[trackId] = 0;
-    },
-    []
-  );
-
-  const setGain = useCallback(
-    (trackId: TrackId, value: number) => {
-      setConfig(prev => ({
-        ...prev,
-        mixer: {
-          ...prev.mixer,
-          [trackId]: {
-            ...prev.mixer[trackId],
-            gain: value,
-          },
-        },
-      }));
-    },
-    []
-  );
-
-  const setPan = useCallback(
-    (trackId: TrackId, value: number) => {
-      setConfig(prev => ({
-        ...prev,
-        mixer: {
-          ...prev.mixer,
-          [trackId]: {
-            ...prev.mixer[trackId],
-            pan: value,
-          },
-        },
-      }));
-    },
-    []
-  );
-
+  // ─── clearAll composes all hook resets ────────
   const clearAll = useCallback(() => {
     setConfig(prev => {
       const newTracks = {} as Record<
@@ -849,328 +267,65 @@ export function SequencerProvider({
         swing: 0,
       };
     });
-    setIsLatched(false);
-    setIsHeld(false);
-    fillActiveRef.current = false;
     setSelectedPatternId('custom');
-    setTempState('off');
-    tempStateRef.current = 'off';
-    setHomeSnapshot(null);
-    homeSnapshotRef.current = null;
-    setPendingPattern(null);
-    pendingPatternRef.current = null;
-  }, []);
+    fill.reset();
+    pm.reset();
+    trackConfig.reset();
+  }, [fill, pm, trackConfig]);
 
-  const clearTrack = useCallback(
-    (trackId: TrackId) => {
-      setConfig(prev => ({
-        ...prev,
-        tracks: {
-          ...prev.tracks,
-          [trackId]: { steps: '0'.repeat(16) },
-        },
-      }));
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const setSwing = useCallback(
-    (value: number) => {
-      setConfig(prev => ({
-        ...prev,
-        swing: Math.max(0, Math.min(100, value)),
-      }));
-    },
-    []
-  );
-
-  const toggleFillLatch = useCallback(() => {
-    setIsLatched(prev => {
-      const next = !prev;
-      fillActiveRef.current = next || isHeld;
-      return next;
-    });
-  }, [isHeld]);
-
-  const setFillHeld = useCallback(
-    (held: boolean) => {
-      setIsHeld(held);
-      if (!held) {
-        setIsLatched(false);
-        fillActiveRef.current = false;
-      } else {
-        fillActiveRef.current = true;
-      }
-    },
-    []
-  );
-
-  // ─── Fill keyboard shortcut (f key) ─────────────
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== 'KeyF' || e.repeat) return;
-      const tag =
-        (e.target as HTMLElement)?.tagName;
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT'
-      ) return;
-      e.preventDefault();
-      if (e.metaKey || e.ctrlKey) {
-        toggleFillLatch();
-      } else {
-        setFillHeld(true);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== 'KeyF') return;
-      setFillHeld(false);
-    };
-
-    document.addEventListener(
-      'keydown', handleKeyDown
-    );
-    document.addEventListener(
-      'keyup', handleKeyUp
-    );
-    return () => {
-      document.removeEventListener(
-        'keydown', handleKeyDown
-      );
-      document.removeEventListener(
-        'keyup', handleKeyUp
-      );
-    };
-  }, [toggleFillLatch, setFillHeld]);
-
-  const setTrigCondition = useCallback(
-    (
-      trackId: TrackId,
-      stepIndex: number,
-      conditions: StepConditions
-    ) => {
-      setConfig(prev => ({
-        ...prev,
-        tracks: {
-          ...prev.tracks,
-          [trackId]: {
-            ...prev.tracks[trackId],
-            trigConditions: {
-              ...prev.tracks[trackId].trigConditions,
-              [stepIndex]: conditions,
-            },
-          },
-        },
-      }));
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const clearTrigCondition = useCallback(
-    (trackId: TrackId, stepIndex: number) => {
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
-        const trackConds = {
-          ...track.trigConditions,
-        };
-        delete trackConds[stepIndex];
-        const newTrack = Object.keys(
-          trackConds
-        ).length === 0
-          ? {
-              ...track,
-              trigConditions: undefined,
-            }
-          : {
-              ...track,
-              trigConditions: trackConds,
-            };
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: newTrack,
-          },
-        };
-      });
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const setParameterLock = useCallback(
-    (
-      trackId: TrackId,
-      stepIndex: number,
-      locks: StepLocks
-    ) => {
-      setConfig(prev => ({
-        ...prev,
-        tracks: {
-          ...prev.tracks,
-          [trackId]: {
-            ...prev.tracks[trackId],
-            parameterLocks: {
-              ...prev.tracks[trackId].parameterLocks,
-              [stepIndex]: {
-                ...prev.tracks[trackId]
-                  .parameterLocks?.[stepIndex],
-                ...locks,
-              },
-            },
-          },
-        },
-      }));
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  const clearParameterLock = useCallback(
-    (trackId: TrackId, stepIndex: number) => {
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
-        const trackLocks = {
-          ...track.parameterLocks,
-        };
-        delete trackLocks[stepIndex];
-        const newTrack = Object.keys(
-          trackLocks
-        ).length === 0
-          ? {
-              ...track,
-              parameterLocks: undefined,
-            }
-          : {
-              ...track,
-              parameterLocks: trackLocks,
-            };
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: newTrack,
-          },
-        };
-      });
-      setSelectedPatternId('custom');
-    },
-    []
-  );
-
-  // ─── Pattern mode actions ────────────────────────
-
-  const toggleTemp = useCallback(() => {
-    if (!isPlaying) return;
-    setTempState(prev => {
-      const next = prev === 'off' ? 'armed' : 'off';
-      tempStateRef.current = next;
-      if (next === 'off') {
-        // Disarming cancels any pending queue
-        setPendingPattern(null);
-        pendingPatternRef.current = null;
-        setHomeSnapshot(null);
-        homeSnapshotRef.current = null;
-      }
-      return next;
-    });
-  }, [isPlaying]);
-
-  // ─── Temp keyboard shortcut (t key) ─────────────
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== 'KeyT' || e.repeat) return;
-      const tag =
-        (e.target as HTMLElement)?.tagName;
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT'
-      ) return;
-      e.preventDefault();
-      toggleTemp();
-    };
-    document.addEventListener(
-      'keydown', handleKeyDown
-    );
-    return () => {
-      document.removeEventListener(
-        'keydown', handleKeyDown
-      );
-    };
-  }, [toggleTemp]);
-
-  const playPreview = useCallback(
-    (trackId: TrackId) => {
-      const st = trackStatesRef.current[trackId];
-      const cubic = st.gain ** GAIN_EXPONENT;
-      audioEngine.playSound(
-        trackId,
-        audioEngine.getCurrentTime(),
-        cubic,
-        st.pan
-      );
-    },
-    []
-  );
-
-  const dismissError = useCallback(() => {
-    setLoadError(null);
-  }, []);
-
-  // ─── Context value ────────────────────────────────
-
+  // ─── Context value ────────────────────────────
   const value: SequencerContextValue = {
     state: {
-      isPlaying,
+      isPlaying: playback.isPlaying,
       bpm: config.bpm,
-      currentKit,
-      trackStates,
-      isLoaded,
-      loadError,
+      currentKit: playback.currentKit,
+      trackStates: playback.trackStates,
+      isLoaded: playback.isLoaded,
+      loadError: playback.loadError,
       swing: config.swing,
-      isFillActive,
-      fillMode,
-      patternMode,
-      tempState,
+      isFillActive: fill.isFillActive,
+      fillMode: fill.fillMode,
+      patternMode: pm.patternMode,
+      tempState: pm.tempState,
       selectedPatternId,
     },
     actions: {
-      togglePlay,
-      setBpm,
-      setKit,
-      setPattern,
-      toggleStep,
-      setStep,
-      setTrackSteps,
-      toggleMute,
-      toggleSolo,
-      setGain,
-      setPan,
-      toggleFreeRun,
-      setPatternLength,
-      setTrackLength,
+      togglePlay: playback.togglePlay,
+      setBpm: playback.setBpm,
+      setKit: playback.setKit,
+      setPattern: pm.setPattern,
+      toggleStep: trackConfig.toggleStep,
+      setStep: trackConfig.setStep,
+      setTrackSteps: trackConfig.setTrackSteps,
+      toggleMute: trackConfig.toggleMute,
+      toggleSolo: trackConfig.toggleSolo,
+      setGain: trackConfig.setGain,
+      setPan: trackConfig.setPan,
+      toggleFreeRun: trackConfig.toggleFreeRun,
+      setPatternLength: trackConfig.setPatternLength,
+      setTrackLength: trackConfig.setTrackLength,
       clearAll,
-      clearTrack,
-      setSwing,
-      toggleFillLatch,
-      setFillHeld,
-      setTrigCondition,
-      clearTrigCondition,
-      setParameterLock,
-      clearParameterLock,
-      setPatternMode,
-      toggleTemp,
-      playPreview,
-      dismissError,
+      clearTrack: trackConfig.clearTrack,
+      setSwing: trackConfig.setSwing,
+      toggleFillLatch: fill.toggleFillLatch,
+      setFillHeld: fill.setFillHeld,
+      setTrigCondition: trackConfig.setTrigCondition,
+      clearTrigCondition:
+        trackConfig.clearTrigCondition,
+      setParameterLock: trackConfig.setParameterLock,
+      clearParameterLock:
+        trackConfig.clearParameterLock,
+      setPatternMode: pm.setPatternMode,
+      toggleTemp: pm.toggleTemp,
+      playPreview: playback.playPreview,
+      dismissError: playback.dismissError,
     },
     meta: {
-      stepRef, totalStepsRef,
-      triggeredTracksRef, config,
+      stepRef: playback.stepRef,
+      totalStepsRef: playback.totalStepsRef,
+      triggeredTracksRef:
+        playback.triggeredTracksRef,
+      config,
     },
   };
 
@@ -1185,11 +340,11 @@ export function SequencerProvider({
     >
       <TransientContext
         value={{
-          isPlaying,
-          setIsPlaying,
-          isLoaded,
-          setIsLoaded,
-          stepRef,
+          isPlaying: playback.isPlaying,
+          setIsPlaying: () => {},
+          isLoaded: playback.isLoaded,
+          setIsLoaded: () => {},
+          stepRef: playback.stepRef,
         }}
       >
         <SequencerContext value={value}>

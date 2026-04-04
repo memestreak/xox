@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach }
   from 'vitest';
-import { useSelection } from '../app/useSelection';
+import { useSelection } from '../app/hooks/useSelection';
 import type { TrackConfig, TrackId } from '../app/types';
 import type { RefObject } from 'react';
 

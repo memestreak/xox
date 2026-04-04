@@ -4,7 +4,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import type { RefObject } from 'react';
-import type { TrackConfig, TrackId } from './types';
+import type { TrackConfig, TrackId } from '../types';
 
 interface SelectionAnchor {
   trackId: TrackId;
