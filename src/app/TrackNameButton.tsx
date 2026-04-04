@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  memo, useEffect, useRef, useState,
+  memo, useCallback, useEffect, useRef, useState,
 } from 'react';
 import type { TrackId } from './types';
 import Tooltip from './Tooltip';
@@ -36,6 +36,12 @@ function TrackNameButtonInner({
   const menuRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLButtonElement>(null);
 
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+    nameRef.current?.focus();
+  }, []);
+
+  // Click-outside dismiss
   useEffect(() => {
     if (!menuOpen) return;
     const handleClick = (e: MouseEvent) => {
@@ -49,7 +55,7 @@ function TrackNameButtonInner({
           e.target as Node
         )
       ) {
-        setMenuOpen(false);
+        closeMenu();
       }
     };
     document.addEventListener(
@@ -59,13 +65,43 @@ function TrackNameButtonInner({
       document.removeEventListener(
         'mousedown', handleClick
       );
-  }, [menuOpen]);
+  }, [menuOpen, closeMenu]);
+
+  // Escape key dismiss + auto-focus first item
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeMenu();
+      }
+    };
+    document.addEventListener(
+      'keydown', handleKeyDown
+    );
+    // Auto-focus first menu item
+    const firstItem =
+      menuRef.current?.querySelector<HTMLElement>(
+        '[role="menuitem"]'
+      );
+    firstItem?.focus();
+    return () =>
+      document.removeEventListener(
+        'keydown', handleKeyDown
+      );
+  }, [menuOpen, closeMenu]);
 
   return (
     <div className="relative">
       <Tooltip tooltipKey={`track-${trackId}`}>
         <button
           ref={size === 'lg' ? nameRef : undefined}
+          aria-haspopup={
+            size === 'lg' ? 'menu' : undefined
+          }
+          aria-expanded={
+            size === 'lg' ? menuOpen : undefined
+          }
           onMouseDown={(e: React.MouseEvent) => {
             if (e.button !== 0) return;
             if (e.shiftKey) {
@@ -104,12 +140,15 @@ function TrackNameButtonInner({
       {menuOpen && size === 'lg' && (
         <div
           ref={menuRef}
+          role="menu"
+          aria-label={`${trackName} options`}
           className="absolute left-0 top-full mt-1 w-36 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl z-30 overflow-hidden"
         >
           <button
+            role="menuitem"
             onClick={() => {
               onToggleFreeRun();
-              setMenuOpen(false);
+              closeMenu();
             }}
             className="w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800 transition-colors flex items-center justify-between"
           >

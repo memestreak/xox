@@ -103,6 +103,15 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   animation: tap-pulse 200ms ease-out;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-temp-blink {
+    animation: none;
+  }
+  .tap-flash {
+    animation: none;
+  }
+}
+
 /* Hide scrollbar but keep scroll functionality */
 @layer base {
   .hide-scrollbar {

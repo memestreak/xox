@@ -152,7 +152,31 @@ export default function StepPopover({
     [actions, trackId, stepIndex]
   );
 
-  // ─── Dismiss effects ─────────────────────────
+  // ─── Focus management ──────────────────────────
+  const triggerRef = useRef<Element | null>(null);
+
+  // Capture triggering element and auto-focus first
+  // focusable control on mount
+  useEffect(() => {
+    triggerRef.current = document.activeElement;
+    const el = popoverRef.current;
+    if (!el) return;
+    const first = el.querySelector<HTMLElement>(
+      'button, input, select, [tabindex]'
+    );
+    first?.focus();
+  }, []);
+
+  // Restore focus to trigger on unmount
+  useEffect(() => {
+    return () => {
+      if (triggerRef.current instanceof HTMLElement) {
+        triggerRef.current.focus();
+      }
+    };
+  }, []);
+
+  // ─── Dismiss + focus trap ─────────────────────
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       if (
@@ -182,7 +206,34 @@ export default function StepPopover({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      // Focus trap: cycle Tab within popover
+      if (e.key === 'Tab') {
+        const el = popoverRef.current;
+        if (!el) return;
+        const focusable = el.querySelectorAll<
+          HTMLElement
+        >(
+          'button, input, select, [tabindex]'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     };
     document.addEventListener(
       'keydown', handleKeyDown
@@ -226,6 +277,7 @@ export default function StepPopover({
     <div
       ref={popoverRef}
       role="dialog"
+      aria-modal="true"
       aria-label="Step editor"
       className={
         'fixed z-30'
