@@ -26,6 +26,7 @@ function formatPan(v: number): string {
 
 interface TrackNameButtonProps {
   size: 'sm' | 'lg';
+  trackId: TrackId;
   trackName: string;
   isFreeRun: boolean;
   isTriggered: boolean;
@@ -41,6 +42,7 @@ interface TrackNameButtonProps {
  */
 function TrackNameButtonInner({
   size,
+  trackId,
   trackName,
   isFreeRun,
   isTriggered,
@@ -79,7 +81,7 @@ function TrackNameButtonInner({
 
   return (
     <div className="relative">
-      <Tooltip tooltipKey="trackName">
+      <Tooltip tooltipKey={`track-${trackId}`}>
         <button
           ref={size === 'lg' ? nameRef : undefined}
           onMouseDown={(e: React.MouseEvent) => {
@@ -385,6 +387,7 @@ function TrackRowInner({
       <div className="flex items-center gap-2 mb-1 lg:hidden">
         <TrackNameButton
           size="sm"
+          trackId={trackId}
           trackName={trackName}
           isFreeRun={isFreeRun}
           isTriggered={isTriggered}
@@ -432,6 +435,7 @@ function TrackRowInner({
         <div className="hidden lg:flex w-56 items-center gap-2">
           <TrackNameButton
             size="lg"
+            trackId={trackId}
             trackName={trackName}
             isFreeRun={isFreeRun}
             isTriggered={isTriggered}
