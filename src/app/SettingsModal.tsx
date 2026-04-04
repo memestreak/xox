@@ -80,10 +80,14 @@ export default function SettingsModal({
   );
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <dialog
       ref={dialogRef}
       onClose={onClose}
       onClick={handleBackdropClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
       className="m-auto backdrop:bg-black/60 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl text-neutral-200 p-0 max-w-lg w-full"
     >
       <div className="p-6">
@@ -148,6 +152,7 @@ function OptionsTab({
         onChange={(e) =>
           setTooltipsEnabled(e.target.checked)
         }
+        aria-label="Show tooltips"
         className="accent-orange-500 w-4 h-4"
       />
       <span className="text-sm">Show tooltips</span>
@@ -190,6 +195,7 @@ function MidiTab() {
               enabled: e.target.checked,
             })
           }
+          aria-label="Enable MIDI output"
           className="accent-orange-500 w-4 h-4"
         />
         <span className="text-sm">Enable MIDI output</span>
@@ -243,6 +249,7 @@ function MidiTab() {
               ),
             })
           }
+          aria-label="MIDI channel"
           className="w-20 bg-neutral-800 border border-neutral-600 rounded px-3 py-2 text-sm disabled:opacity-50"
         />
       </label>
@@ -298,6 +305,7 @@ function MidiTab() {
                 type="number"
                 min={0}
                 max={127}
+                aria-label={`${track.id.toUpperCase()} MIDI note`}
                 value={
                   config.tracks[
                     track.id as Exclude<
