@@ -9,6 +9,8 @@ import { TooltipProvider } from './TooltipContext';
 import { MidiProvider } from './MidiContext';
 import TransportControls from './TransportControls';
 import StepGrid from './StepGrid';
+import ErrorBoundary from './ErrorBoundary';
+import StatusBanner from './StatusBanner';
 import PageIndicator from './PageIndicator';
 import { getPatternLength } from './types';
 import PatternPicker from './PatternPicker';
@@ -70,6 +72,10 @@ function SequencerInner() {
             </>
           )}
         </PatternPicker>
+        <StatusBanner
+          message={state.loadError}
+          onDismiss={actions.dismissError}
+        />
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto mt-3 lg:mt-4 pb-3 lg:pb-4 track-scroll-region"
@@ -102,12 +108,14 @@ function SequencerInner() {
 
 export default function Sequencer() {
   return (
-    <SequencerProvider>
-      <MidiProvider>
-        <TooltipProvider>
-          <SequencerInner />
-        </TooltipProvider>
-      </MidiProvider>
-    </SequencerProvider>
+    <ErrorBoundary>
+      <SequencerProvider>
+        <MidiProvider>
+          <TooltipProvider>
+            <SequencerInner />
+          </TooltipProvider>
+        </MidiProvider>
+      </SequencerProvider>
+    </ErrorBoundary>
   );
 }

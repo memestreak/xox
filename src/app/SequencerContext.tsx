@@ -77,6 +77,7 @@ interface SequencerState {
   currentKit: Kit;
   trackStates: Record<TrackId, TrackState>;
   isLoaded: boolean;
+  loadError: string | null;
   swing: number;
   isFillActive: boolean;
   fillMode: 'off' | 'latched' | 'momentary';
@@ -136,6 +137,7 @@ interface SequencerActions {
   setPatternMode: (mode: PatternMode) => void;
   toggleTemp: () => void;
   playPreview: (trackId: TrackId) => void;
+  dismissError: () => void;
 }
 
 interface SequencerMeta {
@@ -221,6 +223,8 @@ export function SequencerProvider({
   // ─── Transient state ──────────────────────────────
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] =
+    useState<string | null>(null);
   const stepRef = useRef<number>(-1);
   const totalStepsRef = useRef<number>(0);
   const triggeredTracksRef = useRef<Set<TrackId>>(
@@ -327,8 +331,17 @@ export function SequencerProvider({
   // ─── Effects ──────────────────────────────────────
 
   useEffect(() => {
+    audioEngine.onLoadError = (msg) =>
+      setLoadError(msg);
+    return () => {
+      audioEngine.onLoadError = () => {};
+    };
+  }, []);
+
+  useEffect(() => {
     const load = async () => {
       setIsLoaded(false);
+      setLoadError(null);
       await audioEngine.preloadKit(currentKit.folder);
       setIsLoaded(true);
     };
@@ -1193,6 +1206,10 @@ export function SequencerProvider({
     []
   );
 
+  const dismissError = useCallback(() => {
+    setLoadError(null);
+  }, []);
+
   // ─── Context value ────────────────────────────────
 
   const value: SequencerContextValue = {
@@ -1202,6 +1219,7 @@ export function SequencerProvider({
       currentKit,
       trackStates,
       isLoaded,
+      loadError,
       swing: config.swing,
       isFillActive,
       fillMode,
@@ -1236,6 +1254,7 @@ export function SequencerProvider({
       setPatternMode,
       toggleTemp,
       playPreview,
+      dismissError,
     },
     meta: {
       stepRef, totalStepsRef,
