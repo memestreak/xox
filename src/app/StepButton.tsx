@@ -5,6 +5,13 @@ import type { RefObject } from 'react';
 import { useLongPress } from 'use-long-press';
 import type { StepConditions, TrackId } from './types';
 import { LONG_PRESS_MS, LONG_PRESS_CANCEL_PX } from './constants';
+import { getStepColor } from './stepColors';
+import {
+  ProbabilityBar,
+  PanIndicator,
+  FillBadge,
+  CycleBadge,
+} from './StepBadges';
 import Tooltip from './Tooltip';
 
 interface StepButtonProps {
@@ -42,8 +49,6 @@ interface StepButtonProps {
 /**
  * Individual step toggle button. Memoized so it only
  * re-renders when its active/current state changes.
- * Disabled steps (beyond the track's length) are dimmed
- * and non-interactive.
  */
 function StepButtonInner({
   trackId,
@@ -108,7 +113,8 @@ function StepButtonInner({
 
   const sizeClass = mini
     ? 'w-4 h-4 lg:w-5 lg:h-5' : 'h-8 lg:h-12';
-  const radiusClass = mini ? 'rounded-full' : 'rounded-sm';
+  const radiusClass = mini
+    ? 'rounded-full' : 'rounded-sm';
 
   if (isDisabled) {
     const disabledEl = (
@@ -138,24 +144,10 @@ function StepButtonInner({
     return disabledEl;
   }
 
-  let color: string;
-  if (isActive) {
-    if (isCurrent && !mini) {
-      color = 'bg-orange-400 motion-safe:scale-105'
-        + ' shadow-[0_0_20px_rgba(251,146,60,0.8)]'
-        + ' z-10';
-    } else if (isCurrent && mini) {
-      color = 'bg-orange-400';
-    } else {
-      color = 'bg-orange-600';
-    }
-  } else {
-    if (isCurrent) {
-      color = 'bg-neutral-700';
-    } else {
-      color = 'bg-neutral-800/40 hover:bg-neutral-800';
-    }
-  }
+  const color = getStepColor(
+    isActive, isCurrent, mini
+  );
+  const showBadges = !mini && isActive;
 
   const longPressHandlers = longPress();
 
@@ -190,7 +182,6 @@ function StepButtonInner({
             onPlainClick?.();
             return;
           }
-          // Clicking outside the selection clears it
           onClearSelection?.();
           handleToggle();
         }}
@@ -226,100 +217,24 @@ function StepButtonInner({
             ? ' ring-2 ring-blue-400/70' : '')
         }
       >
-        {!mini && isActive
+        {showBadges
           && conditions?.probability !== undefined
-          ? (
-            <span
-              data-testid="prob-bar"
-              className={
-                'absolute bottom-0 left-0 h-[2px]'
-              }
-              style={{
-                width: `${conditions.probability}%`,
-                background: 'rgba(255,255,255,0.85)',
-              }}
-            />
-          ) : null}
-        {!mini && isActive
+          && <ProbabilityBar
+            probability={conditions.probability}
+          />}
+        {showBadges
           && panLock !== undefined
-          ? (
-            panLock === 0.5
-              ? (
-                <span
-                  data-testid="pan-bar"
-                  className="absolute top-0 h-[2px]"
-                  style={{
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '2px',
-                    background:
-                      'rgba(255,255,255,0.85)',
-                  }}
-                />
-              )
-              : (
-                <span
-                  data-testid="pan-bar"
-                  className="absolute top-0 h-[2px]"
-                  style={{
-                    ...(panLock < 0.5
-                      ? {
-                        right: '50%',
-                        width:
-                          `${(0.5 - panLock) * 100}%`,
-                      }
-                      : {
-                        left: '50%',
-                        width:
-                          `${(panLock - 0.5) * 100}%`,
-                      }),
-                    background:
-                      'rgba(255,255,255,0.85)',
-                  }}
-                />
-              )
-          ) : null}
-        {!mini && isActive && conditions?.fill
-          ? (
-            <span
-              data-testid="fill-badge"
-              className={
-                'absolute top-0 right-0.5'
-                + ' text-[8px] font-bold'
-                + ' leading-none'
-                + ' pointer-events-none'
-                + ' text-white'
-              }
-              style={{
-                fontFamily: 'var(--font-orbitron)',
-              }}
-            >
-              {conditions.fill === 'fill'
-                ? 'F' : '!F'}
-            </span>
-          ) : null}
-        {!mini && isActive && conditions?.cycle != null
+          && <PanIndicator panLock={panLock} />}
+        {showBadges
+          && conditions?.fill
+          && <FillBadge fill={conditions.fill} />}
+        {showBadges
+          && conditions?.cycle != null
           && conditions.cycle.b >= 2
-          ? (
-            <span
-              className={
-                'absolute inset-0 flex items-center'
-                + ' justify-center text-[13px]'
-                + ' font-bold leading-none'
-                + ' pointer-events-none'
-              }
-              style={{
-                fontFamily: 'var(--font-orbitron)',
-                color: 'rgba(255,255,255,0.9)',
-                textShadow:
-                  '0 1px 2px rgba(0,0,0,0.8)',
-                letterSpacing: '0.05em',
-              }}
-            >
-              {conditions.cycle.a}
-              :{conditions.cycle.b}
-            </span>
-          ) : null}
+          && <CycleBadge
+            a={conditions.cycle.a}
+            b={conditions.cycle.b}
+          />}
       </button>
     </Tooltip>
   );
