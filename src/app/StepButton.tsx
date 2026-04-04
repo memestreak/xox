@@ -207,9 +207,8 @@ function StepButtonInner({
           + ' ' + sizeClass + ' ' + radiusClass
           + ' transition-colors duration-100'
           + ' motion-safe:transition-transform'
-          + ' focus-visible:outline-none'
-          + ' focus-visible:ring-2'
-          + ' focus-visible:ring-orange-500 '
+          + ' focus:outline-none'
+          + ' focus-visible:outline-none '
           + color
           + ' border-l-2'
           + (isBeat && !mini
