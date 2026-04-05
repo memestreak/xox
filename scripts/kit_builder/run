@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""Run the kit builder. Invoke directly: ./scripts/kit_builder/run"""
+
+import os
+import sys
+
+# Ensure the project root is on sys.path so package
+# imports resolve correctly.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+
+from scripts.kit_builder.build_kit import main  # noqa: E402
+
+main()
