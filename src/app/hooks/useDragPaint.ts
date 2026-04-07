@@ -7,8 +7,11 @@ import {
   DRAG_THRESHOLD_PX,
   CYCLE_THRESHOLD_TOUCH_PX,
   CYCLE_PX_PER_STEP,
+  NEAREST_CELL_MAX_DISTANCE_PX,
 } from '../constants';
-import { cellFromPoint, bresenham } from '../gridUtils';
+import {
+  cellFromPoint, nearestCellFromPoint, bresenham,
+} from '../gridUtils';
 import type { CellHit } from '../gridUtils';
 
 interface UseDragPaintOptions {
@@ -247,6 +250,48 @@ export function useDragPaint({
         return;
       }
 
+      // Gap-selection: mouse click on empty space
+      // (no cell hit, no modifiers, not touch)
+      if (
+        !hit
+        && e.pointerType === 'mouse'
+        && !e.shiftKey
+        && !popoverOpenRef?.current
+      ) {
+        // Always clear existing selection on gap click
+        onClearSelection?.();
+
+        const cont = containerRef.current;
+        const nearest = cont
+          ? nearestCellFromPoint(
+              e.clientX, e.clientY,
+              cont,
+              NEAREST_CELL_MAX_DISTANCE_PX,
+            )
+          : null;
+        if (
+          !nearest
+          || trackOrder.indexOf(nearest.trackId) === -1
+        ) {
+          return;
+        }
+
+        const drag = dragRef.current;
+        drag.active = true;
+        drag.dragged = false;
+        drag.startX = e.clientX;
+        drag.startY = e.clientY;
+        drag.pointerId = e.pointerId;
+        drag.lastTrackIdx = -1;
+        drag.lastStep = -1;
+        drag.escapeHandler = null;
+        drag.selectionMode = true;
+        drag.cyclingMode = false;
+        drag.selectionHit = null;
+        e.preventDefault();
+        return;
+      }
+
       if (!hit) return;
 
       const { trackId, stepIndex } = hit;
@@ -310,6 +355,8 @@ export function useDragPaint({
           ? '0' : '1';
     },
     [
+      containerRef,
+      trackOrder,
       tracks,
       patterns,
       onSetTrackSteps,
@@ -317,6 +364,7 @@ export function useDragPaint({
       popoverOpenRef,
       pageOffset,
       onSelectionStart,
+      onClearSelection,
     ]
   );
 
@@ -361,14 +409,24 @@ export function useDragPaint({
         const hit = cellFromPoint(
           e.clientX, e.clientY
         );
-        if (hit) {
+        const resolved = hit
+          ?? (container
+            ? nearestCellFromPoint(
+                e.clientX, e.clientY,
+                container,
+                NEAREST_CELL_MAX_DISTANCE_PX,
+              )
+            : null);
+        if (
+          resolved
+          && trackOrder.indexOf(resolved.trackId) !== -1
+          && onSelectionUpdate
+        ) {
           const globalStep =
-            hit.stepIndex + (pageOffset ?? 0);
-          if (onSelectionUpdate) {
-            onSelectionUpdate(
-              hit.trackId, globalStep
-            );
-          }
+            resolved.stepIndex + (pageOffset ?? 0);
+          onSelectionUpdate(
+            resolved.trackId, globalStep
+          );
         }
         return;
       }
@@ -483,7 +541,7 @@ export function useDragPaint({
       if (hit) paintTo(hit, drag);
     },
     [containerRef, paintTo, applyPatternAtIndex,
-      patterns, onSetTrackSteps,
+      patterns, onSetTrackSteps, trackOrder,
       onSelectionStart, onSelectionUpdate, pageOffset,
       onClearSelection]
   );

@@ -48,6 +48,55 @@ export function cellFromPoint(
 }
 
 /**
+ * Find the nearest step button to a point by querying
+ * all [data-step] elements within a container and
+ * computing edge distance.
+ *
+ * Returns null if no cell is within maxDistance.
+ */
+export function nearestCellFromPoint(
+  clientX: number,
+  clientY: number,
+  container: HTMLElement,
+  maxDistance: number,
+): CellHit | null {
+  const steps = container.querySelectorAll<HTMLElement>(
+    '[data-step]'
+  );
+  let bestDist = Infinity;
+  let bestEl: HTMLElement | null = null;
+
+  for (const el of steps) {
+    const r = el.getBoundingClientRect();
+    const dx = Math.max(r.left - clientX, 0, clientX - r.right);
+    const dy = Math.max(r.top - clientY, 0, clientY - r.bottom);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestEl = el;
+    }
+  }
+
+  if (!bestEl || bestDist > maxDistance) return null;
+
+  const stepIndex = Number(bestEl.dataset.step);
+
+  let node: Element | null = bestEl;
+  while (
+    node
+    && !('track' in (node as HTMLElement).dataset)
+  ) {
+    node = node.parentElement;
+  }
+  if (!node) return null;
+  const trackId = (
+    node as HTMLElement
+  ).dataset.track as TrackId;
+
+  return { trackId, stepIndex };
+}
+
+/**
  * Bresenham's line algorithm yielding all (col, row)
  * cells between two grid coordinates, inclusive of
  * both endpoints.
