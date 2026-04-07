@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  useState, useRef, useEffect, useCallback,
+  useState, useRef, useEffect, useCallback, useMemo,
 } from 'react';
 import type { RefObject } from 'react';
 import { useSequencer } from './SequencerContext';
@@ -27,6 +27,12 @@ interface StepPopoverProps {
   scrollContainerRef?: RefObject<
     HTMLDivElement | null
   >;
+  /** When set, edits apply to all targets. */
+  bulkTargets?: Array<{
+    trackId: TrackId; stepIndex: number;
+  }>;
+  /** Auto-focus this section on mount. */
+  focusSection?: 'probability' | 'cycle';
 }
 
 /**
@@ -42,9 +48,20 @@ export default function StepPopover({
   anchorRect,
   onClose,
   scrollContainerRef,
+  bulkTargets,
+  focusSection,
 }: StepPopoverProps) {
   const { actions } = useSequencer();
   const popoverRef = useRef<HTMLDivElement>(null);
+  const probRef = useRef<HTMLDivElement>(null);
+  const cycleRef = useRef<HTMLDivElement>(null);
+
+  const targets = useMemo(
+    () => bulkTargets ?? [{ trackId, stepIndex }],
+    [bulkTargets, trackId, stepIndex]
+  );
+  const isBulk = bulkTargets
+    && bulkTargets.length > 1;
 
   const [probability, setProbability] = useState(
     conditions?.probability ?? 100
@@ -92,17 +109,20 @@ export default function StepPopover({
       if (fill !== 'none') {
         sc.fill = fill;
       }
-      if (Object.keys(sc).length === 0) {
-        actions.clearTrigCondition(
-          trackId, stepIndex
-        );
-      } else {
-        actions.setTrigCondition(
-          trackId, stepIndex, sc
-        );
+      const empty = Object.keys(sc).length === 0;
+      for (const t of targets) {
+        if (empty) {
+          actions.clearTrigCondition(
+            t.trackId, t.stepIndex
+          );
+        } else {
+          actions.setTrigCondition(
+            t.trackId, t.stepIndex, sc
+          );
+        }
       }
     },
-    [actions, trackId, stepIndex]
+    [actions, targets]
   );
 
   const handleProbChange = useCallback(
@@ -134,38 +154,54 @@ export default function StepPopover({
     (v: number) => {
       setGainValue(v);
       gainTouched.current = true;
-      actions.setParameterLock(
-        trackId, stepIndex, { gain: v / 100 }
-      );
+      for (const t of targets) {
+        actions.setParameterLock(
+          t.trackId, t.stepIndex, { gain: v / 100 }
+        );
+      }
     },
-    [actions, trackId, stepIndex]
+    [actions, targets]
   );
 
   const handlePanChange = useCallback(
     (v: number) => {
       setPanValue(v);
       panTouched.current = true;
-      actions.setParameterLock(
-        trackId, stepIndex, { pan: v / 100 }
-      );
+      for (const t of targets) {
+        actions.setParameterLock(
+          t.trackId, t.stepIndex, { pan: v / 100 }
+        );
+      }
     },
-    [actions, trackId, stepIndex]
+    [actions, targets]
   );
 
   // ─── Focus management ──────────────────────────
   const triggerRef = useRef<Element | null>(null);
 
-  // Capture triggering element and auto-focus first
-  // focusable control on mount
+  // Capture triggering element and auto-focus
+  // focusSection target or first focusable control
   useEffect(() => {
     triggerRef.current = document.activeElement;
+    const sectionRef =
+      focusSection === 'probability' ? probRef
+        : focusSection === 'cycle' ? cycleRef
+          : null;
+    if (sectionRef?.current) {
+      const input =
+        sectionRef.current.querySelector<HTMLElement>(
+          'input, select, button'
+        );
+      input?.focus();
+      return;
+    }
     const el = popoverRef.current;
     if (!el) return;
     const first = el.querySelector<HTMLElement>(
       'button, input, select, [tabindex]'
     );
     first?.focus();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Restore focus to trigger on unmount
   useEffect(() => {
@@ -298,23 +334,31 @@ export default function StepPopover({
           'text-xs font-bold uppercase'
           + ' tracking-wider text-neutral-400'
         }>
-          Step {stepIndex + 1}{' '}
-          <span className="text-neutral-500">
-            {'\u00B7'} {trackId.toUpperCase()}
-          </span>
+          {isBulk ? (
+            `${bulkTargets!.length} cells selected`
+          ) : (
+            <>
+              Step {stepIndex + 1}{' '}
+              <span className="text-neutral-500">
+                {'\u00B7'} {trackId.toUpperCase()}
+              </span>
+            </>
+          )}
         </div>
         <button
           onClick={() => {
-            actions.clearTrigCondition(
-              trackId, stepIndex
-            );
+            for (const t of targets) {
+              actions.clearTrigCondition(
+                t.trackId, t.stepIndex
+              );
+            }
             onClose();
           }}
-          disabled={conditions === undefined}
+          disabled={!isBulk && conditions === undefined}
           className={
             'text-[11px] px-1.5 py-0.5 rounded'
             + ' border transition-colors'
-            + (conditions !== undefined
+            + ((isBulk || conditions !== undefined)
               ? ' text-neutral-400'
                 + ' hover:text-neutral-200'
                 + ' border-neutral-700'
@@ -328,14 +372,18 @@ export default function StepPopover({
         </button>
       </div>
 
-      <ProbabilityEditor
-        value={probability}
-        onChange={handleProbChange}
-      />
-      <CycleEditor
-        value={cycleValue}
-        onChange={handleCycleChange}
-      />
+      <div ref={probRef}>
+        <ProbabilityEditor
+          value={probability}
+          onChange={handleProbChange}
+        />
+      </div>
+      <div ref={cycleRef}>
+        <CycleEditor
+          value={cycleValue}
+          onChange={handleCycleChange}
+        />
+      </div>
       <FillConditionEditor
         value={fillValue}
         onChange={handleFillChange}
@@ -356,19 +404,21 @@ export default function StepPopover({
         </div>
         <button
           onClick={() => {
-            actions.clearParameterLock(
-              trackId, stepIndex
-            );
+            for (const t of targets) {
+              actions.clearParameterLock(
+                t.trackId, t.stepIndex
+              );
+            }
             setGainValue(100);
             gainTouched.current = false;
             setPanValue(50);
             panTouched.current = false;
           }}
-          disabled={locks === undefined}
+          disabled={!isBulk && locks === undefined}
           className={
             'text-[11px] px-1.5 py-0.5 rounded'
             + ' border transition-colors'
-            + (locks !== undefined
+            + ((isBulk || locks !== undefined)
               ? ' text-neutral-400'
                 + ' hover:text-neutral-200'
                 + ' border-neutral-700'
