@@ -20,6 +20,8 @@ export const LONG_PRESS_CANCEL_PX = 5;
 export const ENDBAR_LONG_PRESS_CANCEL_PX = 1;
 /** Minimum pointer movement before starting a drag (px). */
 export const DRAG_THRESHOLD_PX = 5;
+/** Max edge-distance for nearest-cell lookup in gaps (px). */
+export const NEAREST_CELL_MAX_DISTANCE_PX = 30;
 /** Touch distance to start cycle mode (px). */
 export const CYCLE_THRESHOLD_TOUCH_PX = 10;
 /** Vertical px per step when cycling patterns. */

@@ -17,6 +17,7 @@ exports[`constants snapshot 1`] = `
   "LONG_PRESS_MS": 500,
   "LOOKAHEAD_MS": 25,
   "MAX_PATTERN_LENGTH": 64,
+  "NEAREST_CELL_MAX_DISTANCE_PX": 30,
   "SCHEDULE_AHEAD_S": 0.1,
   "SWING_MAX": 100,
   "TRIGGER_FLASH_MS": 150,

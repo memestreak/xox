@@ -1,4 +1,6 @@
-import { bresenham, cellFromPoint } from '../app/gridUtils';
+import {
+  bresenham, cellFromPoint, nearestCellFromPoint,
+} from '../app/gridUtils';
 
 describe('bresenham', () => {
   it('yields a single point when start equals end', () => {
@@ -127,5 +129,98 @@ describe('cellFromPoint', () => {
       trackId: 'ch',
       stepIndex: 2,
     });
+  });
+});
+
+describe('nearestCellFromPoint', () => {
+  /**
+   * Helper: create a container with step elements that
+   * have mocked bounding rects nested under a data-track
+   * parent.
+   */
+  function makeGrid(
+    cells: {
+      trackId: string;
+      step: number;
+      rect: { left: number; right: number; top: number; bottom: number };
+    }[]
+  ): HTMLElement {
+    const container = document.createElement('div');
+    const trackGroups = new Map<string, HTMLElement>();
+
+    for (const c of cells) {
+      let trackEl = trackGroups.get(c.trackId);
+      if (!trackEl) {
+        trackEl = document.createElement('div');
+        trackEl.dataset.track = c.trackId;
+        container.appendChild(trackEl);
+        trackGroups.set(c.trackId, trackEl);
+      }
+      const btn = document.createElement('button');
+      btn.dataset.step = String(c.step);
+      btn.getBoundingClientRect = () => ({
+        left: c.rect.left,
+        right: c.rect.right,
+        top: c.rect.top,
+        bottom: c.rect.bottom,
+        width: c.rect.right - c.rect.left,
+        height: c.rect.bottom - c.rect.top,
+        x: c.rect.left,
+        y: c.rect.top,
+        toJSON: () => ({}),
+      });
+      trackEl.appendChild(btn);
+    }
+    return container;
+  }
+
+  it('returns nearest cell when pointer is in a gap', () => {
+    const container = makeGrid([
+      { trackId: 'bd', step: 0, rect: { left: 0, right: 40, top: 0, bottom: 32 } },
+      { trackId: 'bd', step: 1, rect: { left: 46, right: 86, top: 0, bottom: 32 } },
+    ]);
+    // Point in the 6px gap between step 0 and step 1
+    const result = nearestCellFromPoint(42, 16, container, 30);
+    expect(result).toEqual({ trackId: 'bd', stepIndex: 0 });
+  });
+
+  it('returns null when pointer is beyond max distance', () => {
+    const container = makeGrid([
+      { trackId: 'bd', step: 0, rect: { left: 0, right: 40, top: 0, bottom: 32 } },
+    ]);
+    const result = nearestCellFromPoint(200, 200, container, 30);
+    expect(result).toBeNull();
+  });
+
+  it('returns cell when pointer is inside its rect', () => {
+    const container = makeGrid([
+      { trackId: 'sd', step: 3, rect: { left: 100, right: 140, top: 0, bottom: 32 } },
+    ]);
+    const result = nearestCellFromPoint(120, 16, container, 30);
+    expect(result).toEqual({ trackId: 'sd', stepIndex: 3 });
+  });
+
+  it('walks up to find data-track from step element', () => {
+    const container = makeGrid([
+      { trackId: 'ch', step: 5, rect: { left: 0, right: 40, top: 0, bottom: 32 } },
+    ]);
+    const result = nearestCellFromPoint(20, 16, container, 30);
+    expect(result).toEqual({ trackId: 'ch', stepIndex: 5 });
+  });
+
+  it('returns nearest cell across multiple tracks', () => {
+    const container = makeGrid([
+      { trackId: 'bd', step: 0, rect: { left: 0, right: 40, top: 0, bottom: 32 } },
+      { trackId: 'sd', step: 0, rect: { left: 0, right: 40, top: 48, bottom: 80 } },
+    ]);
+    // Point in the 16px gap between rows, closer to sd
+    const result = nearestCellFromPoint(20, 44, container, 30);
+    expect(result).toEqual({ trackId: 'sd', stepIndex: 0 });
+  });
+
+  it('returns null when container has no step elements', () => {
+    const container = document.createElement('div');
+    const result = nearestCellFromPoint(20, 20, container, 30);
+    expect(result).toBeNull();
   });
 });

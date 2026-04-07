@@ -254,12 +254,12 @@ export default function StepGrid({
   }, [stepRef, totalStepsRef, triggeredTracksRef, flashTriggered, setPage]);
 
   return (
-    <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-3 lg:p-6 rounded-xl lg:rounded-2xl border border-neutral-800/50">
+    <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-1 lg:p-2 rounded-xl lg:rounded-2xl border border-neutral-800/50">
       <div
         ref={dragContainerRef}
         style={{ touchAction: 'none' }}
         {...dragPaint}
-        className="space-y-2 lg:space-y-4 select-none"
+        className="space-y-2 lg:space-y-4 select-none p-2 lg:p-4"
       >
         {TRACKS.map(track => (
           <TrackRow
