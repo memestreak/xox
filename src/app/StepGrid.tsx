@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  useCallback, useEffect, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import type { RefObject } from 'react';
 import { TRACKS, useSequencer } from './SequencerContext';
@@ -12,7 +12,7 @@ import ErrorBoundary from './ErrorBoundary';
 import { useDragPaint } from './hooks/useDragPaint';
 import { useSelection } from './hooks/useSelection';
 import type { TrackId, TrackPattern } from './types';
-import { getPatternLength } from './types';
+import { cellKey, getPatternLength, parseCellKey } from './types';
 import { TRIGGER_FLASH_MS } from './constants';
 import trackPatternData from './data/trackPatterns.json';
 
@@ -55,6 +55,7 @@ export default function StepGrid({
     setGain, setPan, setTrackLength, toggleFreeRun,
     clearTrack, playPreview,
     clearTrigCondition, clearParameterLock,
+    setTrigCondition,
   } = actions;
   const {
     stepRef, totalStepsRef,
@@ -65,7 +66,48 @@ export default function StepGrid({
   const longPressActiveRef = useRef<boolean>(false);
   const popoverOpenRef = useRef<boolean>(false);
 
+  const [openPopover, setOpenPopover] = useState<{
+    trackId: TrackId;
+    stepIndex: number;
+    anchorRect: { top: number; left: number };
+    focusSection?: 'probability' | 'cycle';
+  } | null>(null);
+
+  useEffect(() => {
+    popoverOpenRef.current = openPopover !== null;
+  }, [openPopover]);
+
+  // Stable ref for openBulkPopover to read selection
+  const selectionRef = useRef<Set<string>>(new Set());
+
+  const openBulkPopover = useCallback(
+    (focusSection?: 'probability' | 'cycle') => {
+      const sel = selectionRef.current;
+      if (sel.size === 0) return;
+      const first = parseCellKey(
+        sel.values().next().value!
+      );
+      // Find the step button inside its track row
+      const el = document.querySelector<HTMLElement>(
+        `[data-track="${first.trackId}"]`
+        + ` [data-step="${first.step}"]`
+      );
+      const r = el?.getBoundingClientRect();
+      setOpenPopover({
+        trackId: first.trackId,
+        stepIndex: first.step,
+        anchorRect: {
+          top: (r?.bottom ?? 200) + 4,
+          left: r?.left ?? 100,
+        },
+        focusSection,
+      });
+    },
+    []
+  );
+
   const {
+    selected,
     selectedByTrack,
     ctrlClickCell,
     shiftClickCell,
@@ -81,7 +123,13 @@ export default function StepGrid({
     clearTrigCondition,
     clearParameterLock,
     toggleStep,
+    setTrigCondition,
+    openBulkPopover,
   });
+
+  useEffect(() => {
+    selectionRef.current = selected;
+  }, [selected]);
 
   // Clear selection on page change
   const prevPageRef = useRef(pageOffset);
@@ -108,15 +156,19 @@ export default function StepGrid({
     onClearSelection: clearSelection,
   });
 
-  const [openPopover, setOpenPopover] = useState<{
-    trackId: TrackId;
-    stepIndex: number;
-    anchorRect: { top: number; left: number };
-  } | null>(null);
-
-  useEffect(() => {
-    popoverOpenRef.current = openPopover !== null;
-  }, [openPopover]);
+  // When the popover's anchor cell is in the selection,
+  // apply edits to all selected cells.
+  const bulkTargets = useMemo(() => {
+    if (!openPopover) return undefined;
+    const key = cellKey(
+      openPopover.trackId, openPopover.stepIndex
+    );
+    if (!selected.has(key)) return undefined;
+    return [...selected].map(k => {
+      const { trackId, step } = parseCellKey(k);
+      return { trackId, stepIndex: step };
+    });
+  }, [openPopover, selected]);
 
   // Local state driven by rAF, isolated from the
   // context provider so only StepGrid and its children
@@ -298,6 +350,8 @@ export default function StepGrid({
           anchorRect={openPopover.anchorRect}
           onClose={() => setOpenPopover(null)}
           scrollContainerRef={scrollContainerRef}
+          bulkTargets={bulkTargets}
+          focusSection={openPopover.focusSection}
         />
         </ErrorBoundary>
       ) : null}
