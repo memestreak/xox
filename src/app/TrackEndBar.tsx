@@ -1,6 +1,8 @@
 "use client";
 
-import { memo, useCallback, useRef, useState } from 'react';
+import {
+  memo, useCallback, useState, type RefObject,
+} from 'react';
 import {
   LongPressEventType, useLongPress,
 } from 'use-long-press';
@@ -17,6 +19,8 @@ interface TrackEndBarProps {
   isFreeRun: boolean;
   onSetTrackLength: (length: number) => void;
   onToggleFreeRun: () => void;
+  /** Ref to the parent step-grid container. */
+  gridRef: RefObject<HTMLDivElement | null>;
   /** Show tooltip around handle (default true). */
   showTooltip?: boolean;
 }
@@ -36,10 +40,10 @@ function TrackEndBarInner({
   pageOffset,
   isFreeRun,
   onSetTrackLength,
+  gridRef,
   onToggleFreeRun,
   showTooltip = true,
 }: TrackEndBarProps) {
-  const gridRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const endBarLongPress = useLongPress(
@@ -64,7 +68,7 @@ function TrackEndBarInner({
   const lengthFromPointer = useCallback(
     (clientX: number): number => {
       const grid = gridRef.current;
-      if (!grid) return trackLength;
+      if (!grid) return pageOffset + 1;
       const rect = grid.getBoundingClientRect();
       const x = clientX - rect.left;
       const stepWidth = rect.width / 16;
@@ -74,7 +78,7 @@ function TrackEndBarInner({
         Math.min(patternLength, raw + pageOffset)
       );
     },
-    [patternLength, trackLength, pageOffset]
+    [patternLength, pageOffset, gridRef]
   );
 
   const handlePointerDown = useCallback(
@@ -114,7 +118,6 @@ function TrackEndBarInner({
 
   const handle = (
     <div
-      ref={gridRef}
       role="slider"
       aria-label={`${trackName} length`}
       aria-valuemin={1}
