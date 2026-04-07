@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
 import type {
   StepConditions, StepLocks, TrackId,
@@ -100,6 +100,7 @@ function TrackRowInner({
   onPlainClick,
   onClearSelection,
 }: TrackRowProps) {
+  const stepGridRef = useRef<HTMLDivElement>(null);
   // ─── Bound callbacks ──────────────────────────
   const handleMute = useCallback(
     () => onToggleMute(trackId),
@@ -228,6 +229,7 @@ function TrackRowInner({
         {/* Step grid with drag handle */}
         <div className="flex-1 relative">
           <div
+            ref={stepGridRef}
             data-track={trackId}
             className="grid grid-cols-8 lg:grid-cols-16 gap-[3px] lg:gap-1.5"
           >
@@ -292,6 +294,7 @@ function TrackRowInner({
             patternLength={patternLength}
             pageOffset={pageOffset}
             isFreeRun={isFreeRun}
+            gridRef={stepGridRef}
             onSetTrackLength={handleSetLength}
             onToggleFreeRun={handleFreeRun}
           />
