@@ -22,6 +22,7 @@
   "track-lt": "Low Tom",
   "track-rs": "Rimshot",
   "track-cp": "Clap",
+  "track-ac": "Accent",
   "track-cb": "Cowbell",
   "lengthHandle": "Drag to set track length",
   "follow": "Auto-follow playhead during playback",

@@ -86,24 +86,25 @@ function AccentRowInner({
     <div>
       {/* Mobile: label + knob above grid */}
       <div className="flex items-center gap-2 mb-1 lg:hidden">
-        <button
-          type="button"
-          title="Accent"
-          onClick={(e) => {
-            if (e.shiftKey) handleClear();
-          }}
-          className={
-            'text-lg font-bold uppercase'
-            + ' tracking-wider rounded px-1 py-0.5'
-            + ' transition-colors cursor-pointer'
-            + ' font-[family-name:var(--font-orbitron)]'
-            + (isFreeRun
-              ? ' text-orange-400'
-              : ' text-neutral-400')
-          }
-        >
-          AC
-        </button>
+        <Tooltip tooltipKey="track-ac">
+          <button
+            type="button"
+            onClick={(e) => {
+              if (e.shiftKey) handleClear();
+            }}
+            className={
+              'text-lg font-bold uppercase'
+              + ' tracking-wider rounded px-1 py-0.5'
+              + ' transition-colors cursor-pointer'
+              + ' font-[family-name:var(--font-orbitron)]'
+              + (isFreeRun
+                ? ' text-orange-400'
+                : ' text-neutral-400')
+            }
+          >
+            AC
+          </button>
+        </Tooltip>
         <div className="ml-auto">
           <Tooltip
             tooltipKey="accentIntensity"
@@ -123,25 +124,28 @@ function AccentRowInner({
       <div className="flex gap-4 items-center">
         {/* Desktop: sidebar with label + knob */}
         <div className="hidden lg:flex w-56 items-center gap-2">
-          <button
-            type="button"
-            title="Accent"
-            onClick={(e) => {
-              if (e.shiftKey) handleClear();
-            }}
-            className={
-              'w-12 truncate text-xl text-left'
-              + ' font-bold uppercase tracking-wider'
-              + ' rounded px-1 py-0.5 transition-colors'
-              + ' cursor-pointer'
-              + ' font-[family-name:var(--font-orbitron)]'
-              + (isFreeRun
-                ? ' text-orange-400'
-                : ' text-neutral-400')
-            }
-          >
-            AC
-          </button>
+          <Tooltip tooltipKey="track-ac">
+            <div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  if (e.shiftKey) handleClear();
+                }}
+                className={
+                  'w-12 truncate text-xl text-left'
+                  + ' font-bold uppercase tracking-wider'
+                  + ' rounded px-1 py-0.5 transition-colors'
+                  + ' cursor-pointer'
+                  + ' font-[family-name:var(--font-orbitron)]'
+                  + (isFreeRun
+                    ? ' text-orange-400'
+                    : ' text-neutral-400')
+                }
+              >
+                AC
+              </button>
+            </div>
+          </Tooltip>
           {/* Spacer matching mute + solo widths */}
           <div className="flex gap-1">
             <div className="w-6 h-6" />
