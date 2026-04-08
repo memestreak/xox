@@ -92,8 +92,8 @@ function TrackNameButtonInner({
   }, [menuOpen, closeMenu]);
 
   return (
-    <div className="relative">
-      <Tooltip tooltipKey={`track-${trackId}`}>
+    <Tooltip tooltipKey={`track-${trackId}`}>
+      <div className="relative">
         <button
           ref={size === 'lg' ? nameRef : undefined}
           aria-haspopup={
@@ -136,7 +136,6 @@ function TrackNameButtonInner({
         >
           {trackName}
         </button>
-      </Tooltip>
       {menuOpen && size === 'lg' && (
         <div
           ref={menuRef}
@@ -164,7 +163,8 @@ function TrackNameButtonInner({
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </Tooltip>
   );
 }
 
