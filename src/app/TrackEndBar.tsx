@@ -84,6 +84,10 @@ function TrackEndBarInner({
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
+      // Stop propagation so the parent grid's
+      // drag-paint / gap-selection handler doesn't
+      // also claim this pointer and steal capture.
+      e.stopPropagation();
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         onToggleFreeRun();
