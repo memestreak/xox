@@ -139,4 +139,24 @@ describe('TrackEndBar', () => {
       ).toBe('12');
     }
   );
+
+  it(
+    'pointerdown on handle does not bubble to parent'
+    + ' (would otherwise trigger gap-drag selection)',
+    () => {
+      const parentDown = vi.fn();
+      render(
+        <div onPointerDown={parentDown}>
+          <TrackRow {...base} />
+        </div>
+      );
+      const slider = screen.getByRole('slider', {
+        name: 'BD length',
+      });
+      fireEvent.pointerDown(slider, {
+        pointerId: 1, button: 0,
+      });
+      expect(parentDown).not.toHaveBeenCalled();
+    }
+  );
 });
