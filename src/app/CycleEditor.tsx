@@ -29,6 +29,7 @@ export default function CycleEditor({
         Cycle
       </div>
       <select
+        aria-label="Cycle"
         value={value}
         onChange={handleChange}
         className={

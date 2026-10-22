@@ -264,13 +264,8 @@ function TrackRowInner({
                     conditions={
                       trigConditions?.[globalIdx]
                     }
-                    gainLock={
+                    locks={
                       parameterLocks?.[globalIdx]
-                        ?.gain
-                    }
-                    panLock={
-                      parameterLocks?.[globalIdx]
-                        ?.pan
                     }
                     onOpenPopover={handleOpenPopover}
                     onCtrlClick={handleCtrlClick}

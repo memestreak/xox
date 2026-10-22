@@ -3,7 +3,9 @@
 import { memo, useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
 import { useLongPress } from 'use-long-press';
-import type { StepConditions, TrackId } from './types';
+import type {
+  StepConditions, StepLocks, TrackId,
+} from './types';
 import { LONG_PRESS_MS, LONG_PRESS_CANCEL_PX } from './constants';
 import { getStepColor } from './stepColors';
 import {
@@ -27,8 +29,7 @@ interface StepButtonProps {
   onToggle: (
     trackId: TrackId, stepIndex: number
   ) => void;
-  gainLock?: number;
-  panLock?: number;
+  locks?: StepLocks;
   conditions?: StepConditions;
   onOpenPopover?: (
     trackId: TrackId,
@@ -61,8 +62,7 @@ function StepButtonInner({
   isSelected,
   mini,
   onToggle,
-  gainLock,
-  panLock,
+  locks,
   conditions,
   onOpenPopover,
   onCtrlClick,
@@ -72,6 +72,8 @@ function StepButtonInner({
   longPressActiveRef,
 }: StepButtonProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const gainLock = locks?.gain;
+  const panLock = locks?.pan;
 
   const openPopover = useCallback(
     (clientY?: number, clientX?: number) => {
