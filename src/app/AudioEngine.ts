@@ -1,7 +1,13 @@
 "use client";
 
 import { TrackId } from './types';
-import { LOOKAHEAD_MS, SCHEDULE_AHEAD_S } from './constants';
+import {
+  LIMITER_ATTACK_S,
+  LIMITER_RELEASE_S,
+  LIMITER_THRESHOLD_DB,
+  LOOKAHEAD_MS,
+  SCHEDULE_AHEAD_S,
+} from './constants';
 
 // Minimal silent WAV (8-bit mono, 7 samples at 44100 Hz).
 // Playing this via an <audio> element forces iOS to switch
@@ -24,9 +30,14 @@ const SILENT_WAV =
  * - On each "tick", it checks if any notes need to be scheduled within the next ~100ms.
  * - Notes are scheduled for exactly when they should play using AudioContext.currentTime.
  */
+export type StepCallback = (
+  step: number, time: number, late: boolean
+) => void;
+
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
   private buffers: Map<TrackId, AudioBuffer> = new Map();
   private silentAudio: HTMLAudioElement | null = null;
 
@@ -35,6 +46,13 @@ class AudioEngine {
   private currentStep: number = 0;
   private schedulerTimer: NodeJS.Timeout | null = null;
   private pendingReset = false;
+  // Incremented by every start() and stop(). A start()
+  // that was waiting on ctx.resume() checks it to know
+  // whether it has been cancelled in the meantime.
+  private runId = 0;
+  // Incremented by every preloadKit() call. Only the
+  // latest request may install its samples.
+  private kitRequestId = 0;
 
   // Scheduler Configuration
   private bpm: number = 110;
@@ -43,10 +61,13 @@ class AudioEngine {
   private scheduleAheadTime: number = SCHEDULE_AHEAD_S;
 
   /**
-   * Callback triggered when a step passes.
-   * Useful for syncing UI visuals or triggering sounds in the React component.
+   * Callback triggered for every step, in order.
+   * `late` is true when the step's time has already
+   * passed (e.g. the timer was throttled in a background
+   * tab). Late steps should update sequencer state but
+   * not play sound, so missed steps don't play in a burst.
    */
-  public onStep: (step: number, time: number) => void = () => {};
+  public onStep: StepCallback = () => {};
   public onLoadError: (message: string) => void = () => {};
 
   constructor() {}
@@ -63,7 +84,17 @@ class AudioEngine {
       || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new AudioCtx();
     this.masterGain = this.ctx.createGain();
-    this.masterGain.connect(this.ctx.destination);
+    // Voices sum (and accents boost up to 3x), so catch
+    // peaks with a brick-wall-style limiter instead of
+    // letting the output clip.
+    this.limiter = this.ctx.createDynamicsCompressor();
+    this.limiter.threshold.value = LIMITER_THRESHOLD_DB;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = 20;
+    this.limiter.attack.value = LIMITER_ATTACK_S;
+    this.limiter.release.value = LIMITER_RELEASE_S;
+    this.masterGain.connect(this.limiter);
+    this.limiter.connect(this.ctx.destination);
   }
 
   /**
@@ -89,9 +120,16 @@ class AudioEngine {
    * Fetches and decodes audio samples for a specific kit folder.
    * Samples are stored in memory as AudioBuffers.
    *
+   * The new samples replace the current ones only once
+   * they have all loaded, so the previous kit keeps
+   * playing meanwhile. If another preloadKit() call
+   * starts first, this one's results are discarded.
+   *
    * @param kitFolder - The folder containing the kit samples. E.g., "808"
+   * @returns true if this kit was installed, false if a
+   *   newer request superseded it.
    */
-  public async preloadKit(kitFolder: string) {
+  public async preloadKit(kitFolder: string): Promise<boolean> {
     this.init();
     const sounds: TrackId[] = ['bd', 'sd', 'ch', 'oh', 'ac', 'cy', 'ht', 'mt', 'lt', 'rs', 'cp', 'cb'];
     const filenames: Partial<Record<TrackId, string>> = {
@@ -108,7 +146,9 @@ class AudioEngine {
       cb: 'cb.wav'
     };
 
-    this.buffers.clear();
+    const requestId = ++this.kitRequestId;
+    const isCurrent = () => requestId === this.kitRequestId;
+    const loaded = new Map<TrackId, AudioBuffer>();
 
     const promises = sounds.map(async (id) => {
       const filename = filenames[id];
@@ -119,8 +159,9 @@ class AudioEngine {
         if (!response.ok) throw new Error(`Status: ${response.status}`);
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await this.ctx!.decodeAudioData(arrayBuffer);
-        this.buffers.set(id, audioBuffer);
+        loaded.set(id, audioBuffer);
       } catch (e) {
+        if (!isCurrent()) return;
         console.error(`Failed to load ${id} for kit ${kitFolder}`, e);
         this.onLoadError(
           `Failed to load ${id} sample for kit "${kitFolder}"`
@@ -129,6 +170,9 @@ class AudioEngine {
     });
 
     await Promise.all(promises);
+    if (!isCurrent()) return false;
+    this.buffers = loaded;
+    return true;
   }
 
   /**
@@ -137,13 +181,18 @@ class AudioEngine {
    */
   public async start(
     bpm: number,
-    onStep: (step: number, time: number) => void,
+    onStep: StepCallback,
     patternLength: number = 16
   ) {
+    // Never run two scheduler loops at once.
+    this.stop();
+    const runId = this.runId;
     this.init();
     this.bypassSilentMode();
     if (this.ctx?.state === 'suspended') {
       await this.ctx.resume();
+      // stop() or another start() ran while we waited.
+      if (runId !== this.runId) return;
     }
     this.bpm = bpm;
     this.patternLength = patternLength;
@@ -157,6 +206,7 @@ class AudioEngine {
    * Stops the sequencer playback loop.
    */
   public stop() {
+    this.runId++;
     if (this.schedulerTimer) {
       clearTimeout(this.schedulerTimer);
       this.schedulerTimer = null;
@@ -191,8 +241,17 @@ class AudioEngine {
    */
   private scheduler = () => {
     // While there are notes that will need to play before the next "lookahead" check...
-    while (this.nextStepTime < this.ctx!.currentTime + this.scheduleAheadTime) {
-      this.onStep(this.currentStep, this.nextStepTime);
+    const now = this.ctx!.currentTime;
+    while (this.nextStepTime < now + this.scheduleAheadTime) {
+      const late = this.nextStepTime < now;
+      try {
+        this.onStep(this.currentStep, this.nextStepTime, late);
+      } catch (e) {
+        // Never let one bad step stop the clock: without
+        // this the timer below is never re-armed and
+        // playback dies while the UI still says Playing.
+        console.error('Step callback failed', e);
+      }
       this.advanceStep();
     }
     this.schedulerTimer = setTimeout(this.scheduler, this.lookahead);
@@ -253,6 +312,18 @@ class AudioEngine {
    */
   public getCurrentTime(): number {
     return this.ctx?.currentTime ?? 0;
+  }
+
+  /**
+   * Returns the audio-clock time of the sound currently
+   * reaching the speakers: currentTime minus the output
+   * latency. Use this to sync visuals to what is heard.
+   */
+  public getOutputTime(): number {
+    if (!this.ctx) return 0;
+    const latency =
+      this.ctx.outputLatency ?? this.ctx.baseLatency ?? 0;
+    return this.ctx.currentTime - latency;
   }
 }
 

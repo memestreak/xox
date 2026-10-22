@@ -8,7 +8,7 @@ import React from 'react';
 
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
-    preloadKit: vi.fn().mockResolvedValue(undefined),
+    preloadKit: vi.fn().mockResolvedValue(true),
     start: vi.fn(),
     stop: vi.fn(),
     setBpm: vi.fn(),
@@ -16,6 +16,7 @@ vi.mock('../app/AudioEngine', () => ({
     playSound: vi.fn(),
     requestReset: vi.fn(),
     getCurrentTime: vi.fn().mockReturnValue(0),
+    getOutputTime: vi.fn().mockReturnValue(0),
     onStep: vi.fn(),
   },
 }));

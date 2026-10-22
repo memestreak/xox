@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import ErrorBoundary from '../app/ErrorBoundary';
 
-function BombComponent(): JSX.Element {
+function BombComponent(): React.JSX.Element {
   throw new Error('Boom!');
 }
 

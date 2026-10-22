@@ -3,27 +3,27 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import PatternPicker from '../app/PatternPicker';
 import type { Pattern } from '../app/types';
+import { TRACK_IDS } from '../app/types';
 import type { PatternCategory } from '../app/patternUtils';
 
 // --------------- fixtures ---------------
 
-const emptySteps = {
-  ac: '', bd: '', sd: '', ch: '', oh: '',
-  cy: '', ht: '', mt: '', lt: '', rs: '', cp: '', cb: '',
-};
+const emptyTracks = Object.fromEntries(
+  TRACK_IDS.map(id => [id, { steps: '0'.repeat(16) }])
+) as Pattern['tracks'];
 
 const funkPatterns: Pattern[] = [
   {
     id: 'funk-1',
     name: 'Funk 1',
     category: 'Funk',
-    steps: { ...emptySteps },
+    tracks: { ...emptyTracks },
   },
   {
     id: 'funk-2',
     name: 'Funk 2',
     category: 'Funk',
-    steps: { ...emptySteps },
+    tracks: { ...emptyTracks },
   },
 ];
 
@@ -32,7 +32,7 @@ const rockPatterns: Pattern[] = [
     id: 'rock-1',
     name: 'Rock 1',
     category: 'Rock',
-    steps: { ...emptySteps },
+    tracks: { ...emptyTracks },
   },
 ];
 

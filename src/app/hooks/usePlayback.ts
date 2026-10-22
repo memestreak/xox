@@ -11,6 +11,8 @@ import { midiEngine } from '../MidiEngine';
 import { computeStep } from '../computeStep';
 import { GAIN_EXPONENT } from '../constants';
 import { getPatternLength } from '../types';
+import { enqueueStep } from '../stepQueue';
+import type { StepEvent } from '../stepQueue';
 import type {
   HomeSnapshot,
   Kit,
@@ -46,6 +48,7 @@ export interface UsePlaybackReturn {
   stepRef: React.RefObject<number>;
   totalStepsRef: React.RefObject<number>;
   triggeredTracksRef: React.RefObject<Set<TrackId>>;
+  stepQueueRef: React.RefObject<StepEvent[]>;
   trackStatesRef: React.RefObject<
     Record<TrackId, TrackState>
   >;
@@ -108,6 +111,9 @@ export function usePlayback({
   const triggeredTracksRef = useRef<Set<TrackId>>(
     new Set()
   );
+  // Steps are scheduled up to SCHEDULE_AHEAD_S early;
+  // the grid shows each one when its time arrives.
+  const stepQueueRef = useRef<StepEvent[]>([]);
 
   // Derived state
   const currentKit = useMemo<Kit>(() => {
@@ -155,15 +161,20 @@ export function usePlayback({
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       setIsLoaded(false);
       setLoadError(null);
-      await audioEngine.preloadKit(
+      const installed = await audioEngine.preloadKit(
         currentKit.folder
       );
-      setIsLoaded(true);
+      // A newer kit selection owns isLoaded now.
+      if (installed && !cancelled) setIsLoaded(true);
     };
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [currentKit]);
 
   useEffect(() => {
@@ -186,7 +197,7 @@ export function usePlayback({
   // ─── Audio step callback ──────────────────────
 
   const handleStep = useCallback(
-    (step: number, time: number) => {
+    (step: number, time: number, late = false) => {
       stepRef.current = step;
 
       const result = computeStep(step, time, {
@@ -204,9 +215,20 @@ export function usePlayback({
       cycleCountRef.current = result.cycleCounts;
       triggeredTracksRef.current =
         result.triggeredTracks;
+      enqueueStep(stepQueueRef.current, {
+        step,
+        totalSteps: result.totalSteps,
+        time,
+        triggered: late
+          ? new Set()
+          : result.triggeredTracks,
+      });
 
+      // Late steps (timer throttled in a background
+      // tab) advance state but stay silent.
+      const sounds = late ? [] : result.sounds;
       for (const [trackId, scheduledTime, gain, pan]
-        of result.sounds) {
+        of sounds) {
         audioEngine.playSound(
           trackId, scheduledTime, gain, pan
         );
@@ -286,9 +308,11 @@ export function usePlayback({
       stepRef.current = -1;
       totalStepsRef.current = 0;
       triggeredTracksRef.current = new Set();
+      stepQueueRef.current = [];
       initCycleCounts();
     } else {
       totalStepsRef.current = 0;
+      stepQueueRef.current = [];
       initCycleCounts();
       audioEngine.start(
         config.bpm,
@@ -308,6 +332,10 @@ export function usePlayback({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isLoaded) return;
       if (event.code !== 'Space') return;
+      if (event.repeat) {
+        event.preventDefault();
+        return;
+      }
       const target = event.target as HTMLElement;
       const tag = target?.tagName;
       if (
@@ -372,6 +400,7 @@ export function usePlayback({
     stepRef,
     totalStepsRef,
     triggeredTracksRef,
+    stepQueueRef,
     trackStatesRef,
     configRef,
     togglePlay,

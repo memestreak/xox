@@ -31,7 +31,7 @@ const mockRequestReset = vi.fn();
 
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
-    preloadKit: vi.fn().mockResolvedValue(undefined),
+    preloadKit: vi.fn().mockResolvedValue(true),
     start: (...args: unknown[]) => mockStart(...args),
     stop: (...args: unknown[]) => mockStop(...args),
     setBpm: vi.fn(),
@@ -41,6 +41,7 @@ vi.mock('../app/AudioEngine', () => ({
     requestReset: (...args: unknown[]) =>
       mockRequestReset(...args),
     getCurrentTime: vi.fn().mockReturnValue(0),
+    getOutputTime: vi.fn().mockReturnValue(0),
     onStep: vi.fn(),
   },
 }));
@@ -134,6 +135,52 @@ describe('computeStep integration', () => {
     expect(mockPlaySound.mock.calls[0][0]).toBe('bd');
     expect(mockSendNote).toHaveBeenCalledTimes(1);
     expect(mockSendNote.mock.calls[0][0]).toBe('bd');
+  });
+
+  it('late steps advance state but play no sound'
+    + ' (#119)', async () => {
+    const { result } = renderSequencer();
+
+    await act(async () => {
+      result.current.actions.clearAll();
+    });
+    await act(async () => {
+      result.current.actions.toggleStep('bd', 0);
+    });
+
+    const onStep = await startPlayback(result) as (
+      step: number, time: number, late: boolean
+    ) => void;
+    mockPlaySound.mockClear();
+    mockSendNote.mockClear();
+
+    onStep(0, 0.0, true);
+    expect(mockPlaySound).not.toHaveBeenCalled();
+    expect(mockSendNote).not.toHaveBeenCalled();
+    expect(result.current.meta.totalStepsRef.current)
+      .toBe(1);
+  });
+
+  it('held Space (auto-repeat) does not toggle'
+    + ' playback (#118)', async () => {
+    const { result } = renderSequencer();
+    await waitFor(() => {
+      expect(result.current.state.isLoaded).toBe(true);
+    });
+
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent(
+        'keydown', { code: 'Space', repeat: true }
+      ));
+    });
+    expect(mockStart).not.toHaveBeenCalled();
+
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent(
+        'keydown', { code: 'Space' }
+      ));
+    });
+    expect(mockStart).toHaveBeenCalledTimes(1);
   });
 
   it('fill ref is threaded to computeStep', async () => {
@@ -305,6 +352,36 @@ describe('computeStep integration', () => {
 
       // cycleCount=0, 2:2 requires count%2===1 → skip
       expect(mockPlaySound).not.toHaveBeenCalled();
+    }
+  );
+});
+
+describe('step queue wiring (#122)', () => {
+  it('each step is queued with its time and triggers',
+    async () => {
+      const { result } = renderSequencer();
+      await act(async () => {
+        result.current.actions.clearAll();
+      });
+      await act(async () => {
+        result.current.actions.toggleStep('bd', 1);
+      });
+      const onStep = await startPlayback(result);
+
+      onStep(0, 1.0);
+      onStep(1, 1.125);
+
+      const q = result.current.meta.stepQueueRef.current;
+      expect(q.map(e => [e.step, e.time])).toEqual([
+        [0, 1.0], [1, 1.125],
+      ]);
+      expect([...q[1].triggered]).toEqual(['bd']);
+
+      await act(async () => {
+        result.current.actions.togglePlay();
+      });
+      expect(result.current.meta.stepQueueRef.current)
+        .toHaveLength(0);
     }
   );
 });

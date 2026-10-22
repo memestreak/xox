@@ -68,11 +68,25 @@ describe('GlobalControls', () => {
     expect(mockSetPatternLength).toHaveBeenCalledWith(8);
   });
 
-  it('clear button calls clearAll', () => {
+  it('clear button calls clearAll after confirming', () => {
+    const confirm = vi.spyOn(window, 'confirm')
+      .mockReturnValue(true);
     render(<GlobalControls />);
     const btn = screen.getByRole('button');
     fireEvent.click(btn);
+    expect(confirm).toHaveBeenCalled();
     expect(mockClearAll).toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
+  it('clear button does nothing if not confirmed', () => {
+    mockClearAll.mockClear();
+    const confirm = vi.spyOn(window, 'confirm')
+      .mockReturnValue(false);
+    render(<GlobalControls />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(mockClearAll).not.toHaveBeenCalled();
+    confirm.mockRestore();
   });
 
   it('swing knob calls setSwing', () => {

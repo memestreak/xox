@@ -9,6 +9,7 @@ working with code in this repository.
 npm run dev      # Dev server at localhost:3000
 npm run build    # Production build (static export to /out/)
 npm run lint     # ESLint
+npm run typecheck  # tsc --noEmit (app + tests)
 npm test         # Vitest (unit + integration)
 npm run test:watch  # Vitest in watch mode
 ```
@@ -41,7 +42,10 @@ two internal contexts for render isolation: ConfigContext
 `{ state, actions, meta }`. Uses `requestAnimationFrame` for
 visual step sync. Solo/mute priority: if any track is soloed,
 only soloed tracks play; otherwise non-muted tracks play.
-Accented steps play at 1.5x gain.
+Accented steps multiply gain by `1 + accentLevel × 2`
+(2x at the default accent level of 0.5, up to 3x). The
+master bus runs through a limiter (`AudioEngine.init`)
+so summed and accented hits don't clip.
 
 **SequencerConfig (`src/app/types.ts`)** — Canonical type for
 all persistable state (kit, BPM, steps, mixer). Single source
@@ -90,8 +94,10 @@ Supporting files:
 ## Testing
 
 Tests live in `src/__tests__/` and run via Vitest + jsdom.
-A pre-push git hook runs `npm test` and `npm run lint`
-before every push.
+CI (`.github/workflows/ci.yml`) runs lint, typecheck,
+tests, and a production build on every PR and push to
+`main`. Vitest does not typecheck, so run
+`npm run typecheck` locally too.
 
 Test areas:
 - `configCodec.test.ts` — round-trip, defensive decoding,

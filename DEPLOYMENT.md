@@ -19,8 +19,13 @@ As of 2025-01-10, this is configured in your GitHub personal settings, under
 
 1. In the [Cloudflare Dashboard](https://dash.cloudflare.com/), create a new
     application from the **Workers & Pages** section.
-2. Select the **Looking to deploy a page? Get Started** link and use the
-    **Next.js** preset.
+2. Select the **Looking to deploy a page? Get Started** link and use these
+    build settings (the app is a static export, so do **not** use the
+    **Next.js** preset, which builds with the deprecated `next-on-pages`
+    adapter and fails):
+    - **Framework preset:** None (or "Next.js (Static HTML Export)")
+    - **Build command:** `npm run build`
+    - **Build output directory:** `out`
 3. Take the opportunity to create a custom subdomain for the deployment.
 
 ## Automatic Builds

@@ -22,7 +22,7 @@ beforeAll(() => {
 
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
-    preloadKit: vi.fn().mockResolvedValue(undefined),
+    preloadKit: vi.fn().mockResolvedValue(true),
     start: vi.fn(),
     stop: vi.fn(),
     setBpm: vi.fn(),
@@ -77,7 +77,7 @@ describe('SettingsPopover', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('export updates URL hash and shows Copied', async () => {
+  it('export copies a share URL without changing the address bar', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText },
@@ -108,9 +108,9 @@ describe('SettingsPopover', () => {
     const copiedUrl = writeText.mock.calls[0][0] as string;
     expect(copiedUrl).toContain('#');
 
-    expect(replaceState).toHaveBeenCalled();
-    const hashArg = replaceState.mock.calls[0][2] as string;
-    expect(hashArg).toMatch(/^#/);
+    // Writing the hash would make a later refresh restore
+    // this snapshot instead of the autosaved session.
+    expect(replaceState).not.toHaveBeenCalled();
 
     replaceState.mockRestore();
   });

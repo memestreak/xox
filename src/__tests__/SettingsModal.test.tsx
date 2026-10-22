@@ -53,7 +53,7 @@ function renderModal(open = true) {
     <TooltipProvider>
       <MidiProvider>
         <SettingsModal
-          open={open}
+          isOpen={open}
           onClose={onClose}
         />
       </MidiProvider>

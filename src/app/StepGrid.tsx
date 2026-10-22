@@ -14,6 +14,8 @@ import { useSelection } from './hooks/useSelection';
 import type { TrackId, TrackPattern } from './types';
 import { cellKey, getPatternLength, parseCellKey } from './types';
 import { TRIGGER_FLASH_MS } from './constants';
+import { audioEngine } from './AudioEngine';
+import { drainDueSteps } from './stepQueue';
 import trackPatternData from './data/trackPatterns.json';
 
 const TRACK_PATTERNS: TrackPattern[] =
@@ -37,9 +39,10 @@ interface StepGridProps {
 
 /**
  * The main sequencer grid section containing all track
- * rows and the running light indicator. Subscribes to
- * stepRef via requestAnimationFrame to update the visual
- * step highlight without causing full-tree re-renders.
+ * rows and the running light indicator. A
+ * requestAnimationFrame loop drains the scheduled-step
+ * queue against the audio clock, so the highlight
+ * follows what is heard without full-tree re-renders.
  */
 export default function StepGrid({
   scrollContainerRef,
@@ -57,10 +60,7 @@ export default function StepGrid({
     clearTrigCondition, clearParameterLock,
     setTrigCondition,
   } = actions;
-  const {
-    stepRef, totalStepsRef,
-    triggeredTracksRef, config,
-  } = meta;
+  const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
 
   const longPressActiveRef = useRef<boolean>(false);
@@ -212,34 +212,29 @@ export default function StepGrid({
 
   useEffect(() => {
     let raf: number;
-    let prevStep = -1;
-    let prevTotal = 0;
+    let shownStep = -1;
 
     const tick = () => {
-      const curStep = stepRef.current;
-      const curTotal = totalStepsRef.current;
-      if (
-        curStep !== prevStep
-        || curTotal !== prevTotal
-      ) {
-        prevStep = curStep;
-        prevTotal = curTotal;
-        setDisplayStep(curStep);
-        setDisplayTotal(
-          Math.max(0, curTotal - 1)
-        );
-        flashTriggered(
-          new Set(triggeredTracksRef.current)
-        );
-        // Auto-follow page
-        if (
-          autoFollowRef.current
-          && curStep >= 0
-        ) {
-          const stepPage =
-            Math.floor(curStep / 16);
-          setPage(stepPage);
+      // Show each scheduled step when its sound reaches
+      // the speakers, not when it was scheduled.
+      const due = drainDueSteps(
+        stepQueueRef.current,
+        audioEngine.getOutputTime()
+      );
+      if (due) {
+        const { step, totalSteps } = due.latest;
+        shownStep = step;
+        setDisplayStep(step);
+        setDisplayTotal(Math.max(0, totalSteps - 1));
+        flashTriggered(due.triggered);
+        if (autoFollowRef.current) {
+          setPage(Math.floor(step / 16));
         }
+      } else if (stepRef.current === -1 && shownStep !== -1) {
+        // Playback stopped.
+        shownStep = -1;
+        setDisplayStep(-1);
+        setDisplayTotal(0);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -251,7 +246,7 @@ export default function StepGrid({
         clearTimeout(triggerTimerRef.current);
       }
     };
-  }, [stepRef, totalStepsRef, triggeredTracksRef, flashTriggered, setPage]);
+  }, [stepRef, stepQueueRef, flashTriggered, setPage]);
 
   return (
     <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-1 lg:p-2 rounded-xl lg:rounded-2xl border border-neutral-800/50">

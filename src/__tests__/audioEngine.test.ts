@@ -1,6 +1,7 @@
 import {
   describe, expect, it, vi, beforeEach, afterEach,
 } from 'vitest';
+import type { TrackId } from '../app/types';
 
 // Mutable currentTime that the mock AudioContext reads.
 let mockCurrentTime = 0;
@@ -25,6 +26,18 @@ class MockAudioContext {
 
   createBuffer() {
     return {};
+  }
+
+  createDynamicsCompressor() {
+    const param = () => ({ value: 0 });
+    return {
+      threshold: param(),
+      knee: param(),
+      ratio: param(),
+      attack: param(),
+      release: param(),
+      connect: vi.fn(),
+    };
   }
 
   createBufferSource() {
@@ -349,5 +362,230 @@ describe('getCurrentTime()', () => {
     mockCurrentTime = 1.234;
     await audioEngine.preloadKit('808');
     expect(audioEngine.getCurrentTime()).toBe(1.234);
+  });
+});
+
+describe('AudioEngine start/stop race (#118)', () => {
+  beforeEach(() => {
+    mockCurrentTime = 0;
+  });
+
+  afterEach(() => {
+    audioEngine.stop();
+  });
+
+  /** Make the context suspended with a resume we control. */
+  function suspendContext(): () => void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = (audioEngine as any).ctx as MockAudioContext;
+    let finish!: () => void;
+    ctx.state = 'suspended';
+    ctx.resume = vi.fn(
+      () => new Promise<undefined>(resolve => {
+        finish = () => {
+          ctx.state = 'running';
+          resolve(undefined);
+        };
+      })
+    );
+    return () => finish();
+  }
+
+  it('stop() during a pending resume prevents playback', async () => {
+    await audioEngine.start(120, vi.fn());
+    audioEngine.stop();
+    const resolveResume = suspendContext();
+
+    const onStep = vi.fn();
+    const starting = audioEngine.start(120, onStep);
+    audioEngine.stop();
+    resolveResume();
+    await starting;
+
+    mockCurrentTime = 1;
+    vi.advanceTimersByTime(200);
+    expect(onStep).not.toHaveBeenCalled();
+  });
+
+  it('a second start() replaces the first loop', async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    await audioEngine.start(120, first);
+    await audioEngine.start(120, second);
+    first.mockClear();
+    second.mockClear();
+
+    audioEngine.stop();
+    mockCurrentTime = 1;
+    vi.advanceTimersByTime(200);
+    expect(first).not.toHaveBeenCalled();
+    expect(second).not.toHaveBeenCalled();
+  });
+});
+
+describe('AudioEngine late steps (#119)', () => {
+  beforeEach(() => {
+    mockCurrentTime = 0;
+  });
+
+  afterEach(() => {
+    audioEngine.stop();
+  });
+
+  it('flags steps whose time has passed as late', async () => {
+    const log: { step: number; time: number; late: boolean }[] = [];
+    await audioEngine.start(120, (step, time, late) => {
+      log.push({ step, time, late });
+    });
+    log.length = 0;
+
+    // Timer throttled: the clock jumps a full second.
+    mockCurrentTime = 1.0;
+    vi.advanceTimersByTime(25);
+
+    const late = log.filter(e => e.late);
+    const onTime = log.filter(e => !e.late);
+    expect(late.length).toBe(7);
+    expect(late.every(e => e.time < 1.0)).toBe(true);
+    expect(onTime.every(e => e.time >= 1.0)).toBe(true);
+    // Step numbering stays continuous across the gap.
+    expect(log.map(e => e.step)).toEqual(
+      log.map((_, i) => i + 1)
+    );
+  });
+
+  it('normal ticks produce no late steps', async () => {
+    const late = vi.fn();
+    await audioEngine.start(120, (_s, _t, isLate) => {
+      if (isLate) late();
+    });
+    for (let i = 0; i < 40; i++) {
+      mockCurrentTime += 0.025;
+      vi.advanceTimersByTime(25);
+    }
+    expect(late).not.toHaveBeenCalled();
+  });
+});
+
+describe('AudioEngine kit loading (#123)', () => {
+  type Deferred = { resolve: () => void };
+
+  /**
+   * Stub fetch so each kit's responses are held until
+   * released, and decodeAudioData returns a marker
+   * buffer naming the kit it came from.
+   */
+  function stubKitFetch() {
+    const pending: Record<string, Deferred[]> = {};
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      const kit = url.split('/')[2];
+      return new Promise(resolve => {
+        (pending[kit] ??= []).push({
+          resolve: () => resolve({
+            ok: true,
+            arrayBuffer: async () => kit,
+          }),
+        });
+      });
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = (audioEngine as any).ctx as MockAudioContext;
+    ctx.decodeAudioData = vi.fn(
+      async (data: unknown) => ({ kit: data })
+    );
+    return {
+      release: (kit: string) =>
+        pending[kit]?.forEach(d => d.resolve()),
+    };
+  }
+
+  function bufferKit(id: TrackId): unknown {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffers = (audioEngine as any).buffers as Map<
+      TrackId, { kit: string }
+    >;
+    return buffers.get(id)?.kit;
+  }
+
+  it('a slow earlier load cannot overwrite a newer kit',
+    async () => {
+      // Ensure the context exists before stubbing it.
+      vi.stubGlobal(
+        'fetch', vi.fn().mockRejectedValue(new Error('x'))
+      );
+      await audioEngine.preloadKit('808');
+      const net = stubKitFetch();
+
+      const first = audioEngine.preloadKit('808');
+      const second = audioEngine.preloadKit('electro');
+      net.release('electro');
+      expect(await second).toBe(true);
+      net.release('808');
+      expect(await first).toBe(false);
+
+      expect(bufferKit('bd')).toBe('electro');
+      expect(bufferKit('cb')).toBe('electro');
+    }
+  );
+
+  it('keeps the previous kit until the new one loads',
+    async () => {
+      const net = stubKitFetch();
+      const a = audioEngine.preloadKit('808');
+      net.release('808');
+      await a;
+
+      const b = audioEngine.preloadKit('electro');
+      await Promise.resolve();
+      expect(bufferKit('bd')).toBe('808');
+      net.release('electro');
+      await b;
+      expect(bufferKit('bd')).toBe('electro');
+    }
+  );
+});
+
+describe('AudioEngine callback errors (#124)', () => {
+  beforeEach(() => {
+    mockCurrentTime = 0;
+  });
+
+  afterEach(() => {
+    audioEngine.stop();
+  });
+
+  it('keeps scheduling after onStep throws', async () => {
+    const error = vi.spyOn(console, 'error')
+      .mockImplementation(() => {});
+    const steps: number[] = [];
+    await audioEngine.start(120, (step) => {
+      steps.push(step);
+      if (step === 0) throw new Error('boom');
+    });
+    for (let i = 0; i < 10; i++) {
+      mockCurrentTime += 0.025;
+      vi.advanceTimersByTime(25);
+    }
+    expect(steps.length).toBeGreaterThan(1);
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+});
+
+describe('AudioEngine master limiter (#125)', () => {
+  it('routes the master bus through a limiter', async () => {
+    vi.stubGlobal(
+      'fetch', vi.fn().mockRejectedValue(new Error('x'))
+    );
+    await audioEngine.preloadKit('808');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const engine = audioEngine as any;
+    expect(engine.limiter).not.toBeNull();
+    expect(engine.limiter.threshold.value).toBe(-1);
+    expect(engine.limiter.ratio.value).toBe(20);
+    expect(engine.masterGain.connect)
+      .toHaveBeenCalledWith(engine.limiter);
+    expect(engine.limiter.connect)
+      .toHaveBeenCalledWith(engine.ctx.destination);
   });
 });

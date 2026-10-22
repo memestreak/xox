@@ -185,7 +185,7 @@ export async function decodeConfig(
  * Rejects old versions (< CONFIG_VERSION) by returning
  * defaults. Validates all fields defensively.
  */
-function validateConfig(
+export function validateConfig(
   raw: unknown
 ): SequencerConfig {
   const defaults = defaultConfig();

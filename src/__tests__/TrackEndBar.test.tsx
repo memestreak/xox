@@ -24,6 +24,7 @@ const base = {
   isSolo: false,
   isFreeRun: false,
   gain: 0.8,
+  pan: 0.5,
   currentStep: -1,
   totalSteps: 0,
   onToggleStep: vi.fn(),
@@ -32,6 +33,10 @@ const base = {
   onSetGain: vi.fn(),
   onSetTrackLength: vi.fn(),
   onToggleFreeRun: vi.fn(),
+  onSetPan: vi.fn(),
+  onClearTrack: vi.fn(),
+  onPlayPreview: vi.fn(),
+  isTriggered: false,
 };
 
 describe('TrackEndBar', () => {
