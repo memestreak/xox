@@ -112,7 +112,7 @@ function StepButtonInner({
   }, [longPressActiveRef]);
 
   const sizeClass = mini
-    ? 'w-4 h-4 lg:w-5 lg:h-5' : 'h-9 lg:h-10';
+    ? 'w-4 h-4 lg:w-5 lg:h-5' : 'h-12 lg:h-[52px]';
   const radiusClass = mini
     ? 'rounded-full' : 'rounded-[5px]';
 
