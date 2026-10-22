@@ -227,7 +227,14 @@ class AudioEngine {
     const now = this.ctx!.currentTime;
     while (this.nextStepTime < now + this.scheduleAheadTime) {
       const late = this.nextStepTime < now;
-      this.onStep(this.currentStep, this.nextStepTime, late);
+      try {
+        this.onStep(this.currentStep, this.nextStepTime, late);
+      } catch (e) {
+        // Never let one bad step stop the clock: without
+        // this the timer below is never re-armed and
+        // playback dies while the UI still says Playing.
+        console.error('Step callback failed', e);
+      }
       this.advanceStep();
     }
     this.schedulerTimer = setTimeout(this.scheduler, this.lookahead);

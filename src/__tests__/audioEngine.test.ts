@@ -532,3 +532,30 @@ describe('AudioEngine kit loading (#123)', () => {
     }
   );
 });
+
+describe('AudioEngine callback errors (#124)', () => {
+  beforeEach(() => {
+    mockCurrentTime = 0;
+  });
+
+  afterEach(() => {
+    audioEngine.stop();
+  });
+
+  it('keeps scheduling after onStep throws', async () => {
+    const error = vi.spyOn(console, 'error')
+      .mockImplementation(() => {});
+    const steps: number[] = [];
+    await audioEngine.start(120, (step) => {
+      steps.push(step);
+      if (step === 0) throw new Error('boom');
+    });
+    for (let i = 0; i < 10; i++) {
+      mockCurrentTime += 0.025;
+      vi.advanceTimersByTime(25);
+    }
+    expect(steps.length).toBeGreaterThan(1);
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+});

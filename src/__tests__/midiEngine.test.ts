@@ -1,7 +1,7 @@
 import {
   describe, expect, it, vi, beforeEach, afterEach,
 } from 'vitest';
-import { MidiEngine } from '../app/MidiEngine';
+import { MidiEngine, validateMidiConfig } from '../app/MidiEngine';
 
 // Mock MIDIOutput
 function createMockOutput(
@@ -341,5 +341,51 @@ describe('MidiEngine config changes', () => {
       localStorage.getItem('xox-midi')!
     );
     expect(stored.channel).toBe(7);
+  });
+});
+
+describe('validateMidiConfig (#124)', () => {
+  it('fills missing fields from defaults', () => {
+    const cfg = validateMidiConfig({ enabled: true });
+    expect(cfg.enabled).toBe(true);
+    expect(cfg.channel).toBe(10);
+    expect(cfg.noteLength).toEqual({ type: 'fixed', ms: 50 });
+    expect(cfg.tracks.bd.noteNumber).toBe(36);
+  });
+
+  it('rejects invalid values field by field', () => {
+    const cfg = validateMidiConfig({
+      enabled: 'yes',
+      channel: 99,
+      noteLength: { type: 'percent' },
+      tracks: { bd: { noteNumber: 200 }, sd: { noteNumber: 40 } },
+    });
+    expect(cfg.enabled).toBe(false);
+    expect(cfg.channel).toBe(10);
+    expect(cfg.noteLength).toEqual({ type: 'fixed', ms: 50 });
+    expect(cfg.tracks.bd.noteNumber).toBe(36);
+    expect(cfg.tracks.sd.noteNumber).toBe(40);
+  });
+
+  it('returns defaults for non-objects', () => {
+    expect(validateMidiConfig(null).channel).toBe(10);
+    expect(validateMidiConfig('x').channel).toBe(10);
+  });
+
+  it('an old saved config without noteLength can still'
+    + ' send notes', async () => {
+    localStorage.setItem('xox-midi', JSON.stringify({
+      enabled: true, deviceId: 'out1', channel: 1,
+    }));
+    const output = createMockOutput('out1', 'Synth');
+    const access = createMockAccess([output]);
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      requestMIDIAccess: vi.fn().mockResolvedValue(access),
+    });
+    const engine = new MidiEngine();
+    await engine.init();
+    expect(() => engine.sendNote('bd', 0, 1)).not.toThrow();
+    expect(output.send).toHaveBeenCalled();
   });
 });
