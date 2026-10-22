@@ -1,17 +1,25 @@
 import type { Metadata, Viewport } from "next";
 import {
-  Geist, Geist_Mono, Orbitron,
+  Barlow, Barlow_Condensed, JetBrains_Mono, Orbitron,
 } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const barlow = Barlow({
+  variable: "--font-barlow",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const barlowCondensed = Barlow_Condensed({
+  variable: "--font-barlow-condensed",
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  weight: ["500", "700"],
 });
 
 const orbitron = Orbitron({
@@ -47,13 +55,14 @@ export default function RootLayout({
       <head>
         <meta
           name="theme-color"
-          content="#0a0a0a"
+          content="#141311"
         />
       </head>
       <body
         className={
-          `${geistSans.variable}`
-          + ` ${geistMono.variable}`
+          `${barlow.variable}`
+          + ` ${barlowCondensed.variable}`
+          + ` ${jetbrainsMono.variable}`
           + ` ${orbitron.variable}`
           + ' antialiased'
         }

@@ -37,40 +37,33 @@ export default function FillButton() {
     [actions]
   );
 
-  let bg: string;
+  // Held: amber key. Latched: lit orange key.
+  let look: string;
   if (fillMode === 'momentary') {
-    bg = 'bg-orange-400'
-      + ' shadow-[0_0_20px_rgba(251,146,60,0.6)]';
+    look = 'bg-none bg-mute border-mute text-[#1a1208]'
+      + ' shadow-[0_0_18px_rgb(242_178_58/0.45)]';
   } else if (fillMode === 'latched') {
-    bg = 'bg-orange-600'
-      + ' shadow-[0_0_20px_rgba(234,88,12,0.4)]';
+    look = 'bg-none bg-accent border-accent-hi text-[#1a0d05]'
+      + ' shadow-[0_0_18px_rgb(240_102_42/0.4)]';
   } else {
-    bg = 'bg-orange-600/30';
+    look = 'text-ink';
   }
 
   return (
     <Tooltip tooltipKey="fill" position="bottom">
       <button
         aria-pressed={isFillActive}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      onClick={handleClick}
-      style={{ touchAction: 'manipulation' }}
-      className={
-        'self-stretch px-2 lg:px-3 rounded-full'
-        + ' font-bold text-sm lg:text-base'
-        + ' font-[family-name:var(--font-orbitron)]'
-        + ' border border-orange-700'
-        + ' transition-colors'
-        + ' focus-visible:outline-none'
-        + ' focus-visible:ring-2'
-        + ' focus-visible:ring-orange-500'
-        + ' focus-visible:ring-offset-2'
-        + ' focus-visible:ring-offset-neutral-950 '
-        + bg
-      }
-    >
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onClick={handleClick}
+        style={{ touchAction: 'manipulation' }}
+        className={
+          'ss-key ss-cap h-10 lg:h-11 px-3 lg:px-[18px]'
+          + ' rounded-lg text-sm lg:text-[17px] '
+          + look
+        }
+      >
         FILL
       </button>
     </Tooltip>

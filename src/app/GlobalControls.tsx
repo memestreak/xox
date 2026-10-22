@@ -2,13 +2,15 @@
 
 import { memo, useCallback } from 'react';
 import Knob from './Knob';
+import PanelSection from './PanelSection';
 import { useSequencer } from './SequencerContext';
 import Tooltip from './Tooltip';
 import { getPatternLength } from './types';
 
 /**
- * Global controls section: pattern length, swing, and
- * clear all.
+ * Global controls: pattern length, swing, and reset.
+ * Renders three cells of the controls strip; the
+ * parent places them (Reset sits last on desktop).
  */
 function GlobalControlsInner() {
   const { state, actions, meta } = useSequencer();
@@ -41,63 +43,59 @@ function GlobalControlsInner() {
   }, [actions]);
 
   return (
-    <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
-      <div className="flex items-stretch gap-2 lg:gap-3">
-        {/* Steps dropdown */}
-        <div className="flex flex-col">
-          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
-            Steps
-          </span>
-          <Tooltip tooltipKey="steps">
-            <select
-              id="global-steps"
-              value={patternLength}
-              onChange={handlePatternLength}
-              className="bg-neutral-800 border border-neutral-700 rounded p-1 text-xs lg:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors w-12 lg:w-14"
-            >
-              {Array.from(
-                { length: 64 },
-                (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}
-                  </option>
-                )
-              )}
-            </select>
-          </Tooltip>
-        </div>
+    <>
+      <PanelSection
+        label="Steps"
+        labelFor="global-steps"
+        className="col-span-2"
+      >
+        <Tooltip tooltipKey="steps">
+          <select
+            id="global-steps"
+            value={patternLength}
+            onChange={handlePatternLength}
+            className="ss-key ss-select h-9 w-full lg:w-[76px] pl-3 font-mono text-sm"
+          >
+            {Array.from(
+              { length: 64 },
+              (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1}
+                </option>
+              )
+            )}
+          </select>
+        </Tooltip>
+      </PanelSection>
 
-        {/* Swing knob */}
-        <div className="flex flex-col">
-          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold text-center">
-            Swing
-          </span>
-          <div className="flex-1" />
+      <PanelSection label="Swing" className="col-span-2">
+        <div className="flex items-center gap-2.5 h-9">
           <Tooltip tooltipKey="swing">
             <Knob
               value={state.swing / 100}
               onChange={handleSwing}
-              size={32}
-              centerLabel={`${state.swing}%`}
+              size={34}
+              ariaPrefix="Swing"
               defaultValue={0}
             />
           </Tooltip>
+          <span className="font-mono text-sm text-ink w-9 tabular-nums">
+            {state.swing}%
+          </span>
         </div>
+      </PanelSection>
 
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Reset button */}
+      <PanelSection className="col-span-2 justify-end lg:order-last">
         <Tooltip tooltipKey="reset">
           <button
             onClick={handleReset}
-            className="h-8 self-end bg-neutral-800 border border-neutral-700 rounded px-1.5 lg:px-2 text-[9px] lg:text-[10px] uppercase tracking-wider font-bold text-neutral-400 hover:text-red-400 hover:border-red-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            className="ss-key ss-cap h-9 px-3 text-xs text-muted hover:text-step1"
           >
             Reset
           </button>
         </Tooltip>
-      </div>
-    </div>
+      </PanelSection>
+    </>
   );
 }
 

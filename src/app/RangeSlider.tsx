@@ -113,7 +113,7 @@ export default function RangeSlider({
     : 0;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <div
         ref={trackRef}
         role="slider"
@@ -123,11 +123,11 @@ export default function RangeSlider({
         aria-valuenow={value}
         aria-label={label}
         className={
-          'relative h-6 flex-1 rounded'
-          + ' bg-neutral-700 cursor-ew-resize'
-          + ' focus-visible:outline-none'
-          + ' focus-visible:ring-2'
-          + ' focus-visible:ring-orange-500'
+          'relative h-7 flex-1 flex items-center'
+          + ' cursor-ew-resize rounded'
+          + ' focus-visible:outline-2'
+          + ' focus-visible:outline-offset-2'
+          + ' focus-visible:outline-accent'
         }
         style={{ touchAction: 'none' }}
         onPointerDown={onPointerDown}
@@ -136,20 +136,38 @@ export default function RangeSlider({
         onLostPointerCapture={release}
         onKeyDown={onKeyDown}
       >
+        <FaderTrack />
         <div
-          className={
-            'absolute inset-y-0 left-0 rounded'
-            + ' bg-orange-600'
-          }
+          className="absolute left-0 h-1 rounded-sm bg-accent pointer-events-none"
           style={{ width: `${pct}%` }}
         />
+        <FaderCap pct={pct} />
       </div>
       <span className={
-        'text-xs font-mono text-neutral-300'
-        + ' w-10 text-right tabular-nums'
+        'text-[13px] font-mono text-ink'
+        + ' w-11 text-right tabular-nums'
       }>
         {value}%
       </span>
+    </div>
+  );
+}
+
+/** Recessed groove the fader cap rides in. */
+export function FaderTrack() {
+  return (
+    <div className="absolute inset-x-0 h-1 rounded-sm bg-well shadow-[inset_0_1px_2px_rgb(0_0_0/0.8)] pointer-events-none" />
+  );
+}
+
+/** Cream fader cap with a center line, at pct (0-100). */
+export function FaderCap({ pct }: { pct: number }) {
+  return (
+    <div
+      className="absolute w-3.5 h-[22px] -ml-[7px] rounded-[3px] bg-linear-to-b from-[#efe8da] to-[#bdb5a6] shadow-[0_2px_4px_rgb(0_0_0/0.6)] flex items-center justify-center pointer-events-none"
+      style={{ left: `${pct}%` }}
+    >
+      <div className="w-2 h-0.5 rounded-sm bg-panel" />
     </div>
   );
 }

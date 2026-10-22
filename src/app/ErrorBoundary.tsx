@@ -43,13 +43,13 @@ export default class ErrorBoundary extends Component<
         return this.props.fallback;
       }
       return (
-        <div className="bg-neutral-900 text-neutral-200 p-4 rounded-lg border border-neutral-700 text-center">
+        <div className="ss-panel text-ink p-4 rounded-lg text-center">
           <p className="text-sm mb-2">
             Something went wrong.
           </p>
           <button
             onClick={this.handleReset}
-            className="px-3 py-1 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors"
+            className="ss-key ss-cap h-8 px-3 text-xs"
           >
             Try again
           </button>

@@ -83,7 +83,7 @@ function AccentRowInner({
   );
 
   return (
-    <div>
+    <div className="border-t border-line pt-3 lg:pt-4">
       {/* Mobile: label + knob above grid */}
       <div className="flex items-center gap-2 mb-1 lg:hidden">
         <Tooltip tooltipKey="track-ac">
@@ -93,13 +93,13 @@ function AccentRowInner({
               if (e.shiftKey) handleClear();
             }}
             className={
-              'text-lg font-bold uppercase'
-              + ' tracking-wider rounded px-1 py-0.5'
+              'text-xl font-bold uppercase leading-none'
+              + ' tracking-[0.08em] rounded px-1 py-1'
               + ' transition-colors cursor-pointer'
-              + ' font-[family-name:var(--font-orbitron)]'
+              + ' font-display'
               + (isFreeRun
-                ? ' text-orange-400'
-                : ' text-neutral-400')
+                ? ' text-accent-hi'
+                : ' text-muted')
             }
           >
             AC
@@ -114,7 +114,7 @@ function AccentRowInner({
               value={gain}
               onChange={handleGain}
               trackName="ACCENT"
-              size={20}
+              size={26}
               defaultValue={0.5}
             />
           </Tooltip>
@@ -132,14 +132,14 @@ function AccentRowInner({
                   if (e.shiftKey) handleClear();
                 }}
                 className={
-                  'w-12 truncate text-xl text-left'
-                  + ' font-bold uppercase tracking-wider'
-                  + ' rounded px-1 py-0.5 transition-colors'
-                  + ' cursor-pointer'
-                  + ' font-[family-name:var(--font-orbitron)]'
+                  'w-14 truncate text-[22px] text-left'
+                  + ' font-bold uppercase tracking-[0.08em]'
+                  + ' leading-none rounded px-1 py-1'
+                  + ' transition-colors cursor-pointer'
+                  + ' font-display'
                   + (isFreeRun
-                    ? ' text-orange-400'
-                    : ' text-neutral-400')
+                    ? ' text-accent-hi'
+                    : ' text-muted')
                 }
               >
                 AC
@@ -148,10 +148,10 @@ function AccentRowInner({
           </Tooltip>
           {/* Spacer matching mute + solo widths */}
           <div className="flex gap-1">
-            <div className="w-6 h-6" />
-            <div className="w-6 h-6" />
+            <div className="w-[26px] h-[26px]" />
+            <div className="w-[26px] h-[26px]" />
           </div>
-          <div className="flex gap-1 ml-1">
+          <div className="flex gap-1.5 ml-2">
             <Tooltip
               tooltipKey="accentIntensity"
               position="bottom"
@@ -194,7 +194,6 @@ function AccentRowInner({
                       !disabled
                       && effectiveStep === globalIdx
                     }
-                    isBeat={globalIdx % 4 === 0}
                     isDisabled={disabled}
                     mini
                     onToggle={handleToggleStep}

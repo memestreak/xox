@@ -103,21 +103,31 @@ export default function PatternPicker({
         onClick={() => isOpen ? handleClose() : handleOpen()}
         aria-expanded={isOpen}
         aria-label="Pattern"
-        className={`w-32 lg:w-40 px-3 lg:px-4 py-2 rounded-full
-          font-bold text-xs lg:text-sm font-[family-name:var(--font-orbitron)]
-          transition-colors
-          focus-visible:outline-none focus-visible:ring-2
-          focus-visible:ring-orange-500
-          focus-visible:ring-offset-2
-          focus-visible:ring-offset-neutral-950
-          ${isOpen
-            ? 'bg-orange-600 text-white hover:bg-orange-700'
-            : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'
-          }`}
+        className={
+          'ss-key h-9 w-full pl-3 pr-2.5 text-sm font-medium'
+          + ' flex items-center justify-between gap-2'
+          + (isOpen ? ' border-accent' : ' border-edge')
+        }
       >
-        <span className="block truncate">
-          {isOpen ? `▲ ${displayName}` : displayName}
-        </span>
+        <span className="block truncate">{displayName}</span>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          aria-hidden="true"
+          className={
+            'shrink-0 text-muted transition-transform'
+            + (isOpen ? ' rotate-180' : '')
+          }
+        >
+          <path
+            d="M3 4.5l3 3 3-3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </svg>
       </button>
     </Tooltip>
   );
@@ -140,13 +150,10 @@ export default function PatternPicker({
         onKeyDown={(e) => {
           if (e.code === 'Space') e.preventDefault();
         }}
-        className="h-[240px] flex flex-col
-          bg-neutral-900/50 border border-neutral-800
-          rounded-lg lg:rounded-xl shadow-inner
-          focus-visible:outline-none"
+        className="ss-panel h-[240px] flex flex-col rounded-xl focus-visible:outline-none"
       >
-        {/* Category pills */}
-        <div className="p-3 pb-2 flex flex-wrap gap-1.5">
+        {/* Category keys */}
+        <div className="p-3 pb-2.5 flex flex-wrap gap-1.5">
           {categories.map(group => {
             const isSelected =
               selectedCategory === group.category;
@@ -163,14 +170,14 @@ export default function PatternPicker({
                   )
                 }
                 data-has-active={hasActive || undefined}
-                className={`px-3 py-1.5 text-sm border
-                  rounded-lg font-medium transition-colors
-                  ${isSelected
-                    ? 'bg-orange-600 text-white border-transparent'
+                className={
+                  'ss-key h-8 px-3 text-sm font-medium'
+                  + (isSelected
+                    ? ' bg-none bg-accent border-accent-hi text-[#1a0d05]'
                     : hasActive
-                      ? 'bg-neutral-700 text-orange-400 border-orange-600/40'
-                      : 'bg-neutral-800 text-neutral-300 border-transparent hover:bg-neutral-700 hover:text-neutral-100'
-                  }`}
+                      ? ' border-accent/60 text-accent-hi'
+                      : ' border-edge text-ink')
+                }
               >
                 {group.category}
               </button>
@@ -179,7 +186,7 @@ export default function PatternPicker({
         </div>
 
         {/* Divider */}
-        <div className="border-t border-neutral-800" />
+        <div className="border-t border-line" />
 
         {/* Pattern grid (scrollable) */}
         <div className="overflow-y-auto flex-1 min-h-0 p-3 hide-scrollbar">
@@ -206,13 +213,21 @@ export default function PatternPicker({
                       role="option"
                       aria-selected={isActive}
                       onClick={() => onSelect(p)}
-                      className={`text-left px-2 py-1
-                        text-sm rounded transition-colors
-                        ${isActive
-                          ? 'text-orange-400 bg-neutral-800 font-semibold'
-                          : 'text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100'
-                        }`}
+                      className={
+                        'text-left px-2 py-1.5 text-sm rounded-md'
+                        + ' flex items-center gap-2 transition-colors'
+                        + (isActive
+                          ? ' bg-raised text-ink font-semibold'
+                          : ' text-muted hover:bg-raised hover:text-ink')
+                      }
                     >
+                      <span
+                        aria-hidden="true"
+                        className={
+                          'ss-led'
+                          + (isActive ? ' ss-led-on' : ' bg-transparent')
+                        }
+                      />
                       {p.name}
                     </button>
                   );
@@ -220,7 +235,7 @@ export default function PatternPicker({
               </div>
             )
             : (
-              <p className="text-sm text-neutral-500 italic">
+              <p className="text-sm text-faint">
                 Select a category
               </p>
             )}

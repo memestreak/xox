@@ -79,13 +79,14 @@ export default function SettingsPopover() {
           onClick={() => setIsOpen(prev => !prev)}
           aria-label="Settings"
           aria-expanded={isOpen}
-          className="p-2 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+          className="ss-key w-10 h-10 lg:w-11 lg:h-11 rounded-lg flex items-center justify-center text-muted hover:text-ink"
         >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className="w-5 h-5"
+          className="w-[18px] h-[18px]"
+          aria-hidden="true"
         >
           <path
             fillRule="evenodd"
@@ -99,15 +100,20 @@ export default function SettingsPopover() {
         <div
           ref={popoverRef}
           role="menu"
-          className="absolute right-0 top-full mt-2 w-48 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl z-30 overflow-hidden"
+          className="ss-menu absolute right-0 top-full mt-2 w-52 p-1.5 z-30 flex flex-col"
         >
           <button
             role="menuitem"
             onClick={handleExport}
-            className="w-full text-left px-4 py-3 text-sm text-neutral-200 hover:bg-neutral-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-500"
+            className="w-full text-left px-2.5 py-2 rounded-[5px] text-sm text-ink hover:bg-[#2f2c27] flex items-center gap-2.5 focus-visible:outline-none focus-visible:bg-[#2f2c27]"
           >
-            {feedback || 'Export URL'}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="text-muted shrink-0">
+              <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+              <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+            </svg>
+            {feedback || 'Copy share link'}
           </button>
+          <div className="h-px bg-line mx-1.5 my-1" />
           <button
             role="menuitem"
             onClick={() => {
@@ -115,8 +121,14 @@ export default function SettingsPopover() {
               setSettingsOpen(true);
               setIsOpen(false);
             }}
-            className="w-full text-left px-4 py-3 text-sm text-neutral-200 hover:bg-neutral-800 transition-colors border-t border-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-500"
+            className="w-full text-left px-2.5 py-2 rounded-[5px] text-sm text-ink hover:bg-[#2f2c27] flex items-center gap-2.5 focus-visible:outline-none focus-visible:bg-[#2f2c27]"
           >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="text-muted shrink-0">
+              <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" />
+              <circle cx="16" cy="6" r="2" />
+              <circle cx="10" cy="12" r="2" />
+              <circle cx="18" cy="18" r="2" />
+            </svg>
             Settings…
           </button>
         </div>

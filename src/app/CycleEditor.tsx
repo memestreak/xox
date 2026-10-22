@@ -21,26 +21,15 @@ export default function CycleEditor({
   );
 
   return (
-    <div className="space-y-1">
-      <div className={
-        'text-[10px] uppercase tracking-wider'
-        + ' text-neutral-500'
-      }>
+    <div className="space-y-1.5">
+      <div className="ss-label">
         Cycle
       </div>
       <select
         aria-label="Cycle"
         value={value}
         onChange={handleChange}
-        className={
-          'w-full bg-neutral-800'
-          + ' text-neutral-200'
-          + ' text-sm rounded px-2 py-1.5'
-          + ' border border-neutral-700'
-          + ' focus-visible:outline-none'
-          + ' focus-visible:ring-2'
-          + ' focus-visible:ring-orange-500'
-        }
+        className="ss-key ss-select w-full h-8 pl-2.5 font-mono text-sm"
       >
         {CYCLE_OPTIONS.map(opt => (
           <option key={opt.label} value={opt.label}>

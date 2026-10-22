@@ -172,7 +172,7 @@ function TrackRowInner({
   return (
     <div>
       {/* Mobile: track name + M/S above grid */}
-      <div className="flex items-center gap-2 mb-1 lg:hidden">
+      <div className="flex items-center gap-2 mb-1.5 lg:hidden">
         <TrackNameButton
           size="sm"
           trackId={trackId}
@@ -254,7 +254,6 @@ function TrackRowInner({
                       !disabled
                       && effectiveStep === globalIdx
                     }
-                    isBeat={globalIdx % 4 === 0}
                     isDisabled={disabled}
                     onToggle={handleToggleStep}
                     isSelected={

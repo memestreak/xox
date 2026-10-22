@@ -16,36 +16,30 @@ interface TrackToggleProps {
 
 const VARIANT_STYLES: Record<
   Variant,
-  { active: string; inactive: string; label: string }
+  { active: string; led: string; label: string }
 > = {
+  // Mute lights amber, solo lights cream.
   mute: {
     active:
-      'bg-red-600 border-red-500 text-white'
-      + ' shadow-[0_0_10px_rgba(220,38,38,0.4)]',
-    inactive:
-      'bg-neutral-800 border-neutral-700'
-      + ' text-neutral-500',
+      'bg-none bg-mute border-mute text-[#1a1208]',
+    led: 'bg-[#fff4d6]',
     label: 'M',
   },
   solo: {
     active:
-      'bg-green-600 border-green-500 text-white'
-      + ' shadow-[0_0_10px_rgba(34,197,94,0.4)]',
-    inactive:
-      'bg-neutral-800 border-neutral-700'
-      + ' text-neutral-500',
+      'bg-none bg-step4 border-step4 text-[#1a1208]',
+    led: 'bg-accent',
     label: 'S',
   },
 };
 
 const SIZE_STYLES: Record<Size, string> = {
   sm:
-    'w-[26px] h-[22px] text-[9px] rounded',
+    'w-[26px] h-[22px] text-[11px] rounded',
   md:
-    'w-6 h-6 text-[10px] rounded-md'
-    + ' hover:border-neutral-600',
+    'w-[26px] h-[26px] text-xs rounded-[5px]',
   lg:
-    'min-w-[44px] min-h-[44px] text-[8px] rounded',
+    'min-w-[44px] min-h-[44px] text-sm rounded-md',
 };
 
 /**
@@ -69,18 +63,23 @@ function TrackToggleInner({
       <button
         onClick={onToggle}
         className={
-          'shrink-0 flex items-center justify-center'
-          + ' font-bold border transition-colors'
-          + ' focus-visible:outline-none'
-          + ' focus-visible:ring-2'
-          + ' focus-visible:ring-orange-500 '
+          'ss-key ss-cap relative shrink-0 flex'
+          + ' items-center justify-center tracking-normal '
           + SIZE_STYLES[size]
           + ' '
-          + (active ? v.active : v.inactive)
+          + (active ? v.active : 'text-muted')
         }
         aria-label={`${action} ${trackName}`}
         aria-pressed={active}
       >
+        <span
+          aria-hidden="true"
+          className={
+            'absolute top-[3px] right-[3px] w-1 h-1'
+            + ' rounded-full '
+            + (active ? v.led : 'bg-[#3b3731]')
+          }
+        />
         {v.label}
       </button>
     </Tooltip>

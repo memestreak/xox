@@ -67,10 +67,10 @@ describe('TrackEndBar', () => {
       // hover variant and sets the solid color
       expect(
         slider.className
-      ).toContain('before:bg-neutral-300');
+      ).toContain('before:bg-ink');
       expect(
         slider.className
-      ).not.toContain('hover:before:bg-neutral-300');
+      ).not.toContain('hover:before:bg-ink');
       base.onToggleFreeRun.mockClear();
       fireEvent.contextMenu(slider);
       expect(

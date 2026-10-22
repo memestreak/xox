@@ -86,19 +86,38 @@ describe('TrackNameButton', () => {
     ).toHaveFocus();
   });
 
-  it('arrow keys keep focus on menu items', () => {
+  it('arrow keys move focus between menu items', () => {
     renderButton();
     const menu = openMenu();
-    const item = screen.getByRole('menuitem', {
-      name: /free-run/i,
-    });
-    // Single item: ArrowDown/ArrowUp/End/Home wrap to it.
-    for (const key of [
-      'ArrowDown', 'ArrowUp', 'End', 'Home',
-    ]) {
-      fireEvent.keyDown(menu, { key });
-      expect(item).toHaveFocus();
-    }
+    const [freeRun, preview, clear] =
+      screen.getAllByRole('menuitem');
+    expect(freeRun).toHaveFocus();
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(preview).toHaveFocus();
+    fireEvent.keyDown(menu, { key: 'End' });
+    expect(clear).toHaveFocus();
+    // Focus wraps at both ends.
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(freeRun).toHaveFocus();
+    fireEvent.keyDown(menu, { key: 'ArrowUp' });
+    expect(clear).toHaveFocus();
+    fireEvent.keyDown(menu, { key: 'Home' });
+    expect(freeRun).toHaveFocus();
+  });
+
+  it('menu previews and clears the track', () => {
+    const props = renderButton();
+    openMenu();
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: /preview/i })
+    );
+    expect(props.onPlayPreview).toHaveBeenCalled();
+    expect(screen.queryByRole('menu')).toBeNull();
+    openMenu();
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: /clear track/i })
+    );
+    expect(props.onClearTrack).toHaveBeenCalledTimes(1);
   });
 
   it('arrow keys do not reach document listeners', () => {

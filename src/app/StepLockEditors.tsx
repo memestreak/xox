@@ -11,11 +11,8 @@ export function GainLockEditor({
   onChange,
 }: GainLockEditorProps) {
   return (
-    <div className="space-y-1">
-      <div className={
-        'text-[10px] uppercase tracking-wider'
-        + ' text-neutral-500'
-      }>
+    <div className="space-y-1.5">
+      <div className="ss-label">
         Gain
       </div>
       <RangeSlider
@@ -39,11 +36,8 @@ export function PanLockEditor({
   onChange,
 }: PanLockEditorProps) {
   return (
-    <div className="space-y-1">
-      <div className={
-        'text-[10px] uppercase tracking-wider'
-        + ' text-neutral-500'
-      }>
+    <div className="space-y-1.5">
+      <div className="ss-label">
         Pan
       </div>
       <PanSlider

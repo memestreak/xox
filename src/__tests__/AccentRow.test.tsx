@@ -37,7 +37,7 @@ describe('AccentRow', () => {
     );
     expect(
       btn0.className
-    ).toContain('bg-orange-600');
+    ).toContain('bg-accent');
   });
 
   it('shows inactive state for off steps', () => {
@@ -47,7 +47,7 @@ describe('AccentRow', () => {
     );
     expect(
       btn3.className
-    ).toContain('bg-neutral-800');
+    ).toContain('bg-[#2a2824]');
   });
 
   it('calls onToggleStep on click', () => {
@@ -158,7 +158,7 @@ describe('AccentRow', () => {
     );
     expect(
       btn.className
-    ).toContain('bg-orange-400');
+    ).toContain('bg-accent-hi');
   });
 
   it('renders intensity knob', () => {

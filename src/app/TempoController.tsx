@@ -53,7 +53,7 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
   }, []);
 
   return (
-    <div className="relative flex items-center">
+    <div className="flex items-center h-10 lg:h-11 rounded-lg bg-well border border-line pl-2.5 lg:pl-3.5 pr-1 shadow-[inset_0_2px_6px_rgb(0_0_0/0.6)]">
       <label htmlFor="bpm-input" className="sr-only">BPM</label>
       <input
         id="bpm-input"
@@ -66,8 +66,11 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
         min={MIN_BPM}
         max={MAX_BPM}
         onChange={(e) => setBpm(Math.max(MIN_BPM, Math.min(MAX_BPM, Number(e.target.value) || MIN_BPM)))}
-        className="bg-neutral-900 border border-neutral-800 rounded pl-2 pr-10 py-1 w-28 text-orange-500 font-bold font-[family-name:var(--font-orbitron)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:border-orange-500 transition-colors"
+        className="w-12 lg:w-16 bg-transparent text-right font-mono font-bold text-lg lg:text-2xl text-lcd [text-shadow:0_0_10px_rgb(245_160_58/0.45)] tabular-nums focus-visible:outline-none focus-visible:underline decoration-accent underline-offset-4 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
+      <span className="ss-label text-[10px] mx-1.5 lg:mx-2" aria-hidden="true">
+        BPM
+      </span>
       <Tooltip tooltipKey="tap" position="bottom">
         <button
           ref={tapBtnRef}
@@ -76,10 +79,9 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
           onMouseDown={() => { handleTap(); flashTap(); }}
           onTouchStart={() => { handleTap(); flashTap(); }}
           onClick={(e) => e.preventDefault()}
-          className="group/tap absolute inset-y-0 right-0 px-2 flex items-center text-[10px] uppercase tracking-widest font-bold font-[family-name:var(--font-orbitron)] cursor-pointer transition-colors"
+          className="ss-key ss-cap h-8 lg:h-[34px] px-2 lg:px-2.5 text-[11px] lg:text-xs text-muted hover:text-ink"
         >
-          <span className="text-neutral-500 group-hover/tap:hidden">BPM</span>
-          <span className="text-neutral-400 hidden group-hover/tap:inline">TAP</span>
+          Tap
         </button>
       </Tooltip>
     </div>

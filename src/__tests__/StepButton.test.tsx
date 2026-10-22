@@ -9,7 +9,6 @@ const base = {
   stepIndex: 0,
   isActive: true,
   isCurrent: false,
-  isBeat: false,
   isDisabled: false,
   onToggle: vi.fn(),
 };

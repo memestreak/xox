@@ -21,14 +21,14 @@ describe('PageIndicator', () => {
     expect(dots.length).toBe(4);
   });
 
-  it('renders single dot when pageCount is 1', () => {
+  it('hides the dots when there is only one page', () => {
     render(
       <PageIndicator {...defaults} pageCount={1} />
     );
-    const dots = screen.getAllByRole('button', {
+    const dots = screen.queryAllByRole('button', {
       name: /^Page \d/,
     });
-    expect(dots.length).toBe(1);
+    expect(dots.length).toBe(0);
   });
 
   it('clicking a dot calls setPage', () => {
@@ -50,7 +50,7 @@ describe('PageIndicator', () => {
     const dots = screen.getAllByRole('button', {
       name: /^Page \d/,
     });
-    expect(dots[1].className).toContain('bg-orange');
+    expect(dots[1].className).toContain('bg-accent');
   });
 
   it('follow toggle shows active state', () => {

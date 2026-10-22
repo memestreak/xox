@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useEffect } from 'react';
+import { FaderCap, FaderTrack } from './RangeSlider';
 
 interface PanSliderProps {
   value: number;
@@ -108,7 +109,7 @@ export default function PanSlider({
   const widthPct = (barWidth / 100) * 100;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <div
         ref={trackRef}
         role="slider"
@@ -118,11 +119,11 @@ export default function PanSlider({
         aria-valuenow={value}
         aria-label="Pan"
         className={
-          'relative h-6 flex-1 rounded'
-          + ' bg-neutral-700 cursor-ew-resize'
-          + ' focus-visible:outline-none'
-          + ' focus-visible:ring-2'
-          + ' focus-visible:ring-orange-500'
+          'relative h-7 flex-1 flex items-center'
+          + ' cursor-ew-resize rounded'
+          + ' focus-visible:outline-2'
+          + ' focus-visible:outline-offset-2'
+          + ' focus-visible:outline-accent'
         }
         style={{ touchAction: 'none' }}
         onPointerDown={onPointerDown}
@@ -131,22 +132,23 @@ export default function PanSlider({
         onLostPointerCapture={release}
         onKeyDown={onKeyDown}
       >
+        <FaderTrack />
+        {/* Center detent mark */}
+        <div className="absolute left-1/2 w-px h-3 bg-faint pointer-events-none" />
         {widthPct > 0 && (
           <div
-            className={
-              'absolute inset-y-0 rounded'
-              + ' bg-orange-600'
-            }
+            className="absolute h-1 rounded-sm bg-accent pointer-events-none"
             style={{
               left: `${offsetPct}%`,
               width: `${widthPct}%`,
             }}
           />
         )}
+        <FaderCap pct={value} />
       </div>
       <span className={
-        'text-xs font-mono text-neutral-300'
-        + ' w-10 text-right tabular-nums'
+        'text-[13px] font-mono text-ink'
+        + ' w-11 text-right tabular-nums'
       }>
         {formatPan(value)}
       </span>

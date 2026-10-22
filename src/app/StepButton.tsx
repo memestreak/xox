@@ -7,7 +7,7 @@ import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
 import { LONG_PRESS_MS, LONG_PRESS_CANCEL_PX } from './constants';
-import { getStepColor } from './stepColors';
+import { getStepColor, stepGroup } from './stepColors';
 import {
   ProbabilityBar,
   PanIndicator,
@@ -22,7 +22,6 @@ interface StepButtonProps {
   stepIndex: number;
   isActive: boolean;
   isCurrent: boolean;
-  isBeat: boolean;
   isDisabled: boolean;
   isSelected?: boolean;
   mini?: boolean;
@@ -57,7 +56,6 @@ function StepButtonInner({
   stepIndex,
   isActive,
   isCurrent,
-  isBeat,
   isDisabled,
   isSelected,
   mini,
@@ -114,9 +112,9 @@ function StepButtonInner({
   }, [longPressActiveRef]);
 
   const sizeClass = mini
-    ? 'w-4 h-4 lg:w-5 lg:h-5' : 'h-8 lg:h-12';
+    ? 'w-4 h-4 lg:w-5 lg:h-5' : 'h-9 lg:h-10';
   const radiusClass = mini
-    ? 'rounded-full' : 'rounded-sm';
+    ? 'rounded-full' : 'rounded-[5px]';
 
   if (isDisabled) {
     const disabledEl = (
@@ -128,11 +126,7 @@ function StepButtonInner({
         }
         className={
           sizeClass + ' ' + radiusClass
-          + ' bg-neutral-900/20 cursor-not-allowed'
-          + ' border-l-2'
-          + (isBeat && !mini
-            ? ' border-neutral-800/30'
-            : ' border-transparent')
+          + ' bg-well/60 cursor-not-allowed'
         }
       />
     );
@@ -147,7 +141,7 @@ function StepButtonInner({
   }
 
   const color = getStepColor(
-    isActive, isCurrent, mini
+    isActive, isCurrent, mini, stepGroup(stepIndex)
   );
   const showBadges = !mini && isActive;
 
@@ -206,15 +200,20 @@ function StepButtonInner({
         className={
           'relative overflow-hidden'
           + ' ' + sizeClass + ' ' + radiusClass
-          + ' transition-colors duration-100'
-          + ' motion-safe:transition-transform'
+          + ' transition-[background-color,filter]'
+          + ' duration-100'
           + ' focus:outline-none'
-          + ' focus-visible:outline-none '
+          + ' focus-visible:outline-2'
+          + ' focus-visible:outline-offset-2'
+          + ' focus-visible:outline-accent '
           + color
-          + ' border-l-2'
-          + (isBeat && !mini
-            ? ' border-neutral-700'
-            : ' border-transparent')
+          + (mini
+            ? ''
+            // Indicator LED notch at the top of the key
+            : ' after:absolute after:left-1/2'
+              + ' after:top-[5px] after:w-1.5'
+              + ' after:h-[3px] after:-translate-x-1/2'
+              + ' after:rounded-sm')
           + (isSelected
             ? ' ring-2 ring-blue-400/70' : '')
         }
