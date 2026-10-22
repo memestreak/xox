@@ -43,6 +43,9 @@ class AudioEngine {
   // that was waiting on ctx.resume() checks it to know
   // whether it has been cancelled in the meantime.
   private runId = 0;
+  // Incremented by every preloadKit() call. Only the
+  // latest request may install its samples.
+  private kitRequestId = 0;
 
   // Scheduler Configuration
   private bpm: number = 110;
@@ -100,9 +103,16 @@ class AudioEngine {
    * Fetches and decodes audio samples for a specific kit folder.
    * Samples are stored in memory as AudioBuffers.
    *
+   * The new samples replace the current ones only once
+   * they have all loaded, so the previous kit keeps
+   * playing meanwhile. If another preloadKit() call
+   * starts first, this one's results are discarded.
+   *
    * @param kitFolder - The folder containing the kit samples. E.g., "808"
+   * @returns true if this kit was installed, false if a
+   *   newer request superseded it.
    */
-  public async preloadKit(kitFolder: string) {
+  public async preloadKit(kitFolder: string): Promise<boolean> {
     this.init();
     const sounds: TrackId[] = ['bd', 'sd', 'ch', 'oh', 'ac', 'cy', 'ht', 'mt', 'lt', 'rs', 'cp', 'cb'];
     const filenames: Partial<Record<TrackId, string>> = {
@@ -119,7 +129,9 @@ class AudioEngine {
       cb: 'cb.wav'
     };
 
-    this.buffers.clear();
+    const requestId = ++this.kitRequestId;
+    const isCurrent = () => requestId === this.kitRequestId;
+    const loaded = new Map<TrackId, AudioBuffer>();
 
     const promises = sounds.map(async (id) => {
       const filename = filenames[id];
@@ -130,8 +142,9 @@ class AudioEngine {
         if (!response.ok) throw new Error(`Status: ${response.status}`);
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await this.ctx!.decodeAudioData(arrayBuffer);
-        this.buffers.set(id, audioBuffer);
+        loaded.set(id, audioBuffer);
       } catch (e) {
+        if (!isCurrent()) return;
         console.error(`Failed to load ${id} for kit ${kitFolder}`, e);
         this.onLoadError(
           `Failed to load ${id} sample for kit "${kitFolder}"`
@@ -140,6 +153,9 @@ class AudioEngine {
     });
 
     await Promise.all(promises);
+    if (!isCurrent()) return false;
+    this.buffers = loaded;
+    return true;
   }
 
   /**

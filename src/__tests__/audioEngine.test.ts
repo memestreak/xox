@@ -1,6 +1,7 @@
 import {
   describe, expect, it, vi, beforeEach, afterEach,
 } from 'vitest';
+import type { TrackId } from '../app/types';
 
 // Mutable currentTime that the mock AudioContext reads.
 let mockCurrentTime = 0;
@@ -452,4 +453,82 @@ describe('AudioEngine late steps (#119)', () => {
     }
     expect(late).not.toHaveBeenCalled();
   });
+});
+
+describe('AudioEngine kit loading (#123)', () => {
+  type Deferred = { resolve: () => void };
+
+  /**
+   * Stub fetch so each kit's responses are held until
+   * released, and decodeAudioData returns a marker
+   * buffer naming the kit it came from.
+   */
+  function stubKitFetch() {
+    const pending: Record<string, Deferred[]> = {};
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      const kit = url.split('/')[2];
+      return new Promise(resolve => {
+        (pending[kit] ??= []).push({
+          resolve: () => resolve({
+            ok: true,
+            arrayBuffer: async () => kit,
+          }),
+        });
+      });
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = (audioEngine as any).ctx as MockAudioContext;
+    ctx.decodeAudioData = vi.fn(
+      async (data: unknown) => ({ kit: data })
+    );
+    return {
+      release: (kit: string) =>
+        pending[kit]?.forEach(d => d.resolve()),
+    };
+  }
+
+  function bufferKit(id: TrackId): unknown {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffers = (audioEngine as any).buffers as Map<
+      TrackId, { kit: string }
+    >;
+    return buffers.get(id)?.kit;
+  }
+
+  it('a slow earlier load cannot overwrite a newer kit',
+    async () => {
+      // Ensure the context exists before stubbing it.
+      vi.stubGlobal(
+        'fetch', vi.fn().mockRejectedValue(new Error('x'))
+      );
+      await audioEngine.preloadKit('808');
+      const net = stubKitFetch();
+
+      const first = audioEngine.preloadKit('808');
+      const second = audioEngine.preloadKit('electro');
+      net.release('electro');
+      expect(await second).toBe(true);
+      net.release('808');
+      expect(await first).toBe(false);
+
+      expect(bufferKit('bd')).toBe('electro');
+      expect(bufferKit('cb')).toBe('electro');
+    }
+  );
+
+  it('keeps the previous kit until the new one loads',
+    async () => {
+      const net = stubKitFetch();
+      const a = audioEngine.preloadKit('808');
+      net.release('808');
+      await a;
+
+      const b = audioEngine.preloadKit('electro');
+      await Promise.resolve();
+      expect(bufferKit('bd')).toBe('808');
+      net.release('electro');
+      await b;
+      expect(bufferKit('bd')).toBe('electro');
+    }
+  );
 });

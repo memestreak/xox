@@ -31,7 +31,7 @@ const mockRequestReset = vi.fn();
 
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
-    preloadKit: vi.fn().mockResolvedValue(undefined),
+    preloadKit: vi.fn().mockResolvedValue(true),
     start: (...args: unknown[]) => mockStart(...args),
     stop: (...args: unknown[]) => mockStop(...args),
     setBpm: vi.fn(),

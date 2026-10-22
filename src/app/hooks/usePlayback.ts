@@ -161,15 +161,20 @@ export function usePlayback({
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       setIsLoaded(false);
       setLoadError(null);
-      await audioEngine.preloadKit(
+      const installed = await audioEngine.preloadKit(
         currentKit.folder
       );
-      setIsLoaded(true);
+      // A newer kit selection owns isLoaded now.
+      if (installed && !cancelled) setIsLoaded(true);
     };
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [currentKit]);
 
   useEffect(() => {

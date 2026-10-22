@@ -22,7 +22,7 @@ beforeAll(() => {
 
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
-    preloadKit: vi.fn().mockResolvedValue(undefined),
+    preloadKit: vi.fn().mockResolvedValue(true),
     start: vi.fn(),
     stop: vi.fn(),
     setBpm: vi.fn(),
