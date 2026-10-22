@@ -11,6 +11,8 @@ import {
 } from 'react';
 import patternsData from './data/patterns.json';
 import { defaultConfig, decodeConfig } from './configCodec';
+import { loadSession, saveSession } from './configStorage';
+import { AUTOSAVE_DEBOUNCE_MS } from './constants';
 import { TRACK_IDS } from './types';
 import { useFillMode } from './hooks/useFillMode';
 import { usePatternMode } from './hooks/usePatternMode';
@@ -207,19 +209,104 @@ export function SequencerProvider({
     configRef.current = config;
   }, [config]);
 
-  // ─── URL hash import on mount ────────────────
+  // ─── Restore on mount, then autosave ─────────
+  // Autosave starts only after the initial restore, so
+  // the default config never overwrites a saved session.
+  const [restored, setRestored] = useState(false);
+  const selectedPatternIdRef = useRef(selectedPatternId);
   useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    if (!hash) return;
-    decodeConfig(hash)
-      .then(decoded => {
-        setConfig(decoded);
-        setSelectedPatternId('custom');
-      })
-      .catch(() => {
-        // Silently fall back to default config
-      });
+    selectedPatternIdRef.current = selectedPatternId;
+  }, [selectedPatternId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    /**
+     * Import a share link from the URL hash. Returns true
+     * if a valid config was applied. The hash is removed
+     * afterwards so a later refresh restores the
+     * autosaved session (with any newer edits) instead
+     * of the original link.
+     */
+    const importFromHash = async (): Promise<boolean> => {
+      const hash = window.location.hash.slice(1);
+      if (!hash) return false;
+      let decoded: SequencerConfig;
+      try {
+        decoded = await decodeConfig(hash);
+      } catch {
+        return false;
+      }
+      if (cancelled) return false;
+      setConfig(decoded);
+      setSelectedPatternId('custom');
+      window.history.replaceState(
+        null, '',
+        window.location.pathname + window.location.search
+      );
+      return true;
+    };
+
+    const restore = async () => {
+      const imported = await importFromHash();
+      if (cancelled) return;
+      if (!imported) {
+        const saved = loadSession();
+        if (saved) {
+          setConfig(saved.config);
+          setSelectedPatternId(saved.selectedPatternId);
+        }
+      }
+      setRestored(true);
+    };
+    restore();
+
+    // A share link pasted into an open tab only changes
+    // the hash, which doesn't reload the page.
+    const onHashChange = () => {
+      importFromHash();
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(
+        'hashchange', onHashChange
+      );
+    };
   }, []);
+
+  useEffect(() => {
+    if (!restored) return;
+    const timer = setTimeout(() => {
+      saveSession({ config, selectedPatternId });
+    }, AUTOSAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [config, selectedPatternId, restored]);
+
+  // Flush immediately when the page is hidden or closed,
+  // so an edit inside the debounce window isn't lost.
+  useEffect(() => {
+    if (!restored) return;
+    const flush = () => {
+      saveSession({
+        config: configRef.current,
+        selectedPatternId: selectedPatternIdRef.current,
+      });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener(
+      'visibilitychange', onVisibility
+    );
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener(
+        'visibilitychange', onVisibility
+      );
+    };
+  }, [restored]);
 
   // ─── Compose hooks ───────────────────────────
   const fill = useFillMode();

@@ -2,6 +2,9 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useSequencer } from '../app/SequencerContext';
 import { defaultConfig, encodeConfig } from '../app/configCodec';
+import {
+  CONFIG_STORAGE_KEY, loadSession, saveSession,
+} from '../app/configStorage';
 import { TRACK_IDS, getPatternLength } from '../app/types';
 import type { Pattern, TrackId, TrackConfig } from '../app/types';
 import patternsData from '../app/data/patterns.json';
@@ -1228,4 +1231,106 @@ describe('setParameterLock merging', () => {
       expect(locks).toBeUndefined();
     }
   );
+});
+
+// -------------------------------------------------------
+// Autosave and restore (#120)
+// -------------------------------------------------------
+describe('autosave and restore', () => {
+  beforeEach(() => {
+    window.location.hash = '';
+  });
+
+  it('saves edits to localStorage', async () => {
+    const { result } = renderSequencer();
+    await act(async () => {
+      result.current.actions.setBpm(142);
+    });
+    await waitFor(() => {
+      const session = loadSession();
+      expect(session?.config.bpm).toBe(142);
+    });
+  });
+
+  it('restores the saved session on mount', async () => {
+    const config = defaultConfig();
+    config.bpm = 97;
+    saveSession({ config, selectedPatternId: 'custom' });
+
+    const { result } = renderSequencer();
+    await waitFor(() => {
+      expect(result.current.meta.config.bpm).toBe(97);
+    });
+    expect(
+      result.current.state.selectedPatternId
+    ).toBe('custom');
+  });
+
+  it('a share link wins over the saved session and is'
+    + ' cleared from the URL', async () => {
+    const saved = defaultConfig();
+    saved.bpm = 97;
+    saveSession({ config: saved, selectedPatternId: 'x' });
+
+    const shared = defaultConfig();
+    shared.bpm = 150;
+    window.location.hash = await encodeConfig(shared);
+
+    const { result } = renderSequencer();
+    await waitFor(() => {
+      expect(result.current.meta.config.bpm).toBe(150);
+    });
+    expect(window.location.hash).toBe('');
+  });
+
+  it('an invalid share link falls back to the saved'
+    + ' session', async () => {
+    const saved = defaultConfig();
+    saved.bpm = 97;
+    saveSession({ config: saved, selectedPatternId: 'x' });
+    window.location.hash = 'NOT_A_VALID_LINK';
+
+    const { result } = renderSequencer();
+    await waitFor(() => {
+      expect(result.current.meta.config.bpm).toBe(97);
+    });
+  });
+
+  it('does not overwrite the saved session with'
+    + ' defaults before restoring', async () => {
+    const saved = defaultConfig();
+    saved.bpm = 97;
+    saveSession({ config: saved, selectedPatternId: 'x' });
+
+    renderSequencer();
+    await new Promise(r => setTimeout(r, 400));
+    expect(loadSession()?.config.bpm).toBe(97);
+  });
+
+  it('imports a share link pasted into an open tab',
+    async () => {
+      const { result } = renderSequencer();
+      const shared = defaultConfig();
+      shared.bpm = 133;
+      const hash = await encodeConfig(shared);
+
+      await act(async () => {
+        window.location.hash = hash;
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      });
+      await waitFor(() => {
+        expect(result.current.meta.config.bpm).toBe(133);
+      });
+    }
+  );
+
+  it('ignores corrupted saved data', async () => {
+    window.localStorage.setItem(
+      CONFIG_STORAGE_KEY, '{not json'
+    );
+    const { result } = renderSequencer();
+    await new Promise(r => setTimeout(r, 50));
+    expect(result.current.meta.config.bpm)
+      .toBe(defaultConfig().bpm);
+  });
 });

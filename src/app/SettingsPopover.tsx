@@ -62,9 +62,6 @@ export default function SettingsPopover() {
         window.location.pathname +
         '#' +
         hash;
-      window.history.replaceState(
-        null, '', '#' + hash
-      );
       await navigator.clipboard.writeText(url);
       setFeedback('Copied!');
       setTimeout(() => setFeedback(''), FEEDBACK_TIMEOUT_MS);

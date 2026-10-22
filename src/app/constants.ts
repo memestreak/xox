@@ -44,6 +44,8 @@ export const GAIN_EXPONENT = 3;
 export const TRIGGER_FLASH_MS = 150;
 /** Duration of copy/export feedback messages (ms). */
 export const FEEDBACK_TIMEOUT_MS = 1500;
+/** Delay after the last edit before autosaving (ms). */
+export const AUTOSAVE_DEBOUNCE_MS = 300;
 
 // ── Tempo ───────────────────────────────────────────
 export const BPM_MIN = 20;

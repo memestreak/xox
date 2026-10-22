@@ -3,6 +3,7 @@
 exports[`constants snapshot 1`] = `
 {
   "ACCENT_GAIN_MULTIPLIER": 2,
+  "AUTOSAVE_DEBOUNCE_MS": 300,
   "BPM_MAX": 300,
   "BPM_MIN": 20,
   "CYCLE_PX_PER_STEP": 6,
