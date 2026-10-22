@@ -42,7 +42,10 @@ two internal contexts for render isolation: ConfigContext
 `{ state, actions, meta }`. Uses `requestAnimationFrame` for
 visual step sync. Solo/mute priority: if any track is soloed,
 only soloed tracks play; otherwise non-muted tracks play.
-Accented steps play at 1.5x gain.
+Accented steps multiply gain by `1 + accentLevel × 2`
+(2x at the default accent level of 0.5, up to 3x). The
+master bus runs through a limiter (`AudioEngine.init`)
+so summed and accented hits don't clip.
 
 **SequencerConfig (`src/app/types.ts`)** — Canonical type for
 all persistable state (kit, BPM, steps, mixer). Single source

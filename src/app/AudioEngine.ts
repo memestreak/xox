@@ -1,7 +1,13 @@
 "use client";
 
 import { TrackId } from './types';
-import { LOOKAHEAD_MS, SCHEDULE_AHEAD_S } from './constants';
+import {
+  LIMITER_ATTACK_S,
+  LIMITER_RELEASE_S,
+  LIMITER_THRESHOLD_DB,
+  LOOKAHEAD_MS,
+  SCHEDULE_AHEAD_S,
+} from './constants';
 
 // Minimal silent WAV (8-bit mono, 7 samples at 44100 Hz).
 // Playing this via an <audio> element forces iOS to switch
@@ -31,6 +37,7 @@ export type StepCallback = (
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
   private buffers: Map<TrackId, AudioBuffer> = new Map();
   private silentAudio: HTMLAudioElement | null = null;
 
@@ -77,7 +84,17 @@ class AudioEngine {
       || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new AudioCtx();
     this.masterGain = this.ctx.createGain();
-    this.masterGain.connect(this.ctx.destination);
+    // Voices sum (and accents boost up to 3x), so catch
+    // peaks with a brick-wall-style limiter instead of
+    // letting the output clip.
+    this.limiter = this.ctx.createDynamicsCompressor();
+    this.limiter.threshold.value = LIMITER_THRESHOLD_DB;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = 20;
+    this.limiter.attack.value = LIMITER_ATTACK_S;
+    this.limiter.release.value = LIMITER_RELEASE_S;
+    this.masterGain.connect(this.limiter);
+    this.limiter.connect(this.ctx.destination);
   }
 
   /**

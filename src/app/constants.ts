@@ -39,6 +39,13 @@ export const ACCENT_GAIN_MULTIPLIER = 2;
 /** Exponent for cubic gain curve (perceived loudness). */
 export const GAIN_EXPONENT = 3;
 
+/** Master limiter threshold (dBFS). */
+export const LIMITER_THRESHOLD_DB = -1;
+/** Master limiter attack time (seconds). */
+export const LIMITER_ATTACK_S = 0.003;
+/** Master limiter release time (seconds). */
+export const LIMITER_RELEASE_S = 0.1;
+
 // ── UI timing ───────────────────────────────────────
 /** Duration of the triggered-track flash highlight (ms). */
 export const TRIGGER_FLASH_MS = 150;

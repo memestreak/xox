@@ -28,6 +28,18 @@ class MockAudioContext {
     return {};
   }
 
+  createDynamicsCompressor() {
+    const param = () => ({ value: 0 });
+    return {
+      threshold: param(),
+      knee: param(),
+      ratio: param(),
+      attack: param(),
+      release: param(),
+      connect: vi.fn(),
+    };
+  }
+
   createBufferSource() {
     return {
       buffer: null as AudioBuffer | null,
@@ -557,5 +569,23 @@ describe('AudioEngine callback errors (#124)', () => {
     expect(steps.length).toBeGreaterThan(1);
     expect(error).toHaveBeenCalled();
     error.mockRestore();
+  });
+});
+
+describe('AudioEngine master limiter (#125)', () => {
+  it('routes the master bus through a limiter', async () => {
+    vi.stubGlobal(
+      'fetch', vi.fn().mockRejectedValue(new Error('x'))
+    );
+    await audioEngine.preloadKit('808');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const engine = audioEngine as any;
+    expect(engine.limiter).not.toBeNull();
+    expect(engine.limiter.threshold.value).toBe(-1);
+    expect(engine.limiter.ratio.value).toBe(20);
+    expect(engine.masterGain.connect)
+      .toHaveBeenCalledWith(engine.limiter);
+    expect(engine.limiter.connect)
+      .toHaveBeenCalledWith(engine.ctx.destination);
   });
 });
