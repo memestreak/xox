@@ -56,7 +56,7 @@ describe('SettingsPopover', () => {
     );
     expect(screen.getByRole('menu')).toBeInTheDocument();
     expect(
-      screen.getByRole('menuitem', { name: /export url/i })
+      screen.getByRole('menuitem', { name: /copy share link/i })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('menuitem', { name: /settings…/i })
@@ -95,7 +95,7 @@ describe('SettingsPopover', () => {
       screen.getByRole('button', { name: /settings/i })
     );
     fireEvent.click(
-      screen.getByRole('menuitem', { name: /export url/i })
+      screen.getByRole('menuitem', { name: /copy share link/i })
     );
 
     await waitFor(() => {
@@ -132,7 +132,7 @@ describe('SettingsPopover', () => {
       screen.getByRole('button', { name: /settings/i })
     );
     fireEvent.click(
-      screen.getByRole('menuitem', { name: /export url/i })
+      screen.getByRole('menuitem', { name: /copy share link/i })
     );
 
     await waitFor(() => {

@@ -17,6 +17,13 @@ import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
 
+const POPOVER_WIDTH = 288;
+
+const RESET_BUTTON =
+  'ss-key h-6 px-2 text-xs text-muted hover:text-ink'
+  + ' disabled:opacity-40 disabled:cursor-default'
+  + ' disabled:hover:text-muted';
+
 interface StepPopoverProps {
   trackId: TrackId;
   stepIndex: number;
@@ -315,32 +322,35 @@ export default function StepPopover({
       role="dialog"
       aria-modal="true"
       aria-label="Step editor"
-      className={
-        'fixed z-30'
-        + ' w-56 bg-neutral-900 border'
-        + ' border-neutral-700 rounded-lg'
-        + ' shadow-xl p-3 space-y-3'
-      }
+      className="ss-menu fixed z-30 w-72 p-3.5 space-y-3.5"
       style={anchorRect ? {
         top: `${flippedTop ?? anchorRect.top}px`,
-        left: `${anchorRect.left}px`,
+        // Keep the popover on screen near the right edge.
+        left: `${Math.max(
+          8,
+          Math.min(
+            anchorRect.left,
+            window.innerWidth - POPOVER_WIDTH - 8
+          )
+        )}px`,
       } : undefined}
     >
       {/* Header */}
       <div className={
         'flex items-center justify-between'
       }>
-        <div className={
-          'text-xs font-bold uppercase'
-          + ' tracking-wider text-neutral-400'
-        }>
+        <div className="flex items-baseline gap-2">
           {isBulk ? (
-            `${bulkTargets!.length} cells selected`
+            <span className="ss-label text-ink">
+              {`${bulkTargets!.length} cells selected`}
+            </span>
           ) : (
             <>
-              Step {stepIndex + 1}{' '}
-              <span className="text-neutral-500">
-                {'\u00B7'} {trackId.toUpperCase()}
+              <span className="ss-cap text-lg leading-none text-ink">
+                {trackId.toUpperCase()}
+              </span>
+              <span className="ss-label">
+                Step {stepIndex + 1}
               </span>
             </>
           )}
@@ -355,18 +365,7 @@ export default function StepPopover({
             onClose();
           }}
           disabled={!isBulk && conditions === undefined}
-          className={
-            'text-[11px] px-1.5 py-0.5 rounded'
-            + ' border transition-colors'
-            + ((isBulk || conditions !== undefined)
-              ? ' text-neutral-400'
-                + ' hover:text-neutral-200'
-                + ' border-neutral-700'
-                + ' hover:bg-neutral-800'
-              : ' text-neutral-700'
-                + ' border-neutral-800'
-                + ' cursor-default')
-          }
+          className={RESET_BUTTON}
         >
           Reset trig cond.
         </button>
@@ -390,16 +389,13 @@ export default function StepPopover({
       />
 
       {/* Divider */}
-      <div className="border-t border-neutral-700" />
+      <div className="border-t border-line" />
 
       {/* Locks header */}
       <div className={
         'flex items-center justify-between'
       }>
-        <div className={
-          'text-xs font-bold uppercase'
-          + ' tracking-wider text-neutral-400'
-        }>
+        <div className="ss-label text-ink">
           Locks
         </div>
         <button
@@ -415,18 +411,7 @@ export default function StepPopover({
             panTouched.current = false;
           }}
           disabled={!isBulk && locks === undefined}
-          className={
-            'text-[11px] px-1.5 py-0.5 rounded'
-            + ' border transition-colors'
-            + ((isBulk || locks !== undefined)
-              ? ' text-neutral-400'
-                + ' hover:text-neutral-200'
-                + ' border-neutral-700'
-                + ' hover:bg-neutral-800'
-              : ' text-neutral-700'
-                + ' border-neutral-800'
-                + ' cursor-default')
-          }
+          className={RESET_BUTTON}
         >
           Reset locks
         </button>

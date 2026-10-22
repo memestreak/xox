@@ -25,39 +25,30 @@ function PageIndicatorInner({
   setAutoFollow,
 }: PageIndicatorProps) {
   return (
-    <div
-      className={
-        'flex flex-col items-start gap-1.5'
-        + ' flex-shrink-0'
-      }
-    >
+    <div className="flex items-center gap-2 flex-shrink-0">
       <Tooltip tooltipKey="follow" position="bottom">
         <button
           aria-label="Auto-follow playhead"
           aria-pressed={autoFollow}
           onClick={() => setAutoFollow(!autoFollow)}
           className={
-            'px-2.5 py-px rounded-full'
-            + ' text-[10px] lg:text-xs'
+            'ss-key ss-cap h-9 px-2.5 text-xs'
+            + ' inline-flex items-center gap-1.5'
             + ' whitespace-nowrap'
-            + ' font-bold font-[family-name:var(--font-orbitron)]'
-            + ' transition-colors'
-            + ' focus-visible:outline-none'
-            + ' focus-visible:ring-2'
-            + ' focus-visible:ring-orange-500 '
-            + ' border'
-            + (autoFollow
-              ? ' bg-orange-600 text-white'
-                + ' border-transparent'
-              : ' bg-neutral-800'
-                + ' border-neutral-600'
-                + ' text-neutral-500')
+            + (autoFollow ? ' text-ink' : ' text-muted')
           }
         >
+          <span
+            className={
+              'ss-led' + (autoFollow ? ' ss-led-on' : '')
+            }
+          />
           Follow
         </button>
       </Tooltip>
-      <div className="flex gap-1.5 self-center">
+      {/* Page dots only matter past 16 steps. */}
+      {pageCount > 1 && (
+      <div className="flex gap-1.5">
         {Array.from(
           { length: pageCount },
           (_, i) => (
@@ -68,21 +59,20 @@ function PageIndicatorInner({
                 className={
                   'w-2.5 h-2.5 rounded-full'
                   + ' transition-colors'
-                  + ' focus-visible:outline-none'
-                  + ' focus-visible:ring-2'
-                  + ' focus-visible:ring-orange-500 '
+                  + ' focus-visible:outline-2'
+                  + ' focus-visible:outline-offset-2'
+                  + ' focus-visible:outline-accent '
                   + (i === currentPage
-                    ? 'bg-orange-500'
-                      + ' shadow-[0_0_8px_rgba('
-                      + '249,115,22,0.6)]'
-                    : 'bg-neutral-600'
-                      + ' hover:bg-neutral-400')
+                    ? 'bg-accent'
+                      + ' shadow-[0_0_8px_rgb(240_102_42/0.6)]'
+                    : 'bg-edge hover:bg-faint')
                 }
               />
             </Tooltip>
           )
         )}
       </div>
+      )}
     </div>
   );
 }

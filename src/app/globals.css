@@ -1,28 +1,193 @@
 @import "../../node_modules/tailwindcss/index.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Silkscreen theme. Warm graphite hardware panel with
+ * TR-808 style step colors. Colors and fonts are
+ * Tailwind theme tokens, so they work as utilities
+ * (bg-panel, text-ink, font-display, ...).
+ */
+@theme static {
+  --color-ground: #141311;
+  --color-panel: #1c1b19;
+  --color-raised: #262420;
+  --color-well: #0d0c0b;
+  --color-line: #33302b;
+  --color-edge: #3d3933;
+  --color-ink: #ece6da;
+  --color-muted: #a39b8e;
+  --color-faint: #958d80;
+  --color-accent: #f0662a;
+  --color-accent-hi: #ff8a52;
+  --color-lcd: #f5a03a;
+  --color-mute: #f2b23a;
+
+  /* Step keys: one color per group of four steps. */
+  --color-step1: #e4502c;
+  --color-step1-off: #3a221a;
+  --color-step2: #ee8a2a;
+  --color-step2-off: #3a2a1a;
+  --color-step3: #f0c43a;
+  --color-step3-off: #38311b;
+  --color-step4: #ece4d2;
+  --color-step4-off: #33312c;
 }
 
+/* Font vars come from next/font classes on <body>,
+   so they must be inlined rather than read at :root. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-barlow);
+  --font-display: var(--font-barlow-condensed);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-logo: var(--font-orbitron);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-barlow), system-ui, sans-serif;
+}
+
+/* ── Shared Silkscreen components ─────────────── */
+
+@layer components {
+  /* Small caps label printed on the panel. */
+  .ss-label {
+    font-family: var(--font-barlow-condensed);
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Raised hardware key: buttons, selects, triggers. */
+  .ss-key {
+    border: 1px solid var(--color-edge);
+    border-radius: 6px;
+    background: linear-gradient(#2c2925, #23211e);
+    color: var(--color-ink);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
+      0 1px 0 rgb(0 0 0 / 0.5);
+    transition: border-color 120ms, color 120ms,
+      background 120ms;
+  }
+  .ss-key:hover:not(:disabled) {
+    border-color: #57514a;
+  }
+  .ss-key:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Caption text on a key (PLAY, FILL, RESET...). */
+  .ss-cap {
+    font-family: var(--font-barlow-condensed);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* Recessed panel section. */
+  .ss-panel {
+    background: var(--color-panel);
+    border: 1px solid var(--color-line);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  }
+
+  /* Floating menu / popover surface. */
+  .ss-menu {
+    background: #23211e;
+    border: 1px solid var(--color-edge);
+    border-radius: 8px;
+    box-shadow:
+      0 18px 40px rgb(0 0 0 / 0.55),
+      inset 0 1px 0 rgb(255 255 255 / 0.05);
+  }
+
+  /* Status LED. */
+  .ss-led {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: #3b3731;
+    flex-shrink: 0;
+  }
+  .ss-led-on {
+    background: var(--color-accent);
+    box-shadow: 0 0 6px var(--color-accent);
+  }
+}
+
+/*
+ * Native <select> styled as a Silkscreen key. Browsers
+ * that support customizable selects (Chromium 135+)
+ * also get a styled option list; others keep their
+ * native picker (the right call on iOS anyway).
+ */
+.ss-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%23a39b8e' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E"),
+    linear-gradient(#2c2925, #23211e);
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 10px center, 0 0;
+  background-size: 12px 12px, 100% 100%;
+  padding-right: 30px;
+  cursor: pointer;
+}
+
+@supports (appearance: base-select) {
+  .ss-select,
+  .ss-select::picker(select) {
+    appearance: base-select;
+  }
+  .ss-select {
+    display: flex;
+    align-items: center;
+  }
+  /* The chevron comes from the background image. */
+  .ss-select::picker-icon {
+    display: none;
+  }
+  .ss-select:open {
+    border-color: var(--color-accent);
+  }
+  .ss-select::picker(select) {
+    margin-top: 4px;
+    padding: 5px;
+    max-height: 320px;
+    background: #23211e;
+    border: 1px solid var(--color-edge);
+    border-radius: 8px;
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.55);
+    color: var(--color-ink);
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-edge) transparent;
+  }
+  .ss-select option {
+    padding: 7px 10px;
+    border-radius: 5px;
+    font-family: var(--font-barlow);
+    font-size: 14px;
+    color: var(--color-ink);
+    background: transparent;
+    gap: 8px;
+  }
+  .ss-select option:hover,
+  .ss-select option:focus-visible {
+    background: #2f2c27;
+    outline: none;
+  }
+  .ss-select option:checked {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .ss-select option::checkmark {
+    color: var(--color-accent);
+  }
 }
 
 button {
@@ -39,7 +204,7 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
-  background: #262626;
+  background: var(--color-well);
   border-radius: 3px;
 }
 
@@ -54,7 +219,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 input[type="range"]::-moz-range-track {
   height: 6px;
-  background: #262626;
+  background: var(--color-well);
   border-radius: 3px;
   border: none;
 }
@@ -72,11 +237,11 @@ input[type="range"]:focus-visible {
 }
 
 input[type="range"]:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px #f97316;
+  box-shadow: 0 0 0 3px var(--color-accent);
 }
 
 input[type="range"]:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px #f97316;
+  box-shadow: 0 0 0 3px var(--color-accent);
 }
 
 @keyframes temp-blink {
@@ -90,12 +255,8 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 
 @keyframes tap-pulse {
   0% {
-    background-color: rgb(234 88 12 / 0.4);
-    color: #f97316;
-  }
-  100% {
-    background-color: transparent;
-    color: '';
+    background: rgb(240 102 42 / 0.45);
+    color: var(--color-ink);
   }
 }
 

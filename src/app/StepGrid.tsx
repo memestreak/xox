@@ -263,12 +263,45 @@ export default function StepGrid({
   }, [stepRef, stepQueueRef, flashTriggered, setPage]);
 
   return (
-    <div className="space-y-2 lg:space-y-4 bg-neutral-900/30 p-1 lg:p-2 rounded-xl lg:rounded-2xl border border-neutral-800/50">
+    <div className="ss-panel rounded-xl lg:rounded-2xl p-1 lg:p-2">
+      {/* Column header: labels + step numbers */}
+      <div
+        aria-hidden="true"
+        className="hidden lg:flex gap-4 items-end px-4 pt-2"
+      >
+        <div className="w-56 flex items-center gap-2">
+          <span className="ss-label text-[10px] w-14 px-1">
+            Track
+          </span>
+          <span className="ss-label text-[10px] w-14">
+            M · S
+          </span>
+          <span className="ss-label text-[10px] w-7 ml-2 text-center">
+            Vol
+          </span>
+          <span className="ss-label text-[10px] w-7 text-center">
+            Pan
+          </span>
+        </div>
+        <div className="flex-1 grid grid-cols-16 gap-1.5">
+          {Array.from({ length: 16 }, (_, i) => (
+            <span
+              key={i}
+              className={
+                'font-mono text-[10px] text-center '
+                + (i % 4 === 0 ? 'text-muted' : 'text-faint/60')
+              }
+            >
+              {pageOffset + i + 1}
+            </span>
+          ))}
+        </div>
+      </div>
       <div
         ref={dragContainerRef}
         style={{ touchAction: 'none' }}
         {...dragPaint}
-        className="space-y-2 lg:space-y-4 select-none p-2 lg:p-4"
+        className="space-y-2.5 lg:space-y-2 select-none p-2 lg:px-4 lg:pt-2 lg:pb-4"
       >
         {TRACKS.map(track => (
           <TrackRow

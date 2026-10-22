@@ -153,9 +153,9 @@ function TrackEndBarInner({
         + ' before:w-1.5 before:rounded-full'
         + ' before:transition-colors'
         + (isDragging
-          ? ' before:bg-neutral-300'
-          : ' before:bg-neutral-500/60'
-            + ' hover:before:bg-neutral-300')
+          ? ' before:bg-ink'
+          : ' before:bg-edge'
+            + ' hover:before:bg-ink')
       }
     />
   );
@@ -176,7 +176,7 @@ function TrackEndBarInner({
           aria-label="free run"
           style={{
             left: `${handlePct}%`,
-            fontFamily: 'var(--font-orbitron)',
+            fontFamily: 'var(--font-barlow-condensed)',
           }}
           className={
             'absolute top-1/2 -translate-x-1/2'
@@ -185,10 +185,10 @@ function TrackEndBarInner({
             + ' flex items-center'
             + ' justify-center'
             + ' w-3.5 h-3.5 rounded-full'
-            + ' bg-orange-500'
-            + ' text-[10px] font-bold'
-            + ' text-white'
-            + ' shadow-[0_0_6px_rgba(251,146,60,0.6)]'
+            + ' bg-accent'
+            + ' text-[11px] font-bold'
+            + ' text-[#1a0d05]'
+            + ' shadow-[0_0_6px_rgb(240_102_42/0.6)]'
           }
         >
           F

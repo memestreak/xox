@@ -110,7 +110,7 @@ Supporting files:
   output; settings live in `SettingsModal.tsx`
 - `TempoController.tsx` — BPM input (clamped 20-300)
 - `SettingsPopover.tsx` — Gear icon settings menu with
-  Export URL
+  Copy share link
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `data/patterns.json` — preset patterns, one binary step
   string per track (`"1010101010101010"`)
@@ -210,7 +210,19 @@ introduces race conditions.
 - Patterns use binary step strings per track; tracks can
   have different lengths (1-64), and the pattern length is
   the longest track
-- Tailwind CSS v4 for styling
+- Tailwind CSS v4 for styling. The "Silkscreen" theme
+  lives in `globals.css`: color tokens (`bg-panel`,
+  `text-ink`, `text-muted`, `bg-accent`, step colors
+  `bg-step1`..`bg-step4`) and fonts (`font-display` =
+  Barlow Condensed for labels/captions, `font-sans` =
+  Barlow, `font-mono` = JetBrains Mono, `font-logo` =
+  Orbitron). Shared classes: `ss-key` (raised button),
+  `ss-select` (styled native select; Chromium also
+  styles the open list), `ss-label`, `ss-cap`,
+  `ss-panel`, `ss-menu`, `ss-led`. Use these instead
+  of raw `neutral-*`/`orange-*` colors
+- Step keys are colored by group of four (808 style):
+  `stepColors.ts` maps step index to group
 - TypeScript strict mode
 
 ## Multi-PR Workflow

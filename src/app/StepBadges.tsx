@@ -17,7 +17,7 @@ export function ProbabilityBar({
       className="absolute bottom-0 left-0 h-[2px]"
       style={{
         width: `${probability}%`,
-        background: 'rgba(255,255,255,0.85)',
+        background: 'currentColor',
       }}
     />
   );
@@ -39,7 +39,7 @@ export function PanIndicator({
           left: '50%',
           transform: 'translateX(-50%)',
           width: '2px',
-          background: 'rgba(255,255,255,0.85)',
+          background: 'currentColor',
         }}
       />
     );
@@ -58,7 +58,7 @@ export function PanIndicator({
             left: '50%',
             width: `${(panLock - 0.5) * 100}%`,
           }),
-        background: 'rgba(255,255,255,0.85)',
+        background: 'currentColor',
       }}
     />
   );
@@ -73,14 +73,13 @@ export function FillBadge({ fill }: FillBadgeProps) {
     <span
       data-testid="fill-badge"
       className={
-        'absolute top-0 right-0.5'
-        + ' text-[8px] font-bold'
+        'absolute top-0.5 right-1'
+        + ' text-[10px] font-bold'
         + ' leading-none'
         + ' pointer-events-none'
-        + ' text-white'
       }
       style={{
-        fontFamily: 'var(--font-orbitron)',
+        fontFamily: 'var(--font-barlow-condensed)',
       }}
     >
       {fill === 'fill' ? 'F' : '!F'}
@@ -100,14 +99,12 @@ export function CycleBadge({
     <span
       className={
         'absolute inset-0 flex items-center'
-        + ' justify-center text-[13px]'
+        + ' justify-center text-[15px]'
         + ' font-bold leading-none'
         + ' pointer-events-none'
       }
       style={{
-        fontFamily: 'var(--font-orbitron)',
-        color: 'rgba(255,255,255,0.9)',
-        textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+        fontFamily: 'var(--font-barlow-condensed)',
         letterSpacing: '0.05em',
       }}
     >

@@ -10,6 +10,7 @@ import FillButton from './FillButton';
 import PatternModeSelector from './PatternModeSelector';
 import { useSequencer } from './SequencerContext';
 import Tooltip from './Tooltip';
+import PanelSection from './PanelSection';
 
 interface TransportControlsProps {
   pageIndicator?: ReactNode;
@@ -34,13 +35,18 @@ function TransportControlsInner({
   } = actions;
 
   return (
-    <header className="bg-neutral-950 safe-area-top safe-area-x space-y-2 lg:space-y-4">
-      {/* Row 1: Logo + BPM + Play */}
-      <div className="flex justify-between items-center lg:items-end">
-        <h1 className="text-2xl lg:text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600 font-[family-name:var(--font-orbitron)]">
-          X0X
-        </h1>
-        <div className="flex gap-2 lg:gap-4 items-center lg:items-end">
+    <header className="safe-area-top safe-area-x space-y-3 lg:space-y-[18px]">
+      {/* Row 1: Logo + tempo + transport */}
+      <div className="flex justify-between items-center gap-2">
+        <div className="flex items-baseline gap-3 min-w-0">
+          <h1 className="font-logo font-black text-2xl lg:text-[32px] leading-none tracking-[0.02em] text-accent">
+            X0X
+          </h1>
+          <span className="ss-label hidden lg:inline text-faint">
+            Rhythm sequencer
+          </span>
+        </div>
+        <div className="flex gap-1.5 lg:gap-3 items-center">
           <TempoController bpm={bpm} setBpm={setBpm} />
           <Tooltip tooltipKey="play" position="bottom">
             <button
@@ -48,28 +54,49 @@ function TransportControlsInner({
               disabled={!isLoaded}
               aria-label={isPlaying ? 'Stop playback' : 'Start playback'}
               aria-pressed={isPlaying}
-              className={`w-20 lg:w-28 py-2 rounded-full font-bold text-sm lg:text-base text-center font-[family-name:var(--font-orbitron)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${isPlaying
-                ? 'bg-red-600 hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.4)]'
-                : 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_20px_rgba(234,88,12,0.4)]'
-                } ${!isLoaded ? 'opacity-50 cursor-wait' : ''}`}
+              className={
+                'ss-cap h-10 lg:h-11 px-3 lg:pl-[18px] lg:pr-[22px]'
+                + ' inline-flex items-center justify-center gap-2 lg:gap-2.5'
+                + ' rounded-lg border text-sm lg:text-[17px]'
+                + ' transition-colors focus-visible:outline-2'
+                + ' focus-visible:outline-offset-2'
+                + ' focus-visible:outline-accent'
+                + (isPlaying
+                  ? ' bg-[#2a1a12] border-accent text-accent-hi'
+                    + ' shadow-[inset_0_2px_6px_rgb(0_0_0/0.6),0_0_16px_rgb(240_102_42/0.25)]'
+                  : ' bg-linear-to-b from-[#f57a3e] to-[#e0561f]'
+                    + ' border-accent-hi text-[#1a0d05]'
+                    + ' shadow-[inset_0_1px_0_rgb(255_255_255/0.35),inset_0_-3px_0_rgb(0_0_0/0.18),0_6px_18px_rgb(240_102_42/0.25)]'
+                    + ' hover:from-[#f88a52] hover:to-[#e86228]')
+                + (!isLoaded ? ' opacity-50 cursor-wait' : '')
+              }
             >
-              {isPlaying ? 'STOP' : 'PLAY'}
+              {isPlaying ? (
+                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                  <rect x="1" y="1" width="10" height="10" rx="1.5" fill="currentColor" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                  <path d="M3 1.5v11l9-5.5z" fill="currentColor" />
+                </svg>
+              )}
+              <span className="hidden sm:inline">
+                {isPlaying ? 'STOP' : 'PLAY'}
+              </span>
             </button>
           </Tooltip>
           <FillButton />
           <SettingsPopover />
         </div>
       </div>
-      {/* Row 2: Global + Kit + Mode + Pattern */}
-      <div className="grid grid-cols-[1fr_1fr_auto_1.5fr] gap-2 lg:gap-4 pt-2 lg:pt-0">
+      {/* Row 2: one panel strip, hairline dividers */}
+      <div className="grid grid-cols-6 lg:flex gap-px bg-line border border-line rounded-xl overflow-hidden shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
         <GlobalControls />
-        <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
-          <label
-            htmlFor="kit-select"
-            className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold"
-          >
-            Kit
-          </label>
+        <PanelSection
+          label="Kit"
+          labelFor="kit-select"
+          className="col-span-2"
+        >
           <Tooltip tooltipKey="kit">
             <select
               id="kit-select"
@@ -80,7 +107,7 @@ function TransportControlsInner({
                 );
                 if (kit) setKit(kit);
               }}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded p-1 lg:p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 hover:border-neutral-600 transition-colors"
+              className="ss-key ss-select h-9 w-full lg:w-24 pl-3 text-sm"
             >
               {kitsData.kits.map(k => (
                 <option key={k.id} value={k.id}>
@@ -89,19 +116,19 @@ function TransportControlsInner({
               ))}
             </select>
           </Tooltip>
-        </div>
+        </PanelSection>
         <PatternModeSelector />
-        <div className="bg-neutral-900/50 p-2 border border-neutral-800 rounded-lg lg:rounded-xl shadow-inner">
-          <span className="text-[8px] lg:text-[10px] uppercase tracking-widest text-neutral-500 mb-1 block font-bold">
-            Pattern
-          </span>
-          <div className="flex items-start gap-2">
+        <PanelSection
+          label="Pattern"
+          className="col-span-6 lg:flex-1"
+        >
+          <div className="flex items-center gap-1.5">
             <div className="flex-1 min-w-0">
               {patternTrigger}
             </div>
             {pageIndicator}
           </div>
-        </div>
+        </PanelSection>
       </div>
     </header>
   );

@@ -53,10 +53,10 @@ function SequencerInner() {
     : 'Stopped';
 
   return (
-    <div className="h-dvh overflow-hidden flex flex-col bg-neutral-950 text-neutral-100 font-sans">
+    <div className="h-dvh overflow-hidden flex flex-col bg-ground text-ink font-sans bg-[radial-gradient(1200px_500px_at_50%_-10%,#1f1d1a_0%,transparent_60%)]">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-orange-600 focus:text-white focus:rounded"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-accent focus:text-[#1a0d05] focus:rounded"
       >
         Skip to main content
       </a>
@@ -67,7 +67,7 @@ function SequencerInner() {
       >
         {liveMessage}
       </div>
-      <div className="max-w-none lg:max-w-4xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-4 flex flex-col flex-1 min-h-0">
+      <div className="max-w-none lg:max-w-5xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-6 flex flex-col flex-1 min-h-0">
         <PatternPicker
           categories={categories}
           selectedPatternId={selectedPatternId}
@@ -107,11 +107,11 @@ function SequencerInner() {
               href="https://github.com/memestreak/xox"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] font-bold hover:text-orange-500 transition-colors text-center"
+              className="ss-label text-faint hover:text-accent transition-colors text-center"
             >
               Source Code
             </a>
-            <span className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] font-bold font-mono text-right">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint text-right">
               Built at commit {process.env.NEXT_PUBLIC_COMMIT_HASH ?? 'dev'}
             </span>
           </footer>

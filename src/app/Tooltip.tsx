@@ -56,9 +56,9 @@ export default function Tooltip({
         + ' ' + posClass
         + ' z-50 whitespace-nowrap'
         + ' px-1.5 py-0.5'
-        + ' text-[10px] font-bold normal-case tracking-normal font-[family-name:var(--font-geist-sans)]'
-        + ' bg-neutral-800 text-neutral-200'
-        + ' rounded'
+        + ' text-xs font-medium normal-case tracking-normal font-sans'
+        + ' bg-raised text-ink border border-edge'
+        + ' shadow-lg rounded'
         + ' opacity-0'
         + ' group-hover/tooltip:opacity-100'
         + ' transition-opacity'

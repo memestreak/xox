@@ -13,11 +13,8 @@ export default function ProbabilityEditor({
   onChange,
 }: ProbabilityEditorProps) {
   return (
-    <div className="space-y-1">
-      <div className={
-        'text-[10px] uppercase tracking-wider'
-        + ' text-neutral-500'
-      }>
+    <div className="space-y-1.5">
+      <div className="ss-label">
         Probability
       </div>
       <ProbabilitySlider

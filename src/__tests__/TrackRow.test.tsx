@@ -4,6 +4,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import TrackRow from '../app/TrackRow';
 import type { TrackId } from '../app/types';
+import { PLAYHEAD_CLASS } from '../app/stepColors';
 
 const noop = vi.fn();
 
@@ -219,7 +220,7 @@ describe('TrackRow step rendering', () => {
       currentStep: 0, totalSteps: 0,
     });
     expect(stepButtons()[0].className)
-      .toContain('bg-orange-400');
+      .toContain(PLAYHEAD_CLASS);
     rerender(
       <TrackRow
         {...baseProps()}
@@ -228,9 +229,11 @@ describe('TrackRow step rendering', () => {
       />
     );
     expect(stepButtons()[1].className)
-      .toContain('bg-neutral-700');
+      .toContain(PLAYHEAD_CLASS);
     expect(stepButtons()[0].className)
-      .toContain('bg-orange-600');
+      .not.toContain(PLAYHEAD_CLASS);
+    expect(stepButtons()[0].className)
+      .toContain('bg-step1 ');
   });
 
   it('short track wraps the playhead at its own length', () => {
@@ -243,7 +246,7 @@ describe('TrackRow step rendering', () => {
     });
     // Non-free-run: step 13 % 12 = 1
     expect(stepButtons()[1].className)
-      .toContain('bg-neutral-700');
+      .toContain(PLAYHEAD_CLASS);
   });
 
   it('free-run track follows totalSteps', () => {
@@ -257,9 +260,9 @@ describe('TrackRow step rendering', () => {
     });
     // Free-run: 17 % 12 = 5
     expect(stepButtons()[5].className)
-      .toContain('bg-neutral-700');
+      .toContain(PLAYHEAD_CLASS);
     expect(stepButtons()[3].className)
-      .not.toContain('bg-neutral-700');
+      .not.toContain(PLAYHEAD_CLASS);
   });
 
   it('shows condition and lock badges on active steps', () => {

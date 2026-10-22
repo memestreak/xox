@@ -17,6 +17,18 @@ interface TrackNameButtonProps {
   onPlayPreview: () => void;
 }
 
+const MENU_ITEM_BASE =
+  'w-full text-left px-2.5 py-2 rounded-[5px] text-sm'
+  + ' hover:bg-[#2f2c27] transition-colors'
+  + ' flex items-center justify-between gap-3'
+  + ' focus-visible:outline-none focus-visible:bg-[#2f2c27]';
+
+const MENU_ITEM = MENU_ITEM_BASE + ' text-ink';
+
+const MENU_HINT =
+  'font-mono text-[10px] text-muted border border-edge'
+  + ' rounded px-1.5 py-px';
+
 /**
  * Track name button with optional popover menu.
  * The popover (with free-run toggle) only renders
@@ -155,17 +167,19 @@ function TrackNameButtonInner({
           }}
           className={
             (size === 'sm'
-              ? 'text-lg'
-              : 'w-12 truncate text-xl text-left')
-            + ' font-bold uppercase tracking-wider font-[family-name:var(--font-orbitron)]'
-            + ' rounded px-1 py-0.5 transition-colors'
+              ? 'text-xl'
+              : 'w-14 truncate text-[22px] text-left')
+            + ' font-display font-bold uppercase'
+            + ' tracking-[0.08em] leading-none'
+            + ' rounded px-1 py-1 transition-colors'
+            + ' focus-visible:outline-2'
+            + ' focus-visible:outline-accent'
             + (isTriggered
-              ? ' text-orange-300 bg-orange-400/25'
+              ? ' text-lcd bg-accent/20'
               : isFreeRun
-                ? ' text-orange-400 bg-orange-400/10'
-                : ' text-neutral-400'
-                  + ' hover:text-neutral-200'
-                  + ' hover:bg-neutral-800/50')
+                ? ' text-accent-hi bg-accent/10'
+                : ' text-ink'
+                  + ' hover:bg-raised')
           }
         >
           {trackName}
@@ -177,7 +191,7 @@ function TrackNameButtonInner({
           aria-label={`${trackName} options`}
           tabIndex={-1}
           onKeyDown={handleMenuKeyDown}
-          className="absolute left-0 top-full mt-1 w-36 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl z-30 overflow-hidden"
+          className="ss-menu absolute left-0 top-full mt-1 w-56 p-1.5 z-30 flex flex-col"
         >
           <button
             role="menuitem"
@@ -185,17 +199,48 @@ function TrackNameButtonInner({
               onToggleFreeRun();
               closeMenu();
             }}
-            className="w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800 transition-colors flex items-center justify-between"
+            className={MENU_ITEM}
           >
             <span>Free-run</span>
             <span
+              aria-hidden="true"
               className={
-                'inline-block w-2 h-2 rounded-full '
-                + (isFreeRun
-                  ? 'bg-orange-400'
-                  : 'bg-neutral-600')
+                'relative w-[30px] h-4 rounded-full'
+                + ' transition-colors '
+                + (isFreeRun ? 'bg-accent' : 'bg-edge')
               }
-            />
+            >
+              <span
+                className={
+                  'absolute top-0.5 w-3 h-3 rounded-full'
+                  + ' bg-ink transition-[left] '
+                  + (isFreeRun ? 'left-4' : 'left-0.5')
+                }
+              />
+            </span>
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              onPlayPreview();
+              closeMenu();
+            }}
+            className={MENU_ITEM}
+          >
+            <span>Preview sound</span>
+            <span className={MENU_HINT}>Click</span>
+          </button>
+          <div className="h-px bg-line mx-1.5 my-1" />
+          <button
+            role="menuitem"
+            onClick={() => {
+              onClearTrack();
+              closeMenu();
+            }}
+            className={MENU_ITEM_BASE + ' text-[#ff8a62]'}
+          >
+            <span>Clear track</span>
+            <span className={MENU_HINT}>Shift-click</span>
           </button>
         </div>
       )}

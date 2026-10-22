@@ -33,8 +33,8 @@ function describeArc(
   );
 }
 
-// Pre-computed background arc for the default size (24).
-const DEFAULT_SIZE = 24;
+// Pre-computed background arc for the default size.
+const DEFAULT_SIZE = 28;
 const BG_CX = DEFAULT_SIZE / 2;
 const BG_CY = DEFAULT_SIZE / 2;
 const BG_R = (DEFAULT_SIZE - 4) / 2;
@@ -85,9 +85,11 @@ function KnobInner({
   const valueAngle =
     startAngle + value * (endAngle - startAngle);
 
+  // Knob cap with a pointer line, inside the arc ring.
+  const capR = r - 4;
   const valueRad = (valueAngle * Math.PI) / 180;
-  const dotX = cx + r * Math.cos(valueRad);
-  const dotY = cy + r * Math.sin(valueRad);
+  const tipX = cx + (capR - 1) * Math.cos(valueRad);
+  const tipY = cy + (capR - 1) * Math.sin(valueRad);
 
   const bgArc =
     size === DEFAULT_SIZE
@@ -192,7 +194,7 @@ function KnobInner({
             ? `${descriptionId} ${extraDescribedBy}`
             : descriptionId
         }
-        className="cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-full"
+        className="cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-full"
         style={{ touchAction: 'manipulation' }}
         onClick={resetToDefault}
         onPointerDown={onPointerDown}
@@ -204,7 +206,7 @@ function KnobInner({
         <path
           d={bgArc}
           fill="none"
-          stroke="#404040"
+          stroke="var(--color-line)"
           strokeWidth={2.5}
           strokeLinecap="round"
         />
@@ -214,25 +216,37 @@ function KnobInner({
               cx, cy, r, startAngle, valueAngle
             )}
             fill="none"
-            stroke="#f97316"
+            stroke="var(--color-accent)"
             strokeWidth={2.5}
             strokeLinecap="round"
           />
         )}
         <circle
-          cx={dotX}
-          cy={dotY}
-          r={2}
-          fill="#f97316"
+          cx={cx}
+          cy={cy}
+          r={capR}
+          fill="#2a2723"
+          stroke="var(--color-edge)"
         />
+        {!centerLabel && (
+          <line
+            x1={cx}
+            y1={cy}
+            x2={tipX}
+            y2={tipY}
+            stroke="var(--color-ink)"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+          />
+        )}
         {centerLabel && (
           <text
             x={cx}
             y={cy}
             textAnchor="middle"
             dominantBaseline="central"
-            fill="#a3a3a3"
-            fontSize={size * 0.3}
+            fill="var(--color-muted)"
+            fontSize={size * 0.26}
             fontWeight="bold"
             className="pointer-events-none select-none"
           >
@@ -244,7 +258,7 @@ function KnobInner({
         {KEYBOARD_HINT}
         {defaultValue !== undefined && ` ${RESET_HINT}`}
       </span>
-      <div className="absolute bottom-full mb-1 hidden group-hover:block px-1.5 py-0.5 text-[10px] font-bold bg-neutral-800 text-neutral-200 rounded whitespace-nowrap">
+      <div className="absolute bottom-full mb-1 hidden group-hover:block px-1.5 py-0.5 text-[10px] font-bold font-mono bg-raised text-ink border border-edge rounded whitespace-nowrap z-40">
         {formatValue(value)}
       </div>
     </div>

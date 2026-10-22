@@ -88,33 +88,33 @@ export default function SettingsModal({
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
       }}
-      className="m-auto backdrop:bg-black/60 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl text-neutral-200 p-0 max-w-lg w-full"
+      className="ss-menu m-auto backdrop:bg-black/60 rounded-xl text-ink p-0 max-w-lg w-full"
     >
       <div className="p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">
+          <h2 className="ss-cap text-xl">
             Settings
           </h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-neutral-400 hover:text-neutral-200 text-xl leading-none"
+            className="ss-key w-8 h-8 flex items-center justify-center text-muted hover:text-ink text-xl leading-none"
           >
             &times;
           </button>
         </div>
 
         {/* Tab bar */}
-        <div className="flex gap-4 border-b border-neutral-700 mb-6">
+        <div className="flex gap-4 border-b border-line mb-6">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-1 pb-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`ss-cap px-1 pb-2 text-sm border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? 'border-orange-500 text-white'
-                  : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                  ? 'border-accent text-ink'
+                  : 'border-transparent text-muted hover:text-ink'
               }`}
             >
               {tab.label}
@@ -153,7 +153,7 @@ function OptionsTab({
           setTooltipsEnabled(e.target.checked)
         }
         aria-label="Show tooltips"
-        className="accent-orange-500 w-4 h-4"
+        className="accent-[#f0662a] w-4 h-4"
       />
       <span className="text-sm">Show tooltips</span>
     </label>
@@ -180,7 +180,7 @@ function MidiTab() {
   return (
     <>
       {statusMsg && (
-        <p className="text-sm text-amber-400 mb-4">
+        <p className="text-sm text-lcd mb-4">
           {statusMsg}
         </p>
       )}
@@ -196,14 +196,14 @@ function MidiTab() {
             })
           }
           aria-label="Enable MIDI output"
-          className="accent-orange-500 w-4 h-4"
+          className="accent-[#f0662a] w-4 h-4"
         />
         <span className="text-sm">Enable MIDI output</span>
       </label>
 
       {/* Device picker */}
       <label className="block mb-4">
-        <span className="text-sm text-neutral-400 block mb-1">
+        <span className="ss-label block mb-1">
           Output Device
         </span>
         <select
@@ -215,7 +215,7 @@ function MidiTab() {
               deviceId: e.target.value,
             });
           }}
-          className="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2 text-sm disabled:opacity-50"
+          className="ss-key ss-select w-full h-9 pl-3 text-sm disabled:opacity-50"
         >
           <option value="">
             {outputs.length === 0
@@ -232,7 +232,7 @@ function MidiTab() {
 
       {/* Channel */}
       <label className="block mb-4">
-        <span className="text-sm text-neutral-400 block mb-1">
+        <span className="ss-label block mb-1">
           Channel
         </span>
         <input
@@ -250,13 +250,13 @@ function MidiTab() {
             })
           }
           aria-label="MIDI channel"
-          className="w-20 bg-neutral-800 border border-neutral-600 rounded px-3 py-2 text-sm disabled:opacity-50"
+          className="w-20 h-9 bg-well border border-line rounded-md px-3 font-mono text-sm text-ink disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent"
         />
       </label>
 
       {/* Note length */}
       <label className="block mb-6">
-        <span className="text-sm text-neutral-400 block mb-1">
+        <span className="ss-label block mb-1">
           Note Length
         </span>
         <select
@@ -274,7 +274,7 @@ function MidiTab() {
               });
             }
           }}
-          className="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2 text-sm disabled:opacity-50"
+          className="ss-key ss-select w-full h-9 pl-3 text-sm disabled:opacity-50"
         >
           {NOTE_LENGTH_OPTIONS.map((opt) => (
             <option
@@ -289,7 +289,7 @@ function MidiTab() {
 
       {/* Track note mapping */}
       <div>
-        <span className="text-sm text-neutral-400 block mb-2">
+        <span className="ss-label block mb-2">
           Track Notes (MIDI note 0-127)
         </span>
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -298,7 +298,7 @@ function MidiTab() {
               key={track.id}
               className="flex items-center gap-2"
             >
-              <span className="text-xs font-mono w-12 text-neutral-400">
+              <span className="ss-cap text-sm w-12 text-muted">
                 {track.id.toUpperCase()}
               </span>
               <input
@@ -331,7 +331,7 @@ function MidiTab() {
                     },
                   });
                 }}
-                className="w-16 bg-neutral-800 border border-neutral-600 rounded px-2 py-1 text-sm text-center disabled:opacity-50"
+                className="w-16 h-8 bg-well border border-line rounded-md px-2 font-mono text-sm text-center text-ink disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent"
               />
             </label>
           ))}

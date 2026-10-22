@@ -3,55 +3,46 @@ interface FillConditionEditorProps {
   onChange: (v: 'none' | 'fill' | '!fill') => void;
 }
 
+const OPTIONS = [
+  ['none', 'Any'],
+  ['fill', 'Fill'],
+  ['!fill', '!Fill'],
+] as const;
+
 /**
- * Fill / !Fill radio group editor.
+ * Fill condition as a segmented control: play on any
+ * pass, only during a fill, or only outside a fill.
  */
 export default function FillConditionEditor({
   value,
   onChange,
 }: FillConditionEditorProps) {
   return (
-    <div className="space-y-1">
-      <div className={
-        'text-[10px] uppercase tracking-wider'
-        + ' text-neutral-500'
-      }>
-        Fill
-      </div>
+    <div className="space-y-1.5">
+      <div className="ss-label">Fill</div>
       <div
-        className="flex gap-1"
+        className="flex gap-0.5 p-0.5 rounded-md bg-well border border-line"
         role="radiogroup"
         aria-label="Fill condition"
       >
-        {([
-          ['none', 'None'],
-          ['fill', 'FILL'],
-          ['!fill', '!FILL'],
-        ] as const).map(([val, label]) => (
+        {OPTIONS.map(([val, label]) => (
           <button
             key={val}
             role="radio"
             aria-checked={value === val}
             onClick={() => onChange(val)}
             className={
-              'flex-1 text-xs py-1 rounded'
-              + ' border transition-colors'
+              'ss-cap flex-1 h-7 rounded text-xs'
+              + ' tracking-[0.1em] transition-colors'
+              + ' focus-visible:outline-2'
+              + ' focus-visible:outline-accent'
               + (value === val
-                ? val === 'fill'
-                  ? ' bg-orange-600'
-                    + ' border-orange-500'
-                    + ' text-white'
-                  : val === '!fill'
-                    ? ' bg-neutral-700'
-                      + ' border-neutral-600'
-                      + ' text-neutral-200'
-                    : ' bg-neutral-800'
-                      + ' border-neutral-600'
-                      + ' text-neutral-200'
-                : ' bg-neutral-900'
-                  + ' border-neutral-700'
-                  + ' text-neutral-400'
-                  + ' hover:bg-neutral-800')
+                ? val === 'none'
+                  ? ' bg-linear-to-b from-[#34302b] to-[#2a2723]'
+                    + ' text-ink'
+                    + ' shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]'
+                  : ' bg-accent text-[#1a0d05]'
+                : ' text-muted hover:text-ink')
             }
           >
             {label}

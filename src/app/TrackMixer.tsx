@@ -36,7 +36,7 @@ function TrackMixerInner({
   onSetGain,
   onSetPan,
 }: TrackMixerProps) {
-  const knobSize = size === 'sm' ? 20 : undefined;
+  const knobSize = size === 'sm' ? 26 : undefined;
 
   return (
     <>
@@ -58,8 +58,8 @@ function TrackMixerInner({
       </div>
       <div
         className={
-          'flex gap-1'
-          + (size === 'lg' ? ' ml-1' : '')
+          'flex gap-1.5'
+          + (size === 'lg' ? ' ml-2' : '')
         }
       >
         <Knob

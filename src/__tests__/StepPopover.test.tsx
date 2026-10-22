@@ -127,15 +127,15 @@ describe('StepPopover', () => {
     render(<StepPopover {...base} />);
     const radios = screen.getAllByRole('radio');
     expect(radios).toHaveLength(3);
-    expect(radios[0].textContent).toBe('None');
-    expect(radios[1].textContent).toBe('FILL');
-    expect(radios[2].textContent).toBe('!FILL');
+    expect(radios[0].textContent).toBe('Any');
+    expect(radios[1].textContent).toBe('Fill');
+    expect(radios[2].textContent).toBe('!Fill');
   });
 
   it('selecting FILL sets fill condition', () => {
     render(<StepPopover {...base} />);
     const fillBtn = screen.getByRole('radio', {
-      name: /^FILL$/,
+      name: /^Fill$/,
     });
     fireEvent.click(fillBtn);
     expect(mockSet).toHaveBeenCalledWith(
@@ -146,7 +146,7 @@ describe('StepPopover', () => {
   it('selecting !FILL sets fill condition', () => {
     render(<StepPopover {...base} />);
     const nfillBtn = screen.getByRole('radio', {
-      name: /^!FILL$/,
+      name: /^!Fill$/,
     });
     fireEvent.click(nfillBtn);
     expect(mockSet).toHaveBeenCalledWith(
@@ -162,7 +162,7 @@ describe('StepPopover', () => {
       />
     );
     const noneBtn = screen.getByRole('radio', {
-      name: /^None$/,
+      name: /^Any$/,
     });
     fireEvent.click(noneBtn);
     expect(mockClear).toHaveBeenCalledWith(
@@ -178,7 +178,7 @@ describe('StepPopover', () => {
       />
     );
     const nfillRadio = screen.getByRole('radio', {
-      name: /^!FILL$/,
+      name: /^!Fill$/,
     });
     expect(
       nfillRadio.getAttribute('aria-checked')
