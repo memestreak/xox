@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 import React from 'react';
 import { useDragPaint } from '../app/hooks/useDragPaint';
 import type {
@@ -123,7 +124,9 @@ function makeDefaultPatterns(): TrackPattern[] {
 
 describe('useDragPaint', () => {
   const tracks: TrackId[] = ['bd', 'sd', 'ch'];
-  let onSetStep: ReturnType<typeof vi.fn>;
+  let onSetStep: Mock<
+    (trackId: TrackId, stepIndex: number, value: '0' | '1') => void
+  >;
   let container: HTMLDivElement;
   let elements: Map<string, HTMLElement>;
   let containerRef: React.RefObject<
@@ -478,7 +481,7 @@ describe('useDragPaint', () => {
     // -> (4,2) — the exact path depends on the
     // algorithm but all should be on the line
     const calls = onSetStep.mock.calls.map(
-      (c: [TrackId, number, string]) =>
+      (c: [TrackId, number, '0' | '1']) =>
         `${c[0]}:${c[1]}`
     );
     // Start and end must be present
@@ -512,14 +515,16 @@ describe('useDragPaint', () => {
 
     // Step 1 should be called only once
     const step1Calls = onSetStep.mock.calls.filter(
-      (c: [TrackId, number, string]) =>
+      (c: [TrackId, number, '0' | '1']) =>
         c[0] === 'bd' && c[1] === 1
     );
     expect(step1Calls).toHaveLength(1);
   });
 
   describe('pattern cycling mode', () => {
-    let onSetTrackSteps: ReturnType<typeof vi.fn>;
+    let onSetTrackSteps: Mock<
+      (trackId: TrackId, steps: string) => void
+    >;
     let longPressActiveRef: React.RefObject<boolean>;
     let popoverOpenRef: React.RefObject<boolean>;
     let patterns: TrackPattern[];

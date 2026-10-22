@@ -599,7 +599,7 @@ describe('validateTrigConditions', () => {
   it('non-object trigConditions stays undefined',
     async () => {
       const config = defaultConfig();
-      (config.tracks.bd as Record<string, unknown>)
+      (config.tracks.bd as unknown as Record<string, unknown>)
         .trigConditions = 'bad';
       const hash = await encodeRaw(config);
       const decoded = await decodeConfig(hash);

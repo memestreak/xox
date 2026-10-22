@@ -9,6 +9,7 @@ working with code in this repository.
 npm run dev      # Dev server at localhost:3000
 npm run build    # Production build (static export to /out/)
 npm run lint     # ESLint
+npm run typecheck  # tsc --noEmit (app + tests)
 npm test         # Vitest (unit + integration)
 npm run test:watch  # Vitest in watch mode
 ```
@@ -90,8 +91,10 @@ Supporting files:
 ## Testing
 
 Tests live in `src/__tests__/` and run via Vitest + jsdom.
-A pre-push git hook runs `npm test` and `npm run lint`
-before every push.
+CI (`.github/workflows/ci.yml`) runs lint, typecheck,
+tests, and a production build on every PR and push to
+`main`. Vitest does not typecheck, so run
+`npm run typecheck` locally too.
 
 Test areas:
 - `configCodec.test.ts` — round-trip, defensive decoding,

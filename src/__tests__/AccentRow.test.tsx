@@ -16,6 +16,7 @@ const base = {
   onSetTrackLength: vi.fn(),
   onToggleFreeRun: vi.fn(),
   onSetGain: vi.fn(),
+  onClearTrack: vi.fn(),
 };
 
 describe('AccentRow', () => {

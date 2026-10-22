@@ -45,6 +45,9 @@ function setup(overrides?: {
       setStep: mockSetStep,
       clearTrigCondition: mockClearTrig,
       clearParameterLock: mockClearLock,
+      toggleStep: vi.fn(),
+      setTrigCondition: vi.fn(),
+      openBulkPopover: vi.fn(),
     })
   );
 
