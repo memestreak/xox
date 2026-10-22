@@ -4,7 +4,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import type { RefObject } from 'react';
-import { TRACKS, useSequencer } from './SequencerContext';
+import { useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
 import AccentRow from './AccentRow';
 import StepPopover from './StepPopover';
@@ -12,7 +12,9 @@ import ErrorBoundary from './ErrorBoundary';
 import { useDragPaint } from './hooks/useDragPaint';
 import { useSelection } from './hooks/useSelection';
 import type { TrackId, TrackPattern } from './types';
-import { cellKey, getPatternLength, parseCellKey } from './types';
+import {
+  TRACKS, cellKey, getPatternLength, parseCellKey,
+} from './types';
 import { TRIGGER_FLASH_MS } from './constants';
 import { audioEngine } from './AudioEngine';
 import { drainDueSteps } from './stepQueue';
@@ -76,6 +78,18 @@ export default function StepGrid({
   useEffect(() => {
     popoverOpenRef.current = openPopover !== null;
   }, [openPopover]);
+
+  // Stable so it doesn't defeat TrackRow's memo
+  const openStepPopover = useCallback(
+    (
+      trackId: TrackId,
+      stepIndex: number,
+      rect: { top: number; left: number }
+    ) => setOpenPopover({
+      trackId, stepIndex, anchorRect: rect,
+    }),
+    []
+  );
 
   // Stable ref for openBulkPopover to read selection
   const selectionRef = useRef<Set<string>>(new Set());
@@ -293,13 +307,7 @@ export default function StepGrid({
             parameterLocks={
               config.tracks[track.id].parameterLocks
             }
-            onOpenPopover={(
-              trackId: TrackId,
-              stepIndex: number,
-              rect: { top: number; left: number }
-            ) => setOpenPopover({
-              trackId, stepIndex, anchorRect: rect,
-            })}
+            onOpenPopover={openStepPopover}
             selectedSteps={
               selectedByTrack.get(track.id)
             }

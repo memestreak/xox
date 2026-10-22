@@ -6,11 +6,12 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
   type ReactNode,
 } from 'react';
 import patternsData from './data/patterns.json';
-import { defaultConfig, decodeConfig } from './configCodec';
+import { defaultConfig, decodeShareLink } from './configCodec';
 import { loadSession, saveSession } from './configStorage';
 import { AUTOSAVE_DEBOUNCE_MS } from './constants';
 import type { StepEvent } from './stepQueue';
@@ -31,23 +32,17 @@ import type {
   TrackState,
 } from './types';
 
-/**
- * Track definitions for the sequencer grid
- * (excludes accent).
- */
-export const TRACKS: { id: TrackId; name: string }[] = [
-  { id: 'bd', name: 'BD' },
-  { id: 'sd', name: 'SD' },
-  { id: 'ch', name: 'CH' },
-  { id: 'oh', name: 'OH' },
-  { id: 'cy', name: 'CY' },
-  { id: 'ht', name: 'HT' },
-  { id: 'mt', name: 'MT' },
-  { id: 'lt', name: 'LT' },
-  { id: 'rs', name: 'RS' },
-  { id: 'cp', name: 'CP' },
-  { id: 'cb', name: 'CB' },
-];
+// ─── Share link notices ──────────────────────────────
+
+const SHARE_LINK_NEWER_MESSAGE =
+  'This pattern was made with a newer version of XOX.'
+  + ' Some settings may not have loaded.';
+const SHARE_LINK_OLDER_MESSAGE =
+  'This share link is from an older version of XOX and'
+  + ' can no longer be opened.';
+const SHARE_LINK_INVALID_MESSAGE =
+  'This share link is damaged or incomplete and'
+  + ' could not be opened.';
 
 // ─── Interfaces ──────────────────────────────────────
 
@@ -64,6 +59,8 @@ interface SequencerState {
   patternMode: PatternMode;
   tempState: TempState;
   selectedPatternId: string;
+  /** Problem with a share link opened from the URL. */
+  importNotice: string | null;
 }
 
 interface SequencerActions {
@@ -120,6 +117,7 @@ interface SequencerActions {
   toggleTemp: () => void;
   playPreview: (trackId: TrackId) => void;
   dismissError: () => void;
+  dismissImportNotice: () => void;
 }
 
 interface SequencerMeta {
@@ -138,32 +136,12 @@ interface SequencerContextValue {
 
 // ─── Contexts ─────────────────────────────────────────
 
-/** Config context: serializable state. */
-const ConfigContext = createContext<{
-  config: SequencerConfig;
-  setConfig: React.Dispatch<
-    React.SetStateAction<SequencerConfig>
-  >;
-  selectedPatternId: string;
-  setSelectedPatternId: React.Dispatch<
-    React.SetStateAction<string>
-  >;
-} | null>(null);
-
-/** Transient context: playback/UI state. */
-const TransientContext = createContext<{
-  isPlaying: boolean;
-  setIsPlaying: React.Dispatch<
-    React.SetStateAction<boolean>
-  >;
-  isLoaded: boolean;
-  setIsLoaded: React.Dispatch<
-    React.SetStateAction<boolean>
-  >;
-  stepRef: React.RefObject<number>;
-} | null>(null);
-
-/** Combined context for public useSequencer() hook. */
+/**
+ * Single context behind useSequencer(). The value and
+ * its state/actions/meta parts are memoized, so
+ * consumers re-render only when something they get
+ * actually changed.
+ */
 const SequencerContext = createContext<
   SequencerContextValue | null
 >(null);
@@ -215,6 +193,11 @@ export function SequencerProvider({
   // Autosave starts only after the initial restore, so
   // the default config never overwrites a saved session.
   const [restored, setRestored] = useState(false);
+  const [importNotice, setImportNotice] =
+    useState<string | null>(null);
+  const dismissImportNotice = useCallback(() => {
+    setImportNotice(null);
+  }, []);
   const selectedPatternIdRef = useRef(selectedPatternId);
   useEffect(() => {
     selectedPatternIdRef.current = selectedPatternId;
@@ -225,27 +208,42 @@ export function SequencerProvider({
 
     /**
      * Import a share link from the URL hash. Returns true
-     * if a valid config was applied. The hash is removed
+     * if a config was applied. The hash is removed
      * afterwards so a later refresh restores the
      * autosaved session (with any newer edits) instead
-     * of the original link.
+     * of the original link. A link that can't be loaded
+     * leaves the current session alone and shows a
+     * notice instead.
      */
     const importFromHash = async (): Promise<boolean> => {
       const hash = window.location.hash.slice(1);
       if (!hash) return false;
-      let decoded: SequencerConfig;
-      try {
-        decoded = await decodeConfig(hash);
-      } catch {
-        return false;
-      }
-      if (cancelled) return false;
-      setConfig(decoded);
-      setSelectedPatternId('custom');
-      window.history.replaceState(
+      const clearHash = () => window.history.replaceState(
         null, '',
         window.location.pathname + window.location.search
       );
+      let result: Awaited<ReturnType<typeof decodeShareLink>>;
+      try {
+        result = await decodeShareLink(hash);
+      } catch {
+        if (cancelled) return false;
+        setImportNotice(SHARE_LINK_INVALID_MESSAGE);
+        clearHash();
+        return false;
+      }
+      if (cancelled) return false;
+      clearHash();
+      if (result.versionStatus === 'older') {
+        setImportNotice(SHARE_LINK_OLDER_MESSAGE);
+        return false;
+      }
+      setImportNotice(
+        result.versionStatus === 'newer'
+          ? SHARE_LINK_NEWER_MESSAGE
+          : null
+      );
+      setConfig(result.config);
+      setSelectedPatternId('custom');
       return true;
     };
 
@@ -342,6 +340,11 @@ export function SequencerProvider({
   });
 
   // ─── clearAll composes all hook resets ────────
+  // Depend on the (stable) reset callbacks, not the
+  // hook return objects, which are new every render.
+  const fillReset = fill.reset;
+  const pmReset = pm.reset;
+  const trackConfigReset = trackConfig.reset;
   const clearAll = useCallback(() => {
     setConfig(prev => {
       const newTracks = {} as Record<
@@ -357,90 +360,116 @@ export function SequencerProvider({
       };
     });
     setSelectedPatternId('custom');
-    fill.reset();
-    pm.reset();
-    trackConfig.reset();
-  }, [fill, pm, trackConfig]);
+    fillReset();
+    pmReset();
+    trackConfigReset();
+  }, [fillReset, pmReset, trackConfigReset]);
 
   // ─── Context value ────────────────────────────
-  const value: SequencerContextValue = {
-    state: {
-      isPlaying: playback.isPlaying,
-      bpm: config.bpm,
-      currentKit: playback.currentKit,
-      trackStates: playback.trackStates,
-      isLoaded: playback.isLoaded,
-      loadError: playback.loadError,
-      swing: config.swing,
-      isFillActive: fill.isFillActive,
-      fillMode: fill.fillMode,
-      patternMode: pm.patternMode,
-      tempState: pm.tempState,
-      selectedPatternId,
-    },
-    actions: {
-      togglePlay: playback.togglePlay,
-      setBpm: playback.setBpm,
-      setKit: playback.setKit,
-      setPattern: pm.setPattern,
-      toggleStep: trackConfig.toggleStep,
-      setStep: trackConfig.setStep,
-      setTrackSteps: trackConfig.setTrackSteps,
-      toggleMute: trackConfig.toggleMute,
-      toggleSolo: trackConfig.toggleSolo,
-      setGain: trackConfig.setGain,
-      setPan: trackConfig.setPan,
-      toggleFreeRun: trackConfig.toggleFreeRun,
-      setPatternLength: trackConfig.setPatternLength,
-      setTrackLength: trackConfig.setTrackLength,
-      clearAll,
-      clearTrack: trackConfig.clearTrack,
-      setSwing: trackConfig.setSwing,
-      toggleFillLatch: fill.toggleFillLatch,
-      setFillHeld: fill.setFillHeld,
-      setTrigCondition: trackConfig.setTrigCondition,
-      clearTrigCondition:
-        trackConfig.clearTrigCondition,
-      setParameterLock: trackConfig.setParameterLock,
-      clearParameterLock:
-        trackConfig.clearParameterLock,
-      setPatternMode: pm.setPatternMode,
-      toggleTemp: pm.toggleTemp,
-      playPreview: playback.playPreview,
-      dismissError: playback.dismissError,
-    },
-    meta: {
-      stepRef: playback.stepRef,
-      totalStepsRef: playback.totalStepsRef,
-      triggeredTracksRef:
-        playback.triggeredTracksRef,
-      stepQueueRef: playback.stepQueueRef,
-      config,
-    },
-  };
+  // Every action is a stable callback (useCallback or
+  // a state setter), so `actions` is built once.
+  const {
+    isPlaying, isLoaded, loadError, currentKit,
+    trackStates, stepRef, totalStepsRef,
+    triggeredTracksRef, stepQueueRef,
+  } = playback;
+  const { isFillActive, fillMode } = fill;
+  const { patternMode, tempState } = pm;
 
+  const state = useMemo<SequencerState>(() => ({
+    isPlaying,
+    bpm: config.bpm,
+    currentKit,
+    trackStates,
+    isLoaded,
+    loadError,
+    swing: config.swing,
+    isFillActive,
+    fillMode,
+    patternMode,
+    tempState,
+    selectedPatternId,
+    importNotice,
+  }), [
+    isPlaying, config.bpm, currentKit, trackStates,
+    isLoaded, loadError, config.swing, isFillActive,
+    fillMode, patternMode, tempState, selectedPatternId,
+    importNotice,
+  ]);
+
+  const {
+    togglePlay, setBpm, setKit, playPreview, dismissError,
+  } = playback;
+  const {
+    setPattern, setPatternMode, toggleTemp,
+  } = pm;
+  const { toggleFillLatch, setFillHeld } = fill;
+  const {
+    toggleStep, setStep, setTrackSteps, toggleMute,
+    toggleSolo, setGain, setPan, toggleFreeRun,
+    setPatternLength, setTrackLength, clearTrack,
+    setSwing, setTrigCondition, clearTrigCondition,
+    setParameterLock, clearParameterLock,
+  } = trackConfig;
+
+  const actions = useMemo<SequencerActions>(() => ({
+    togglePlay,
+    setBpm,
+    setKit,
+    setPattern,
+    toggleStep,
+    setStep,
+    setTrackSteps,
+    toggleMute,
+    toggleSolo,
+    setGain,
+    setPan,
+    toggleFreeRun,
+    setPatternLength,
+    setTrackLength,
+    clearAll,
+    clearTrack,
+    setSwing,
+    toggleFillLatch,
+    setFillHeld,
+    setTrigCondition,
+    clearTrigCondition,
+    setParameterLock,
+    clearParameterLock,
+    setPatternMode,
+    toggleTemp,
+    playPreview,
+    dismissError,
+    dismissImportNotice,
+  }), [
+    togglePlay, setBpm, setKit, setPattern, toggleStep,
+    setStep, setTrackSteps, toggleMute, toggleSolo,
+    setGain, setPan, toggleFreeRun, setPatternLength,
+    setTrackLength, clearAll, clearTrack, setSwing,
+    toggleFillLatch, setFillHeld, setTrigCondition,
+    clearTrigCondition, setParameterLock,
+    clearParameterLock, setPatternMode, toggleTemp,
+    playPreview, dismissError, dismissImportNotice,
+  ]);
+
+  const meta = useMemo<SequencerMeta>(() => ({
+    stepRef,
+    totalStepsRef,
+    triggeredTracksRef,
+    stepQueueRef,
+    config,
+  }), [
+    stepRef, totalStepsRef, triggeredTracksRef,
+    stepQueueRef, config,
+  ]);
+
+  const value = useMemo<SequencerContextValue>(
+    () => ({ state, actions, meta }),
+    [state, actions, meta]
+  );
   return (
-    <ConfigContext
-      value={{
-        config,
-        setConfig,
-        selectedPatternId,
-        setSelectedPatternId,
-      }}
-    >
-      <TransientContext
-        value={{
-          isPlaying: playback.isPlaying,
-          setIsPlaying: () => {},
-          isLoaded: playback.isLoaded,
-          setIsLoaded: () => {},
-          stepRef: playback.stepRef,
-        }}
-      >
-        <SequencerContext value={value}>
-          {children}
-        </SequencerContext>
-      </TransientContext>
-    </ConfigContext>
+    <SequencerContext value={value}>
+      {children}
+    </SequencerContext>
   );
 }

@@ -4,27 +4,7 @@ import {
   defaultConfig,
   encodeConfig,
 } from '../app/configCodec';
-
-/**
- * Helper: encode a raw object bypassing validation,
- * for testing backward-compat decoding of old formats.
- */
-async function encodeRaw(obj: unknown): Promise<string> {
-  const json = JSON.stringify(obj);
-  const stream = new Blob([json]).stream()
-    .pipeThrough(new CompressionStream('deflate-raw'));
-  const bytes = new Uint8Array(
-    await new Response(stream).arrayBuffer()
-  );
-  let binary = '';
-  for (const b of bytes) {
-    binary += String.fromCharCode(b);
-  }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
+import { encodeRaw } from './helpers/encodeRaw';
 
 /**
  * Golden-file tests protect against silent changes to the

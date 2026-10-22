@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   decodeConfig,
+  decodeShareLink,
   defaultConfig,
   encodeConfig,
 } from '../app/configCodec';
 import type { SequencerConfig } from '../app/types';
 import { TRACK_IDS } from '../app/types';
+import { encodeRaw } from './helpers/encodeRaw';
 
 /**
  * Helper: build a config with overrides merged into defaults.
@@ -14,27 +16,6 @@ function makeConfig(
   overrides: Partial<SequencerConfig> = {}
 ): SequencerConfig {
   return { ...defaultConfig(), ...overrides };
-}
-
-/**
- * Helper: encode a raw object as if it were a valid config,
- * bypassing validation on the encode side.
- */
-async function encodeRaw(obj: unknown): Promise<string> {
-  const json = JSON.stringify(obj);
-  const stream = new Blob([json]).stream()
-    .pipeThrough(new CompressionStream('deflate-raw'));
-  const bytes = new Uint8Array(
-    await new Response(stream).arrayBuffer()
-  );
-  let binary = '';
-  for (const b of bytes) {
-    binary += String.fromCharCode(b);
-  }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
 }
 
 // -------------------------------------------------------
@@ -184,12 +165,28 @@ describe('defensive decoding', () => {
     expect(decoded).toEqual(config);
   });
 
-  it('wrong version number returns defaults', async () => {
+  it('newer version still loads recognized fields',
+    async () => {
+      const config = { ...defaultConfig(), bpm: 140 };
+      const raw = { ...config, version: 999 };
+      const hash = await encodeRaw(raw);
+      const decoded = await decodeConfig(hash);
+      expect(decoded).toEqual(config);
+    }
+  );
+
+  it('decodeShareLink reports version status', async () => {
     const config = defaultConfig();
-    const raw = { ...config, version: 999 };
-    const hash = await encodeRaw(raw);
-    const decoded = await decodeConfig(hash);
-    expect(decoded).toEqual(defaultConfig());
+    const status = async (raw: object) =>
+      (await decodeShareLink(await encodeRaw(raw)))
+        .versionStatus;
+    expect(await status(config)).toBe('current');
+    expect(await status({ ...config, version: 999 }))
+      .toBe('newer');
+    expect(await status({ ...config, version: 3 }))
+      .toBe('older');
+    expect(await status({ kitId: 'electro' }))
+      .toBe('older');
   });
 
   it('old version 3 returns defaults', async () => {

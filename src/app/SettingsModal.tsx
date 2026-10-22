@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { useTooltips } from './TooltipContext';
 import { useMidi } from './MidiContext';
-import { TRACKS } from './SequencerContext';
+import { TRACKS } from './types';
 import type {
   NoteLength, TrackId,
 } from './types';

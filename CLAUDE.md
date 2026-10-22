@@ -16,7 +16,8 @@ npm run test:watch  # Vitest in watch mode
 
 ## Architecture
 
-XOX is a 16-step drum sequencer. Next.js 16 App Router with
+XOX is a step drum sequencer (16 steps by default, up
+to 64 per track). Next.js 16 App Router with
 static export to Cloudflare Pages. All app code lives in
 `src/app/`.
 
@@ -35,13 +36,18 @@ returns `ComputeStepResult` (sounds to play, triggered tracks,
 pattern transition signals). No side effects.
 
 **SequencerContext (`src/app/SequencerContext.tsx`)** — React
-context orchestrator composing four focused hooks. Split into
-two internal contexts for render isolation: ConfigContext
-(serializable state via `SequencerConfig`) and TransientContext
-(playback/UI). Consumer API is `useSequencer()` returning
-`{ state, actions, meta }`. Uses `requestAnimationFrame` for
-visual step sync. Solo/mute priority: if any track is soloed,
-only soloed tracks play; otherwise non-muted tracks play.
+context orchestrator composing four focused hooks. One context;
+consumer API is `useSequencer()` returning
+`{ state, actions, meta }`. Each part and the value are
+memoized and every action is a stable callback, so the
+value changes only when state or config actually changes
+(every consumer still re-renders then). Keep new actions
+stable (read refs, not state) so memoized children that
+take them as props can skip renders. `StepGrid`
+drains a scheduled-step queue (`stepQueue.ts`) in a
+`requestAnimationFrame` loop for visual step sync.
+Solo/mute priority: if any track is soloed, only soloed
+tracks play; otherwise non-muted tracks play.
 Accented steps multiply gain by `1 + accentLevel × 2`
 (2x at the default accent level of 0.5, up to 3x). The
 master bus runs through a limiter (`AudioEngine.init`)
@@ -54,6 +60,15 @@ of truth for serializable configuration.
 **configCodec (`src/app/configCodec.ts`)** — Encodes/decodes
 `SequencerConfig` as compressed JSON + base64url for URL hash
 sharing. Uses `CompressionStream('deflate-raw')`.
+`decodeShareLink` also reports the link's version: older
+versions can't be loaded (the session is kept and a notice
+shown), newer versions load what validates, with a notice.
+
+**configStorage (`src/app/configStorage.ts`)** — Autosaves
+the session to localStorage (debounced, flushed on
+`pagehide`) and restores it on load. A share link in the
+URL hash wins over the saved session and is then removed
+from the URL.
 
 **Hooks (`src/app/hooks/`)** — All custom hooks live here:
 - `useFillMode.ts` — fill latch/momentary state, F-key
@@ -78,17 +93,28 @@ all hook resets.
 
 Supporting files:
 - `types.ts` — `TrackId`, `Kit`, `Pattern`, `TrackState`,
-  `SequencerConfig`, `TrackMixerState` types;
+  `SequencerConfig`, `TrackMixerState` types; `TRACK_IDS`
+  and `TRACKS` (grid tracks, display order);
   `cellKey()`/`parseCellKey()` for selection identifiers
 - `constants.ts` — all timing, threshold, and tuning
   values (import from here, not inline literals)
 - `trackUtils.ts` — `computeEffectiveStep`, `formatPan`
-- `trigConditions.ts` — `evaluateCondition` for trig gating
+- `trigConditions.ts` — `evaluateCondition` for trig gating.
+  Cycle conditions (e.g. 1:2) count the loops each track
+  actually plays: a track's cycle advances whenever its own
+  step wraps to 0, including at pattern boundaries
+- `stepQueue.ts` — scheduled steps for the visual playhead
+- `gridUtils.ts`, `patternUtils.ts` — grid geometry and
+  pattern helpers
+- `MidiEngine.ts` / `MidiContext.tsx` — Web MIDI note
+  output; settings live in `SettingsModal.tsx`
 - `TempoController.tsx` — BPM input (clamped 20-300)
-- `SettingsPopover.tsx` — Gear icon settings menu with Export
+- `SettingsPopover.tsx` — Gear icon settings menu with
+  Export URL
 - `data/kits.json` — Kit definitions (id, name, folder path)
-- `data/patterns.json` — 16-step patterns as binary strings
-  (`"1010101010101010"`)
+- `data/patterns.json` — preset patterns, one binary step
+  string per track (`"1010101010101010"`)
+- `data/trackPatterns.json` — single-track presets
 - `public/kits/{808,electro}/` — .wav samples per kit
 
 ## Testing
@@ -99,14 +125,16 @@ tests, and a production build on every PR and push to
 `main`. Vitest does not typecheck, so run
 `npm run typecheck` locally too.
 
-Test areas:
+Test areas (not exhaustive; most components have a
+matching `<Component>.test.tsx`):
 - `configCodec.test.ts` — round-trip, defensive decoding,
-  field validation
+  field validation, version status
 - `configCodec.golden.test.ts` — backward-compatible
   serialization (golden hashes, base64url safety)
 - `types.test.ts` — TRACK_IDS ordering, cellKey/parseCellKey
 - `SequencerContext.test.tsx` — state actions, derived
-  state, pattern state machine, URL hash import
+  state, pattern state machine, URL hash import, autosave,
+  context memoization
 - `computeStep.test.ts` — pure unit tests: swing,
   solo/mute, trig conditions, accent, parameter locks,
   cycle counts, pattern boundary signals
@@ -116,9 +144,10 @@ Test areas:
 - `trackUtils.test.ts` — computeEffectiveStep, formatPan
 - `hooks/` — per-hook tests for useFillMode,
   usePatternMode, useTrackConfig, usePlayback
-- UI tests — TrackRow, AccentRow, TrackEndBar,
-  StepButton, StepPopover, SettingsPopover,
-  TransportControls, TempoController
+  (useSelection and useDragPaint tests sit at the top level)
+- `helpers/` — `TestWrapper`, compression polyfill,
+  `encodeRaw` for building arbitrary share links
+- `constants.test.ts` — snapshot of every constant
 
 Run `npm test` after any logic change. Run `npm test --
 -u` to update snapshots after intentional format changes.
@@ -143,8 +172,6 @@ close` after verification.
 ```bash
 git worktree add .worktrees/issue-<N> -b issue-<N>-<desc>
 ```
-
-See `@skills/github-issues/SKILL.md` for the full workflow.
 
 ## Deployment
 
@@ -176,10 +203,13 @@ introduces race conditions.
 ## Key Conventions
 
 - State management is local React state only (no external stores)
-- AudioContext must be created/resumed on user gesture
+- AudioContext must be resumed on a user gesture (it is
+  created eagerly; see iOS Audio above)
 - 12 track IDs: `ac bd sd ch oh cy ht mt lt rs cp cb`
   (`ac` is accent — hidden from UI, affects gain only)
-- Patterns use 16-char binary strings per track
+- Patterns use binary step strings per track; tracks can
+  have different lengths (1-64), and the pattern length is
+  the longest track
 - Tailwind CSS v4 for styling
 - TypeScript strict mode
 
@@ -208,10 +238,9 @@ from `main` is fine.
 - Top-level `ErrorBoundary` wraps the entire
   `SequencerProvider` in `Sequencer.tsx`
 - `StepGrid.tsx` wraps `StepPopover` in a boundary
-- `TransportControls.tsx` wraps `PatternPicker` in a
-  boundary
-- `StatusBanner` shows kit load errors and MIDI
-  unavailability (uses `role="alert"`)
+- `StatusBanner` shows kit load errors and share-link
+  notices (uses `role="alert"`). MIDI unavailability is
+  shown in the MIDI tab of `SettingsModal` instead
 
 ## Accessibility
 
@@ -237,6 +266,8 @@ from `main` is fine.
   `border` unconditionally and toggle the color instead
   (e.g., `border-transparent` when invisible). This
   prevents 1px reflow when state changes.
+  The custom lint rule `xox/no-conditional-border`
+  (`eslint-rules/`) enforces this.
 - **Always-mounted collapsible panels** (e.g., the pattern
   drawer) use `max-h-0`/`max-h-[Npx]` with
   `overflow-hidden` for animation. Don't use `gap` on the
