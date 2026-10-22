@@ -24,6 +24,10 @@ const SILENT_WAV =
  * - On each "tick", it checks if any notes need to be scheduled within the next ~100ms.
  * - Notes are scheduled for exactly when they should play using AudioContext.currentTime.
  */
+export type StepCallback = (
+  step: number, time: number, late: boolean
+) => void;
+
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -35,6 +39,10 @@ class AudioEngine {
   private currentStep: number = 0;
   private schedulerTimer: NodeJS.Timeout | null = null;
   private pendingReset = false;
+  // Incremented by every start() and stop(). A start()
+  // that was waiting on ctx.resume() checks it to know
+  // whether it has been cancelled in the meantime.
+  private runId = 0;
 
   // Scheduler Configuration
   private bpm: number = 110;
@@ -43,10 +51,13 @@ class AudioEngine {
   private scheduleAheadTime: number = SCHEDULE_AHEAD_S;
 
   /**
-   * Callback triggered when a step passes.
-   * Useful for syncing UI visuals or triggering sounds in the React component.
+   * Callback triggered for every step, in order.
+   * `late` is true when the step's time has already
+   * passed (e.g. the timer was throttled in a background
+   * tab). Late steps should update sequencer state but
+   * not play sound, so missed steps don't play in a burst.
    */
-  public onStep: (step: number, time: number) => void = () => {};
+  public onStep: StepCallback = () => {};
   public onLoadError: (message: string) => void = () => {};
 
   constructor() {}
@@ -137,13 +148,18 @@ class AudioEngine {
    */
   public async start(
     bpm: number,
-    onStep: (step: number, time: number) => void,
+    onStep: StepCallback,
     patternLength: number = 16
   ) {
+    // Never run two scheduler loops at once.
+    this.stop();
+    const runId = this.runId;
     this.init();
     this.bypassSilentMode();
     if (this.ctx?.state === 'suspended') {
       await this.ctx.resume();
+      // stop() or another start() ran while we waited.
+      if (runId !== this.runId) return;
     }
     this.bpm = bpm;
     this.patternLength = patternLength;
@@ -157,6 +173,7 @@ class AudioEngine {
    * Stops the sequencer playback loop.
    */
   public stop() {
+    this.runId++;
     if (this.schedulerTimer) {
       clearTimeout(this.schedulerTimer);
       this.schedulerTimer = null;
@@ -191,8 +208,10 @@ class AudioEngine {
    */
   private scheduler = () => {
     // While there are notes that will need to play before the next "lookahead" check...
-    while (this.nextStepTime < this.ctx!.currentTime + this.scheduleAheadTime) {
-      this.onStep(this.currentStep, this.nextStepTime);
+    const now = this.ctx!.currentTime;
+    while (this.nextStepTime < now + this.scheduleAheadTime) {
+      const late = this.nextStepTime < now;
+      this.onStep(this.currentStep, this.nextStepTime, late);
       this.advanceStep();
     }
     this.schedulerTimer = setTimeout(this.scheduler, this.lookahead);

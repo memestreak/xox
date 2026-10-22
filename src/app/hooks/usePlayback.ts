@@ -186,7 +186,7 @@ export function usePlayback({
   // ─── Audio step callback ──────────────────────
 
   const handleStep = useCallback(
-    (step: number, time: number) => {
+    (step: number, time: number, late = false) => {
       stepRef.current = step;
 
       const result = computeStep(step, time, {
@@ -205,8 +205,11 @@ export function usePlayback({
       triggeredTracksRef.current =
         result.triggeredTracks;
 
+      // Late steps (timer throttled in a background
+      // tab) advance state but stay silent.
+      const sounds = late ? [] : result.sounds;
       for (const [trackId, scheduledTime, gain, pan]
-        of result.sounds) {
+        of sounds) {
         audioEngine.playSound(
           trackId, scheduledTime, gain, pan
         );
@@ -308,6 +311,10 @@ export function usePlayback({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isLoaded) return;
       if (event.code !== 'Space') return;
+      if (event.repeat) {
+        event.preventDefault();
+        return;
+      }
       const target = event.target as HTMLElement;
       const tag = target?.tagName;
       if (

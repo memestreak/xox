@@ -136,6 +136,52 @@ describe('computeStep integration', () => {
     expect(mockSendNote.mock.calls[0][0]).toBe('bd');
   });
 
+  it('late steps advance state but play no sound'
+    + ' (#119)', async () => {
+    const { result } = renderSequencer();
+
+    await act(async () => {
+      result.current.actions.clearAll();
+    });
+    await act(async () => {
+      result.current.actions.toggleStep('bd', 0);
+    });
+
+    const onStep = await startPlayback(result) as (
+      step: number, time: number, late: boolean
+    ) => void;
+    mockPlaySound.mockClear();
+    mockSendNote.mockClear();
+
+    onStep(0, 0.0, true);
+    expect(mockPlaySound).not.toHaveBeenCalled();
+    expect(mockSendNote).not.toHaveBeenCalled();
+    expect(result.current.meta.totalStepsRef.current)
+      .toBe(1);
+  });
+
+  it('held Space (auto-repeat) does not toggle'
+    + ' playback (#118)', async () => {
+    const { result } = renderSequencer();
+    await waitFor(() => {
+      expect(result.current.state.isLoaded).toBe(true);
+    });
+
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent(
+        'keydown', { code: 'Space', repeat: true }
+      ));
+    });
+    expect(mockStart).not.toHaveBeenCalled();
+
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent(
+        'keydown', { code: 'Space' }
+      ));
+    });
+    expect(mockStart).toHaveBeenCalledTimes(1);
+  });
+
   it('fill ref is threaded to computeStep', async () => {
     const { result } = renderSequencer();
 
