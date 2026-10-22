@@ -16,6 +16,7 @@ vi.mock('../app/AudioEngine', () => ({
     playSound: vi.fn(),
     requestReset: vi.fn(),
     getCurrentTime: vi.fn().mockReturnValue(0),
+    getOutputTime: vi.fn().mockReturnValue(0),
     onStep: vi.fn(),
   },
 }));

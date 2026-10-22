@@ -273,6 +273,18 @@ class AudioEngine {
   public getCurrentTime(): number {
     return this.ctx?.currentTime ?? 0;
   }
+
+  /**
+   * Returns the audio-clock time of the sound currently
+   * reaching the speakers: currentTime minus the output
+   * latency. Use this to sync visuals to what is heard.
+   */
+  public getOutputTime(): number {
+    if (!this.ctx) return 0;
+    const latency =
+      this.ctx.outputLatency ?? this.ctx.baseLatency ?? 0;
+    return this.ctx.currentTime - latency;
+  }
 }
 
 export const audioEngine = new AudioEngine();

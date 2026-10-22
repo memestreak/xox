@@ -13,6 +13,7 @@ import patternsData from './data/patterns.json';
 import { defaultConfig, decodeConfig } from './configCodec';
 import { loadSession, saveSession } from './configStorage';
 import { AUTOSAVE_DEBOUNCE_MS } from './constants';
+import type { StepEvent } from './stepQueue';
 import { TRACK_IDS } from './types';
 import { useFillMode } from './hooks/useFillMode';
 import { usePatternMode } from './hooks/usePatternMode';
@@ -125,6 +126,7 @@ interface SequencerMeta {
   stepRef: React.RefObject<number>;
   totalStepsRef: React.RefObject<number>;
   triggeredTracksRef: React.RefObject<Set<TrackId>>;
+  stepQueueRef: React.RefObject<StepEvent[]>;
   config: SequencerConfig;
 }
 
@@ -412,6 +414,7 @@ export function SequencerProvider({
       totalStepsRef: playback.totalStepsRef,
       triggeredTracksRef:
         playback.triggeredTracksRef,
+      stepQueueRef: playback.stepQueueRef,
       config,
     },
   };
