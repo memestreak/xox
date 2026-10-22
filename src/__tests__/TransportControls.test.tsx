@@ -1,10 +1,14 @@
-import { render, screen, fireEvent }
-  from '@testing-library/react';
+import {
+  render, screen, fireEvent, waitFor,
+} from '@testing-library/react';
 import {
   describe, expect, it, vi, beforeEach,
 } from 'vitest';
 import TransportControls from '../app/TransportControls';
 import { TestWrapper } from './helpers/sequencer-wrapper';
+import { audioEngine } from '../app/AudioEngine';
+import kitsData from '../app/data/kits.json';
+import { BPM_MAX, BPM_MIN } from '../app/constants';
 
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
@@ -36,11 +40,15 @@ vi.mock('../app/MidiEngine', () => ({
 }));
 
 beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(audioEngine.preloadKit).mockResolvedValue(true);
   Element.prototype.setPointerCapture =
     vi.fn() as never;
 });
 
-function renderTransport() {
+function renderTransport(
+  pageIndicator?: React.ReactNode
+) {
   const mockTrigger = (
     <button aria-label="Pattern">Mock Pattern</button>
   );
@@ -48,9 +56,20 @@ function renderTransport() {
     <TestWrapper>
       <TransportControls
         patternTrigger={mockTrigger}
+        pageIndicator={pageIndicator}
       />
     </TestWrapper>
   );
+}
+
+/** Render and wait for the kit preload to finish. */
+async function renderLoaded() {
+  renderTransport();
+  const play = screen.getByRole('button', {
+    name: /start playback/i,
+  });
+  await waitFor(() => expect(play).toBeEnabled());
+  return play;
 }
 
 describe('TransportControls', () => {
@@ -126,5 +145,91 @@ describe('TransportControls', () => {
     expect(
       (select as HTMLSelectElement).value
     ).toBe('electro');
+  });
+
+  it('play button enables once the kit loads', async () => {
+    const play = await renderLoaded();
+    expect(play).not.toHaveClass('cursor-wait');
+  });
+
+  it('clicking play starts the engine and flips state',
+    async () => {
+      const play = await renderLoaded();
+      fireEvent.click(play);
+      expect(audioEngine.start).toHaveBeenCalledTimes(1);
+      const stop = screen.getByRole('button', {
+        name: /stop playback/i,
+      });
+      expect(stop).toHaveAttribute('aria-pressed', 'true');
+      expect(stop).toHaveTextContent('STOP');
+    }
+  );
+
+  it('clicking stop stops the engine', async () => {
+    const play = await renderLoaded();
+    fireEvent.click(play);
+    fireEvent.click(
+      screen.getByRole('button', { name: /stop playback/i })
+    );
+    expect(audioEngine.stop).toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: /start playback/i })
+    ).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('typing a BPM updates the input and engine', async () => {
+    await renderLoaded();
+    const bpm = screen.getByLabelText('BPM');
+    fireEvent.change(bpm, { target: { value: '132' } });
+    expect(bpm).toHaveValue(132);
+    await waitFor(() =>
+      expect(audioEngine.setBpm).toHaveBeenLastCalledWith(132)
+    );
+  });
+
+  it('BPM input clamps out-of-range values', () => {
+    renderTransport();
+    const bpm = screen.getByLabelText('BPM');
+    fireEvent.change(bpm, { target: { value: '999' } });
+    expect(bpm).toHaveValue(BPM_MAX);
+    fireEvent.change(bpm, { target: { value: '1' } });
+    expect(bpm).toHaveValue(BPM_MIN);
+  });
+
+  it('kit selector lists every kit', () => {
+    renderTransport();
+    const options = screen.getAllByRole('option')
+      .filter(o => o.closest('#kit-select'));
+    expect(options.map(o => o.getAttribute('value')))
+      .toEqual(kitsData.kits.map(k => k.id));
+  });
+
+  it('changing kit preloads the new kit folder', async () => {
+    renderTransport();
+    const electro = kitsData.kits.find(
+      k => k.id === 'electro'
+    )!;
+    fireEvent.change(screen.getByLabelText('Kit'), {
+      target: { value: 'electro' },
+    });
+    await waitFor(() =>
+      expect(audioEngine.preloadKit)
+        .toHaveBeenLastCalledWith(electro.folder)
+    );
+  });
+
+  it('renders the page indicator slot', () => {
+    renderTransport(<span data-testid="pager">1/2</span>);
+    expect(screen.getByTestId('pager')).toHaveTextContent('1/2');
+  });
+
+  it('renders the tap tempo and fill controls', () => {
+    renderTransport();
+    expect(
+      screen.getByRole('button', { name: /tap tempo/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /fill/i })
+    ).toBeInTheDocument();
   });
 });

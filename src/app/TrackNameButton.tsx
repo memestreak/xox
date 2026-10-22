@@ -91,6 +91,40 @@ function TrackNameButtonInner({
       );
   }, [menuOpen, closeMenu]);
 
+  // Arrow-key navigation between menu items
+  // (WAI-ARIA menu pattern). Focus wraps at both ends.
+  const handleMenuKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const items = Array.from(
+        e.currentTarget.querySelectorAll<HTMLElement>(
+          '[role="menuitem"]'
+        )
+      );
+      if (items.length === 0) return;
+      const current = items.indexOf(
+        document.activeElement as HTMLElement
+      );
+      let next: number;
+      if (e.key === 'ArrowDown') {
+        next = (current + 1) % items.length;
+      } else if (e.key === 'ArrowUp') {
+        next = current <= 0
+          ? items.length - 1
+          : current - 1;
+      } else if (e.key === 'Home') {
+        next = 0;
+      } else if (e.key === 'End') {
+        next = items.length - 1;
+      } else {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      items[next].focus();
+    },
+    []
+  );
+
   return (
     <Tooltip tooltipKey={`track-${trackId}`}>
       <div className="relative">
@@ -141,6 +175,8 @@ function TrackNameButtonInner({
           ref={menuRef}
           role="menu"
           aria-label={`${trackName} options`}
+          tabIndex={-1}
+          onKeyDown={handleMenuKeyDown}
           className="absolute left-0 top-full mt-1 w-36 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl z-30 overflow-hidden"
         >
           <button

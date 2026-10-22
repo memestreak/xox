@@ -243,7 +243,7 @@ describe('StepButton gain lock opacity', () => {
         <StepButton
           {...base}
           isActive={true}
-          gainLock={0.5}
+          locks={{ gain: 0.5 }}
         />
       );
       const btn = screen.getByRole('button');
@@ -257,7 +257,7 @@ describe('StepButton gain lock opacity', () => {
         <StepButton
           {...base}
           isActive={true}
-          gainLock={0}
+          locks={{ gain: 0 }}
         />
       );
       const btn = screen.getByRole('button');
@@ -271,7 +271,7 @@ describe('StepButton gain lock opacity', () => {
         <StepButton
           {...base}
           isActive={false}
-          gainLock={0.3}
+          locks={{ gain: 0.3 }}
         />
       );
       const btn = screen.getByRole('button');
@@ -437,4 +437,28 @@ describe('StepButton selection', () => {
       expect(onOpen).toHaveBeenCalled();
     }
   );
+});
+
+describe('StepButton locks prop', () => {
+  it('active step with pan lock shows pan indicator', () => {
+    render(
+      <StepButton
+        {...base}
+        isActive={true}
+        locks={{ pan: 0.25 }}
+      />
+    );
+    expect(screen.getByTestId('pan-bar')).toBeInTheDocument();
+  });
+
+  it('no pan lock means no pan indicator', () => {
+    render(
+      <StepButton
+        {...base}
+        isActive={true}
+        locks={{ gain: 0.5 }}
+      />
+    );
+    expect(screen.queryByTestId('pan-bar')).toBeNull();
+  });
 });

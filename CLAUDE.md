@@ -114,6 +114,8 @@ Test areas:
   wiring between SequencerContext and computeStep
 - `audioEngine.test.ts` — timing math, step wrapping
 - `trackUtils.test.ts` — computeEffectiveStep, formatPan
+- `hooks/` — per-hook tests for useFillMode,
+  usePatternMode, useTrackConfig, usePlayback
 - UI tests — TrackRow, AccentRow, TrackEndBar,
   StepButton, StepPopover, SettingsPopover,
   TransportControls, TempoController
