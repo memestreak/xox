@@ -138,17 +138,19 @@ export function usePatternMode({
 
   const toggleTemp = useCallback(() => {
     if (!isPlayingRef.current) return;
-    setTempState(prev => {
-      const next = prev === 'off' ? 'armed' : 'off';
-      tempStateRef.current = next;
-      if (next === 'off') {
-        setPendingPattern(null);
-        pendingPatternRef.current = null;
-        setHomeSnapshot(null);
-        homeSnapshotRef.current = null;
-      }
-      return next;
-    });
+    // Read the ref rather than using a setState updater,
+    // so the other setters and ref writes stay out of
+    // the updater (React may call updaters twice).
+    const next =
+      tempStateRef.current === 'off' ? 'armed' : 'off';
+    setTempState(next);
+    tempStateRef.current = next;
+    if (next === 'off') {
+      setPendingPattern(null);
+      pendingPatternRef.current = null;
+      setHomeSnapshot(null);
+      homeSnapshotRef.current = null;
+    }
   }, [isPlayingRef]);
 
   const reset = useCallback(() => {

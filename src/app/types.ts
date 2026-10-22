@@ -88,6 +88,24 @@ export const TRACK_IDS: readonly TrackId[] = [
 ] as const;
 
 /**
+ * Track definitions for the sequencer grid
+ * (excludes accent), in display order.
+ */
+export const TRACKS: { id: TrackId; name: string }[] = [
+  { id: 'bd', name: 'BD' },
+  { id: 'sd', name: 'SD' },
+  { id: 'ch', name: 'CH' },
+  { id: 'oh', name: 'OH' },
+  { id: 'cy', name: 'CY' },
+  { id: 'ht', name: 'HT' },
+  { id: 'mt', name: 'MT' },
+  { id: 'lt', name: 'LT' },
+  { id: 'rs', name: 'RS' },
+  { id: 'cp', name: 'CP' },
+  { id: 'cb', name: 'CB' },
+];
+
+/**
  * Per-track mixer state within a serialized config.
  */
 export interface TrackMixerState {

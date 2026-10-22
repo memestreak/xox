@@ -285,8 +285,11 @@ export function usePlayback({
 
   // ─── Actions ──────────────────────────────────
 
+  // Reads refs instead of state so the callback stays
+  // stable and the actions context value isn't rebuilt
+  // on every config edit.
   const togglePlay = useCallback(() => {
-    if (isPlaying) {
+    if (isPlayingRef.current) {
       // Revert temp if active
       if (tempStateRef.current === 'active'
           && homeSnapshotRef.current) {
@@ -314,16 +317,17 @@ export function usePlayback({
       totalStepsRef.current = 0;
       stepQueueRef.current = [];
       initCycleCounts();
+      const cfg = configRef.current;
       audioEngine.start(
-        config.bpm,
+        cfg.bpm,
         handleStep,
-        getPatternLength(config.tracks)
+        getPatternLength(cfg.tracks)
       );
       isPlayingRef.current = true;
       setIsPlaying(true);
     }
-  }, [isPlaying, config.bpm, config.tracks,
-    handleStep, initCycleCounts, tempStateRef,
+  }, [configRef, handleStep, initCycleCounts,
+    tempStateRef,
     homeSnapshotRef, setConfig, setSelectedPatternId,
     patternModeReset, isPlayingRef]);
 

@@ -10,6 +10,7 @@ import type { Pattern, TrackId, TrackConfig } from '../app/types';
 import patternsData from '../app/data/patterns.json';
 import kitsData from '../app/data/kits.json';
 import { TestWrapper } from './helpers/sequencer-wrapper';
+import { encodeRaw } from './helpers/encodeRaw';
 
 // Mock the AudioEngine module
 vi.mock('../app/AudioEngine', () => ({
@@ -1324,6 +1325,64 @@ describe('autosave and restore', () => {
     }
   );
 
+  it('an old-version share link keeps the saved session'
+    + ' and shows a notice', async () => {
+    const saved = defaultConfig();
+    saved.bpm = 97;
+    saveSession({ config: saved, selectedPatternId: 'x' });
+    window.location.hash = await encodeRaw({
+      ...defaultConfig(), version: 3, bpm: 150,
+    });
+
+    const { result } = renderSequencer();
+    await waitFor(() => {
+      expect(result.current.state.importNotice)
+        .toMatch(/older version/);
+    });
+    expect(result.current.meta.config.bpm).toBe(97);
+    expect(window.location.hash).toBe('');
+  });
+
+  it('a newer-version share link loads with a notice',
+    async () => {
+      window.location.hash = await encodeRaw({
+        ...defaultConfig(), version: 99, bpm: 150,
+      });
+
+      const { result } = renderSequencer();
+      await waitFor(() => {
+        expect(result.current.meta.config.bpm).toBe(150);
+      });
+      expect(result.current.state.importNotice)
+        .toMatch(/newer version/);
+
+      await act(async () => {
+        result.current.actions.dismissImportNotice();
+      });
+      expect(result.current.state.importNotice).toBeNull();
+    }
+  );
+
+  it('an invalid share link shows a notice', async () => {
+    window.location.hash = 'NOT_A_VALID_LINK';
+    const { result } = renderSequencer();
+    await waitFor(() => {
+      expect(result.current.state.importNotice)
+        .toMatch(/damaged/);
+    });
+  });
+
+  it('a current share link shows no notice', async () => {
+    const shared = defaultConfig();
+    shared.bpm = 150;
+    window.location.hash = await encodeConfig(shared);
+    const { result } = renderSequencer();
+    await waitFor(() => {
+      expect(result.current.meta.config.bpm).toBe(150);
+    });
+    expect(result.current.state.importNotice).toBeNull();
+  });
+
   it('ignores corrupted saved data', async () => {
     window.localStorage.setItem(
       CONFIG_STORAGE_KEY, '{not json'
@@ -1333,4 +1392,33 @@ describe('autosave and restore', () => {
     expect(result.current.meta.config.bpm)
       .toBe(defaultConfig().bpm);
   });
+});
+
+// -------------------------------------------------------
+// Context value memoization (#126)
+// -------------------------------------------------------
+describe('context value memoization', () => {
+  it('keeps the same value when nothing changed',
+    async () => {
+      const { result, rerender } = renderSequencer();
+      await waitFor(() => {
+        expect(result.current.state.isLoaded).toBe(true);
+      });
+      const before = result.current;
+      rerender();
+      expect(result.current).toBe(before);
+    }
+  );
+
+  it('keeps actions stable across config edits',
+    async () => {
+      const { result } = renderSequencer();
+      const actions = result.current.actions;
+      await act(async () => {
+        result.current.actions.setBpm(133);
+      });
+      expect(result.current.meta.config.bpm).toBe(133);
+      expect(result.current.actions).toBe(actions);
+    }
+  );
 });

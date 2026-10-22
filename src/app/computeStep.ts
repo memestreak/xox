@@ -3,8 +3,7 @@ import {
   ACCENT_GAIN_MULTIPLIER,
   GAIN_EXPONENT,
 } from './constants';
-import { TRACK_IDS, getPatternLength } from './types';
-import { TRACKS } from './SequencerContext';
+import { TRACKS, TRACK_IDS, getPatternLength } from './types';
 import type {
   HomeSnapshot,
   Pattern,
@@ -94,20 +93,25 @@ export function computeStep(
     t => t.isSolo
   );
 
-  // Increment cycle count at cycle boundaries
-  for (const id of TRACK_IDS) {
-    const len = config.tracks[id].steps.length;
-    if (totalSteps > 1 && (totalSteps - 1) % len === 0) {
-      cycleCounts[id] = (cycleCounts[id] ?? 0) + 1;
-    }
-  }
-
   const trackStep = (id: TrackId): number => {
     const len = config.tracks[id].steps.length;
     return config.tracks[id].freeRun
       ? (totalSteps - 1) % len
       : step % len;
   };
+
+  // A track starts a new cycle whenever its own step
+  // wraps back to 0. A free-running track wraps every
+  // `len` global steps; any other track also restarts
+  // at each pattern boundary, so a 12-step track in a
+  // 16-step pattern loops after 12 steps and again
+  // after the remaining 4. The very first step is cycle
+  // 0, not a wrap.
+  for (const id of TRACK_IDS) {
+    if (totalSteps > 1 && trackStep(id) === 0) {
+      cycleCounts[id] = (cycleCounts[id] ?? 0) + 1;
+    }
+  }
 
   // Evaluate accent
   const accentStep = trackStep('ac');

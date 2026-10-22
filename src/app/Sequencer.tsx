@@ -84,8 +84,12 @@ function SequencerInner() {
           )}
         </PatternPicker>
         <StatusBanner
-          message={state.loadError}
-          onDismiss={actions.dismissError}
+          message={state.loadError ?? state.importNotice}
+          onDismiss={
+            state.loadError
+              ? actions.dismissError
+              : actions.dismissImportNotice
+          }
         />
         <div
           ref={scrollRef}

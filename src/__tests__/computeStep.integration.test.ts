@@ -325,16 +325,17 @@ describe('computeStep integration', () => {
         result.current.actions.clearAll();
       });
       await act(async () => {
-        result.current.actions.toggleStep('bd', 0);
+        result.current.actions.toggleStep('bd', 1);
         result.current.actions.setTrigCondition(
-          'bd', 0, { cycle: { a: 2, b: 2 } }
+          'bd', 1, { cycle: { a: 2, b: 2 } }
         );
       });
 
       const onStep = await startPlayback(result);
       mockPlaySound.mockClear();
 
-      // Run 17 steps to build up cycle count
+      // Run into the second loop: cycle count is 1, so
+      // the 2:2 condition on step 1 would fire next.
       for (let s = 0; s < 17; s++) {
         onStep(s % 16, 0.0);
       }
@@ -348,7 +349,7 @@ describe('computeStep integration', () => {
       });
 
       mockPlaySound.mockClear();
-      onStep(0, 0.0);
+      onStep(1, 0.0);
 
       // cycleCount=0, 2:2 requires count%2===1 → skip
       expect(mockPlaySound).not.toHaveBeenCalled();

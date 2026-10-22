@@ -653,9 +653,69 @@ describe('computeStep: cycle counts', () => {
       totalSteps: 5,
     });
 
-    const result = computeStep(0, 0.0, deps);
+    const result = computeStep(5, 0.0, deps);
     expect(result.cycleCounts.bd).toBe(0);
   });
+
+  /**
+   * Run `n` steps of a 16-step pattern from the start,
+   * threading cycle counts, and return the counts after
+   * each step for one track.
+   */
+  function runCycles(
+    config: SequencerConfig,
+    id: TrackId,
+    n: number
+  ): number[] {
+    let totalSteps = 0;
+    let cycleCounts = zeroCycles();
+    const counts: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const result = computeStep(
+        i % 16, 0.0,
+        makeDeps({
+          config,
+          trackStates: trackStatesFrom(config),
+          totalSteps,
+          cycleCounts,
+        })
+      );
+      totalSteps = result.totalSteps;
+      cycleCounts = result.cycleCounts;
+      counts.push(cycleCounts[id]);
+    }
+    return counts;
+  }
+
+  it('short track counts loops it actually plays', () => {
+    // A 12-step track in a 16-step pattern restarts at
+    // step 12 (track step 0) and again at the pattern
+    // boundary, so it completes two loops per bar.
+    const config = makeConfig();
+    config.tracks.bd = { steps: '1' + '0'.repeat(11) };
+    const counts = runCycles(config, 'bd', 33);
+    expect(counts[11]).toBe(0);
+    expect(counts[12]).toBe(1);
+    expect(counts[15]).toBe(1);
+    expect(counts[16]).toBe(2);
+    expect(counts[28]).toBe(3);
+    expect(counts[32]).toBe(4);
+  });
+
+  it('short free-running track counts every len steps',
+    () => {
+      const config = makeConfig();
+      config.tracks.bd = {
+        steps: '1' + '0'.repeat(11),
+        freeRun: true,
+      };
+      const counts = runCycles(config, 'bd', 25);
+      expect(counts[11]).toBe(0);
+      expect(counts[12]).toBe(1);
+      expect(counts[16]).toBe(1);
+      expect(counts[24]).toBe(2);
+    }
+  );
 
   it('does not increment on first step', () => {
     let config = makeConfig();

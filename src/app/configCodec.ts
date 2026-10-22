@@ -160,6 +160,42 @@ export async function encodeConfig(
 }
 
 /**
+ * How a decoded config's version compares to this app's.
+ * - 'current': same version, loaded as-is.
+ * - 'newer': made by a newer app; recognized fields are
+ *   loaded and the rest dropped.
+ * - 'older' (or missing version): not loadable; defaults
+ *   are returned.
+ */
+export type ConfigVersionStatus = 'current' | 'newer' | 'older';
+
+export interface DecodedShareLink {
+  config: SequencerConfig;
+  versionStatus: ConfigVersionStatus;
+}
+
+/**
+ * Decode a share-link hash and report how its version
+ * compares to this app's. Throws if the hash isn't
+ * valid compressed JSON.
+ */
+export async function decodeShareLink(
+  hash: string
+): Promise<DecodedShareLink> {
+  const bytes = fromBase64url(hash);
+  const stream = new Blob([bytes as BlobPart]).stream()
+    .pipeThrough(
+      new DecompressionStream('deflate-raw')
+    );
+  const json = await new Response(stream).text();
+  const raw = JSON.parse(json);
+  return {
+    config: validateConfig(raw),
+    versionStatus: getVersionStatus(raw),
+  };
+}
+
+/**
  * Decode a compressed base64url string to a SequencerConfig.
  *
  * Applies defensive validation: unknown kit IDs fall back to
@@ -169,21 +205,26 @@ export async function encodeConfig(
 export async function decodeConfig(
   hash: string
 ): Promise<SequencerConfig> {
-  const bytes = fromBase64url(hash);
-  const stream = new Blob([bytes as BlobPart]).stream()
-    .pipeThrough(
-      new DecompressionStream('deflate-raw')
-    );
-  const json = await new Response(stream).text();
-  const raw = JSON.parse(json);
-  return validateConfig(raw);
+  return (await decodeShareLink(hash)).config;
+}
+
+function getVersionStatus(
+  raw: unknown
+): ConfigVersionStatus {
+  const version = (raw as Record<string, unknown> | null)
+    ?.version;
+  if (typeof version !== 'number') return 'older';
+  if (version > CONFIG_VERSION) return 'newer';
+  if (version < CONFIG_VERSION) return 'older';
+  return 'current';
 }
 
 /**
  * Validate and sanitize a raw parsed config object.
  *
- * Rejects old versions (< CONFIG_VERSION) by returning
- * defaults. Validates all fields defensively.
+ * Old versions (< CONFIG_VERSION, or no version) return
+ * defaults. Newer versions are validated field by field,
+ * so whatever this app recognizes still loads.
  */
 export function validateConfig(
   raw: unknown
@@ -195,8 +236,7 @@ export function validateConfig(
 
   const obj = raw as Record<string, unknown>;
 
-  // Reject old versions
-  if (obj.version !== CONFIG_VERSION) {
+  if (getVersionStatus(obj) === 'older') {
     return defaults;
   }
 
