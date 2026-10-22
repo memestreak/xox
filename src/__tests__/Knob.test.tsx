@@ -101,4 +101,53 @@ describe('Knob', () => {
     fireEvent.click(slider, { detail: 2 });
     expect(onChange).toHaveBeenCalledWith(0.8);
   });
+
+  it('describes keyboard controls via aria-describedby', () => {
+    render(<Knob value={0.5} onChange={vi.fn()} />);
+    const slider = screen.getByRole('slider');
+    expect(slider).toHaveAccessibleDescription(
+      /arrow keys to adjust/i
+    );
+    expect(slider).not.toHaveAccessibleDescription(
+      /double-click/i
+    );
+  });
+
+  it('mentions reset when a default value exists', () => {
+    render(
+      <Knob value={0.5} onChange={vi.fn()} defaultValue={0.5} />
+    );
+    expect(
+      screen.getByRole('slider')
+    ).toHaveAccessibleDescription(/double-click to reset/i);
+  });
+
+  it('keeps an outer aria-describedby id', () => {
+    render(
+      <>
+        <span id="outer">Outer hint</span>
+        <Knob
+          value={0.5}
+          onChange={vi.fn()}
+          aria-describedby="outer"
+        />
+      </>
+    );
+    expect(
+      screen.getByRole('slider')
+    ).toHaveAccessibleDescription(/arrow keys.*Outer hint/i);
+  });
+
+  it('exposes the formatted value as aria-valuetext', () => {
+    render(
+      <Knob
+        value={0.25}
+        onChange={vi.fn()}
+        formatValue={v => `L${Math.round(v * 100)}`}
+      />
+    );
+    expect(
+      screen.getByRole('slider')
+    ).toHaveAttribute('aria-valuetext', 'L25');
+  });
 });

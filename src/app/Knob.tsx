@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect, memo } from 'react';
+import { useRef, useCallback, useEffect, useId, memo } from 'react';
 
 interface KnobProps {
   value: number;
@@ -11,6 +11,8 @@ interface KnobProps {
   defaultValue?: number;
   formatValue?: (v: number) => string;
   ariaPrefix?: string;
+  /** Extra description ids (e.g. from a wrapping Tooltip). */
+  'aria-describedby'?: string;
 }
 
 function describeArc(
@@ -38,6 +40,11 @@ const BG_CY = DEFAULT_SIZE / 2;
 const BG_R = (DEFAULT_SIZE - 4) / 2;
 const BG_ARC = describeArc(BG_CX, BG_CY, BG_R, 135, 405);
 
+const KEYBOARD_HINT =
+  'Use arrow keys to adjust, Shift plus arrow for'
+  + ' larger steps, Home and End for minimum and maximum.';
+const RESET_HINT = 'Double-click to reset.';
+
 /**
  * Rotary knob control rendered as an SVG arc.
  *
@@ -56,7 +63,9 @@ function KnobInner({
   defaultValue,
   formatValue = (v: number) => `${Math.round(v * 100)}%`,
   ariaPrefix = 'Volume',
+  'aria-describedby': extraDescribedBy,
 }: KnobProps) {
+  const descriptionId = useId();
   const dragRef = useRef<{
     startY: number;
     startValue: number;
@@ -176,7 +185,13 @@ function KnobInner({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(value * 100)}
+        aria-valuetext={formatValue(value)}
         aria-label={label}
+        aria-describedby={
+          extraDescribedBy
+            ? `${descriptionId} ${extraDescribedBy}`
+            : descriptionId
+        }
         className="cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-full"
         style={{ touchAction: 'manipulation' }}
         onClick={resetToDefault}
@@ -225,6 +240,10 @@ function KnobInner({
           </text>
         )}
       </svg>
+      <span id={descriptionId} className="sr-only">
+        {KEYBOARD_HINT}
+        {defaultValue !== undefined && ` ${RESET_HINT}`}
+      </span>
       <div className="absolute bottom-full mb-1 hidden group-hover:block px-1.5 py-0.5 text-[10px] font-bold bg-neutral-800 text-neutral-200 rounded whitespace-nowrap">
         {formatValue(value)}
       </div>
