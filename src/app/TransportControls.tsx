@@ -89,8 +89,10 @@ function TransportControlsInner({
           <SettingsPopover />
         </div>
       </div>
-      {/* Row 2: one panel strip, hairline dividers */}
-      <div className="grid grid-cols-6 lg:flex gap-px bg-line border border-line rounded-xl overflow-hidden shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+      {/* Row 2: one panel strip, hairline dividers. No
+          overflow-hidden here: it would clip the tooltips.
+          The corner cells round themselves instead. */}
+      <div className="grid grid-cols-6 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
         <GlobalControls />
         <PanelSection
           label="Kit"
@@ -120,7 +122,7 @@ function TransportControlsInner({
         <PatternModeSelector />
         <PanelSection
           label="Pattern"
-          className="col-span-6 lg:flex-1"
+          className="col-span-6 lg:flex-1 rounded-b-[11px] lg:rounded-none"
         >
           <div className="flex items-center gap-1.5">
             <div className="flex-1 min-w-0">

@@ -47,7 +47,7 @@ function GlobalControlsInner() {
       <PanelSection
         label="Steps"
         labelFor="global-steps"
-        className="col-span-2"
+        className="col-span-2 rounded-tl-[11px] lg:rounded-bl-[11px]"
       >
         <Tooltip tooltipKey="steps">
           <select
@@ -85,8 +85,8 @@ function GlobalControlsInner() {
         </div>
       </PanelSection>
 
-      <PanelSection className="col-span-2 justify-end lg:order-last">
-        <Tooltip tooltipKey="reset">
+      <PanelSection className="col-span-2 justify-end lg:order-last rounded-tr-[11px] lg:rounded-br-[11px]">
+        <Tooltip tooltipKey="reset" align="right">
           <button
             onClick={handleReset}
             className="ss-key ss-cap h-9 px-3 text-xs text-muted hover:text-step1"
