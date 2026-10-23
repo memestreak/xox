@@ -11,6 +11,8 @@ import PatternModeSelector from './PatternModeSelector';
 import { useSequencer } from './SequencerContext';
 import Tooltip from './Tooltip';
 import PanelSection from './PanelSection';
+import MasterVolume from './MasterVolume';
+import { useMasterVolume } from './hooks/useMasterVolume';
 
 interface TransportControlsProps {
   pageIndicator?: ReactNode;
@@ -18,8 +20,8 @@ interface TransportControlsProps {
 }
 
 /**
- * Header section with logo, BPM, play/stop, kit and
- * pattern selectors.
+ * Header section with logo, master volume, BPM,
+ * play/stop, kit and pattern selectors.
  */
 function TransportControlsInner({
   pageIndicator,
@@ -33,6 +35,9 @@ function TransportControlsInner({
   const {
     togglePlay, setBpm, setKit,
   } = actions;
+  // One state for both placements (header on desktop,
+  // strip row below lg) so they never disagree.
+  const master = useMasterVolume();
 
   return (
     <header className="safe-area-top safe-area-x space-y-3 lg:space-y-[18px]">
@@ -47,6 +52,11 @@ function TransportControlsInner({
           </span>
         </div>
         <div className="flex gap-1.5 lg:gap-3 items-center">
+          <MasterVolume
+            variant="header"
+            position={master.position}
+            onChange={master.setPosition}
+          />
           <TempoController bpm={bpm} setBpm={setBpm} />
           <Tooltip tooltipKey="play" position="bottom">
             <button
@@ -131,6 +141,11 @@ function TransportControlsInner({
             {pageIndicator}
           </div>
         </PanelSection>
+        <MasterVolume
+          variant="strip"
+          position={master.position}
+          onChange={master.setPosition}
+        />
       </div>
     </header>
   );

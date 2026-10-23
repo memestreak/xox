@@ -6,6 +6,9 @@ import {
   LIMITER_RELEASE_S,
   LIMITER_THRESHOLD_DB,
   LOOKAHEAD_MS,
+  MASTER_VOLUME_DEFAULT,
+  MASTER_VOLUME_SMOOTHING_S,
+  METER_FFT_SIZE,
   SCHEDULE_AHEAD_S,
 } from './constants';
 
@@ -38,6 +41,13 @@ class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
+  // Master volume sits after the limiter, so turning it
+  // down doesn't change how hard the mix is limited.
+  private outputGain: GainNode | null = null;
+  private outputVolume = MASTER_VOLUME_DEFAULT;
+  // One analyser per output channel (left, right).
+  private meters: AnalyserNode[] = [];
+  private meterData: Float32Array<ArrayBuffer> | null = null;
   private buffers: Map<TrackId, AudioBuffer> = new Map();
   private silentAudio: HTMLAudioElement | null = null;
 
@@ -94,7 +104,63 @@ class AudioEngine {
     this.limiter.attack.value = LIMITER_ATTACK_S;
     this.limiter.release.value = LIMITER_RELEASE_S;
     this.masterGain.connect(this.limiter);
-    this.limiter.connect(this.ctx.destination);
+
+    this.outputGain = this.ctx.createGain();
+    this.outputGain.gain.value = this.outputVolume;
+    // Up-mix mono to stereo so both meter channels
+    // read the centered (unpanned) voices.
+    this.outputGain.channelCount = 2;
+    this.outputGain.channelCountMode = 'explicit';
+    this.outputGain.channelInterpretation = 'speakers';
+    this.limiter.connect(this.outputGain);
+    this.outputGain.connect(this.ctx.destination);
+
+    const splitter = this.ctx.createChannelSplitter(2);
+    this.outputGain.connect(splitter);
+    this.meters = [0, 1].map(channel => {
+      const analyser = this.ctx!.createAnalyser();
+      analyser.fftSize = METER_FFT_SIZE;
+      splitter.connect(analyser, channel);
+      return analyser;
+    });
+    this.meterData = new Float32Array(METER_FFT_SIZE);
+  }
+
+  /**
+   * Sets the master output gain (0-1, linear). Safe to
+   * call before the AudioContext exists; the value is
+   * applied when it is created.
+   */
+  public setOutputVolume(gain: number) {
+    this.outputVolume = Math.max(0, Math.min(1, gain));
+    if (this.ctx && this.outputGain) {
+      // Glide briefly so fader moves don't click.
+      this.outputGain.gain.setTargetAtTime(
+        this.outputVolume,
+        this.ctx.currentTime,
+        MASTER_VOLUME_SMOOTHING_S
+      );
+    }
+  }
+
+  /**
+   * Returns the recent peak level of each output channel
+   * as a linear amplitude (0-1), after master volume.
+   * [0, 0] before the AudioContext exists.
+   */
+  public getOutputPeaks(): [number, number] {
+    const data = this.meterData;
+    if (!data || this.meters.length < 2) return [0, 0];
+    const peaks = this.meters.map(analyser => {
+      analyser.getFloatTimeDomainData(data);
+      let peak = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = Math.abs(data[i]);
+        if (v > peak) peak = v;
+      }
+      return peak;
+    });
+    return [peaks[0], peaks[1]];
   }
 
   /**

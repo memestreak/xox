@@ -46,6 +46,20 @@ export const LIMITER_ATTACK_S = 0.003;
 /** Master limiter release time (seconds). */
 export const LIMITER_RELEASE_S = 0.1;
 
+// ── Master volume and level meter ───────────────────
+/** Default master fader position (0-1); 1 is 0 dB. */
+export const MASTER_VOLUME_DEFAULT = 1;
+/** Time constant for master volume changes (seconds). */
+export const MASTER_VOLUME_SMOOTHING_S = 0.01;
+/** Samples per level-meter reading (per channel). */
+export const METER_FFT_SIZE = 512;
+/** Quietest level the meter shows (dBFS). */
+export const METER_FLOOR_DB = -48;
+/** LED segments per meter channel. */
+export const METER_SEGMENTS = 24;
+/** How fast the meter falls back after a peak (dB/s). */
+export const METER_DECAY_DB_PER_S = 30;
+
 // ── UI timing ───────────────────────────────────────
 /** Duration of the triggered-track flash highlight (ms). */
 export const TRIGGER_FLASH_MS = 150;
