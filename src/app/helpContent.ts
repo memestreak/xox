@@ -51,7 +51,7 @@ const KEYS_TAB: HelpTab = {
           note: '(also while latched)',
         },
         {
-          keys: ['T'], text: 'Temp pattern change',
+          keys: ['T'], text: 'Make next selected pattern temporary',
           note: '(while playing)',
         },
         { keys: ['?'], text: 'Open or close this help' },
