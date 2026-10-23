@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useRef } from 'react';
-import type { RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
@@ -60,6 +60,51 @@ export interface TrackRowProps {
   ) => void;
   onPlainClick?: () => boolean;
   onClearSelection?: () => void;
+  // MOCK ONLY (collapse-empty variants)
+  mockLook?: 'full' | 'slim' | 'folded';
+  onFold?: () => void;
+  nameSlot?: ReactNode;
+  spare?: boolean;
+}
+
+/** MOCK: fold chevron for variant B. */
+function FoldChevron(
+  { folded, onClick, trackName, className = '' }:
+  { folded: boolean; onClick: () => void; trackName: string; className?: string }
+) {
+  return (
+    <button
+      type="button"
+      aria-label={(folded ? 'Unfold ' : 'Fold ') + trackName}
+      aria-expanded={!folded}
+      onClick={onClick}
+      className={'w-5 h-6 shrink-0 flex items-center justify-center rounded text-muted hover:text-ink hover:bg-raised ' + className}
+    >
+      <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"
+        className={'transition-transform ' + (folded ? '-rotate-90' : '')}>
+        <path d="M1.5 3 L5 7 L8.5 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  );
+}
+
+/** MOCK: thin groove showing where a folded track's steps are. */
+function StepGroove(
+  { steps, pageOffset }: { steps: string; pageOffset: number }
+) {
+  return (
+    <div className="grid grid-cols-16 gap-[3px] lg:gap-1.5 h-2 items-center">
+      {Array.from({ length: 16 }, (_, i) => (
+        <div
+          key={i}
+          className={
+            'h-1 rounded-full '
+            + (steps[pageOffset + i] === '1' ? 'bg-accent' : 'bg-edge')
+          }
+        />
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -99,6 +144,10 @@ function TrackRowInner({
   onShiftClick,
   onPlainClick,
   onClearSelection,
+  mockLook = 'full',
+  onFold,
+  nameSlot,
+  spare,
 }: TrackRowProps) {
   const stepGridRef = useRef<HTMLDivElement>(null);
   // ─── Bound callbacks ──────────────────────────
@@ -169,20 +218,100 @@ function TrackRowInner({
     [onShiftClick, pageOffset]
   );
 
+  // ─── MOCK B: folded row ───────────────────────
+  if (mockLook === 'folded') {
+    return (
+      <div className="flex gap-2 lg:gap-4 items-center">
+        <div className="relative flex items-center gap-1 lg:gap-2 w-[76px] lg:w-56 shrink-0">
+          <FoldChevron folded trackName={trackName} onClick={onFold!} className="lg:absolute lg:-left-6" />
+          <button
+            type="button"
+            onClick={onFold}
+            className="font-display font-bold uppercase tracking-[0.08em] text-[15px] leading-none text-muted hover:text-ink px-1"
+          >
+            {trackName}
+          </button>
+        </div>
+        <button
+          type="button"
+          aria-label={'Unfold ' + trackName}
+          onClick={onFold}
+          className="flex-1 py-1"
+        >
+          <StepGroove steps={steps} pageOffset={pageOffset} />
+        </button>
+      </div>
+    );
+  }
+
+  // ─── MOCK C: slim row (empty track) ───────────
+  if (mockLook === 'slim') {
+    return (
+      <div className="flex gap-2 lg:gap-4 items-center">
+        <div className="flex items-center w-14 lg:w-56 shrink-0 opacity-70">
+          <TrackNameButton
+            size="lg"
+            trackId={trackId}
+            trackName={trackName}
+            isFreeRun={isFreeRun}
+            isTriggered={isTriggered}
+            onToggleFreeRun={handleFreeRun}
+            onClearTrack={handleClearTrack}
+            onPlayPreview={handlePlayPreview}
+          />
+        </div>
+        <div
+          ref={stepGridRef}
+          data-track={trackId}
+          className="flex-1 grid grid-cols-16 gap-[2px] lg:gap-1.5"
+        >
+          {Array.from({ length: 16 }, (_, i) => {
+            const globalIdx = pageOffset + i;
+            const disabled =
+              globalIdx >= trackLength
+              || globalIdx >= patternLength;
+            return (
+              <StepButton
+                key={i}
+                trackId={trackId}
+                trackName={trackName}
+                stepIndex={i}
+                isActive={false}
+                isCurrent={!disabled && effectiveStep === globalIdx}
+                isDisabled={disabled}
+                mini
+                onToggle={handleToggleStep}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const nameButton = (size: 'sm' | 'lg') => nameSlot ?? (
+    <>
+      {onFold && (
+        <FoldChevron folded={false} trackName={trackName} onClick={onFold} className={size === 'lg' ? 'absolute -left-6' : ''} />
+      )}
+      <TrackNameButton
+        size={size}
+        trackId={trackId}
+        trackName={trackName}
+        isFreeRun={isFreeRun}
+        isTriggered={isTriggered}
+        onToggleFreeRun={handleFreeRun}
+        onClearTrack={handleClearTrack}
+        onPlayPreview={handlePlayPreview}
+      />
+    </>
+  );
+
   return (
-    <div>
+    <div className={spare ? 'rounded-lg border border-dashed border-edge -mx-1 lg:-mx-2 px-1 lg:px-2 py-1.5 lg:py-2' : ''}>
       {/* Mobile: track name + M/S above grid */}
-      <div className="flex items-center gap-2 mb-1.5 lg:hidden">
-        <TrackNameButton
-          size="sm"
-          trackId={trackId}
-          trackName={trackName}
-          isFreeRun={isFreeRun}
-          isTriggered={isTriggered}
-          onToggleFreeRun={handleFreeRun}
-          onClearTrack={handleClearTrack}
-          onPlayPreview={handlePlayPreview}
-        />
+      <div className="flex items-center gap-1 mb-1.5 lg:hidden">
+        {nameButton('sm')}
         <div className="flex gap-1 ml-auto items-center">
           <TrackMixer
             trackName={trackName}
@@ -201,17 +330,8 @@ function TrackRowInner({
 
       <div className="flex gap-4 items-center">
         {/* Desktop: sidebar */}
-        <div className="hidden lg:flex w-56 items-center gap-2">
-          <TrackNameButton
-            size="lg"
-            trackId={trackId}
-            trackName={trackName}
-            isFreeRun={isFreeRun}
-            isTriggered={isTriggered}
-            onToggleFreeRun={handleFreeRun}
-            onClearTrack={handleClearTrack}
-            onPlayPreview={handlePlayPreview}
-          />
+        <div className="relative hidden lg:flex w-56 items-center gap-2">
+          {nameButton('lg')}
           <TrackMixer
             trackName={trackName}
             isMuted={isMuted}

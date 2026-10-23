@@ -19,6 +19,7 @@ import { TRIGGER_FLASH_MS } from './constants';
 import { audioEngine } from './AudioEngine';
 import { drainDueSteps } from './stepQueue';
 import trackPatternData from './data/trackPatterns.json';
+import { useMockVariant } from './mockVariant';
 
 const TRACK_PATTERNS: TrackPattern[] =
   trackPatternData.patterns;
@@ -64,6 +65,28 @@ export default function StepGrid({
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
+
+  // ─── MOCK: collapse empty tracks ─────────────
+  const mock = useMockVariant();
+  const isEmpty = (id: TrackId) =>
+    !config.tracks[id].steps.includes('1');
+  const emptyIds = TRACKS.filter(t => isEmpty(t.id)).map(t => t.id);
+  // A: hide-empty toggle + tracks shown again by hand
+  const [hideEmpty, setHideEmpty] = useState(true);
+  const [revealed, setRevealed] = useState<Set<TrackId>>(new Set());
+  // B: per-track fold (starts with empty tracks folded)
+  const [folded, setFolded] = useState<Set<TrackId> | null>(null);
+  const foldedSet = folded ?? new Set(emptyIds);
+  const toggleFold = (id: TrackId) => {
+    const next = new Set(foldedSet);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setFolded(next);
+  };
+  // D: which empty track the spare row edits
+  const [spareId, setSpareId] = useState<TrackId | null>(null);
+  const spare = spareId && isEmpty(spareId) ? spareId : emptyIds[0];
+  const hiddenA = mock === 'A' && hideEmpty
+    ? emptyIds.filter(id => !revealed.has(id)) : [];
 
   const longPressActiveRef = useRef<boolean>(false);
   const popoverOpenRef = useRef<boolean>(false);
@@ -268,6 +291,38 @@ export default function StepGrid({
 
   return (
     <div className="ss-panel rounded-xl lg:rounded-2xl p-1 lg:p-2">
+      {mock === 'A' && (
+        <div className="flex items-center gap-2 px-2 lg:px-4 pt-2 lg:pt-2 pb-1 flex-wrap">
+          <button
+            aria-pressed={hideEmpty}
+            onClick={() => { setHideEmpty(!hideEmpty); setRevealed(new Set()); }}
+            className={
+              'ss-key ss-cap h-8 px-2.5 text-xs inline-flex items-center gap-1.5 whitespace-nowrap'
+              + (hideEmpty ? ' text-ink' : ' text-muted')
+            }
+          >
+            <span className={'ss-led' + (hideEmpty ? ' ss-led-on' : '')} />
+            Hide empty
+          </button>
+          {hiddenA.length > 0 && (
+            <>
+              <span className="ss-label ml-1 lg:ml-2">{hiddenA.length} hidden</span>
+              <div className="flex flex-wrap gap-1">
+                {hiddenA.map(id => (
+                  <button
+                    key={id}
+                    aria-label={'Show ' + id}
+                    onClick={() => setRevealed(new Set([...revealed, id]))}
+                    className="ss-key font-display font-bold uppercase tracking-[0.08em] text-[13px] text-muted hover:text-ink h-7 px-2"
+                  >
+                    {TRACKS.find(t => t.id === id)!.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
       {/* Column header: labels + step numbers */}
       <div
         aria-hidden="true"
@@ -307,9 +362,37 @@ export default function StepGrid({
         {...dragPaint}
         className="space-y-2.5 lg:space-y-2 select-none p-2 lg:px-4 lg:pt-2 lg:pb-4"
       >
-        {TRACKS.map(track => (
+        {TRACKS.filter(track => {
+          if (mock === 'A') return !hiddenA.includes(track.id);
+          if (mock === 'D') return !isEmpty(track.id);
+          return true;
+        }).concat(
+          mock === 'D' && spare
+            ? TRACKS.filter(t => t.id === spare) : []
+        ).map(track => (
           <TrackRow
             key={track.id}
+            mockLook={
+              mock === 'B' && foldedSet.has(track.id) ? 'folded'
+              : mock === 'C' && isEmpty(track.id) ? 'slim'
+              : 'full'
+            }
+            onFold={mock === 'B' ? () => toggleFold(track.id) : undefined}
+            spare={mock === 'D' && isEmpty(track.id)}
+            nameSlot={mock === 'D' && isEmpty(track.id) ? (
+              <select
+                aria-label="Spare row track"
+                value={track.id}
+                onChange={e => setSpareId(e.target.value as TrackId)}
+                className="ss-key ss-select h-8 w-[76px] pl-2.5 font-display font-bold text-[17px] tracking-[0.08em]"
+              >
+                {emptyIds.map(id => (
+                  <option key={id} value={id}>
+                    {TRACKS.find(t => t.id === id)!.name}
+                  </option>
+                ))}
+              </select>
+            ) : undefined}
             trackId={track.id}
             trackName={track.name}
             steps={config.tracks[track.id].steps}
