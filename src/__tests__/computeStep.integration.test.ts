@@ -294,6 +294,46 @@ describe('computeStep integration', () => {
     }
   );
 
+  it('latched temp re-arms and returns to the same home',
+    async () => {
+      const { result } = renderSequencer();
+      const home = makePattern(
+        'home', '1010101010101010'
+      );
+      await act(async () => {
+        result.current.actions.setPattern(home);
+      });
+      const onStep = await startPlayback(result);
+      await act(async () => {
+        result.current.actions.setPatternMode(
+          'direct-start'
+        );
+        result.current.actions.toggleTempLatch();
+      });
+      expect(result.current.state.tempState).toBe('armed');
+
+      for (const id of ['t1', 't2']) {
+        await act(async () => {
+          result.current.actions.setPattern(
+            makePattern(id, '1111111111111111')
+          );
+        });
+        expect(result.current.state.tempState)
+          .toBe('active');
+        await act(async () => {
+          onStep(15, 1.0);
+        });
+        await waitFor(() => {
+          expect(result.current.state.tempState)
+            .toBe('armed');
+        });
+        expect(result.current.state.selectedPatternId)
+          .toBe('home');
+      }
+      expect(result.current.state.isTempLatched).toBe(true);
+    }
+  );
+
   it('triggeredTracksRef updated after step',
     async () => {
       const { result } = renderSequencer();

@@ -1,6 +1,7 @@
 {
   "play": "Start / stop playback",
-  "fill": "Hold to fill; ⌘+click to latch",
+  "fill": "Hold to fill",
+  "fillLatch": "Latch fill on / off",
   "tap": "Tap repeatedly to set tempo",
   "bpm": "Drag up / down to change; click to type",
   "swing": "Drag to adjust swing timing",
@@ -34,5 +35,6 @@
   "mode": "Pattern playback mode",
   "temp": "Make next selected pattern temporary",
   "tempStopped": "Start playback to use Temp",
+  "tempLatch": "Keep Temp on: every pattern you pick plays once",
   "pan": "Stereo pan"
 }

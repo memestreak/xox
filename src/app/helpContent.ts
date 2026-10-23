@@ -55,6 +55,10 @@ const KEYS_TAB: HelpTab = {
           keys: ['T'], text: 'Make next selected pattern temporary',
           note: '(while playing)',
         },
+        {
+          keys: ['shift', '+', 'T'], text: 'Latch temp on / off',
+          note: '(every pattern you pick plays once)',
+        },
         { keys: ['H'], text: 'Minimize empty tracks' },
         { keys: ['shift', '+', 'H'], text: 'Restore all tracks' },
         { keys: ['?'], text: 'Open or close this help' },
@@ -200,12 +204,16 @@ const MOUSE_TAB: HelpTab = {
       ],
     },
     {
-      title: 'Fill key',
+      title: 'Fill and Temp keys',
       rows: [
-        { gesture: 'hold', text: 'Fill while held' },
+        { gesture: 'hold FILL', text: 'Fill while held' },
         {
-          keys: ['mod'], gesture: 'click', text: 'Latch fill on / off',
-          note: '(steps you add while it is on play only in fills)',
+          gesture: 'click the light', text: 'Latch on / off',
+          note: '(also ⌘-click FILL)',
+        },
+        {
+          gesture: 'click TEMP', text: 'Make next selected pattern temporary',
+          note: '(or unlatch)',
         },
       ],
     },
@@ -260,6 +268,10 @@ const TOUCH_TAB: HelpTab = {
         {
           gesture: 'hold FILL + tap step',
           text: 'Add a step that plays only in fills',
+        },
+        {
+          gesture: 'tap the light',
+          text: 'Latch Fill or Temp on / off',
         },
       ],
     },

@@ -8,6 +8,7 @@ import { shouldIgnoreShortcut } from '../keyboardUtils';
 
 export interface UseFillModeReturn {
   isFillActive: boolean;
+  isFillLatched: boolean;
   fillMode: 'off' | 'latched' | 'momentary';
   fillActiveRef: React.RefObject<boolean>;
   toggleFillLatch: () => void;
@@ -93,6 +94,7 @@ export function useFillMode(): UseFillModeReturn {
 
   return {
     isFillActive,
+    isFillLatched: isLatched,
     fillMode,
     fillActiveRef,
     toggleFillLatch,
