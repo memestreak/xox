@@ -210,4 +210,44 @@ describe('SettingsPopover', () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Help content')).toHaveFocus();
   });
+
+  it('shows minimize and restore items with their states',
+    async () => {
+      const user = userEvent.setup();
+      renderPopover();
+      await user.click(
+        screen.getByRole('button', { name: /settings/i })
+      );
+      // Default pattern: 8 empty tracks, none minimized
+      const minimize = screen.getByRole('menuitem', {
+        name: /minimize empty tracks/i,
+      });
+      expect(minimize).toBeEnabled();
+      expect(minimize).toHaveTextContent('8');
+      expect(screen.getByRole('menuitem', {
+        name: /restore all tracks/i,
+      })).toBeDisabled();
+
+      await user.click(minimize);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+      await user.click(
+        screen.getByRole('button', { name: /settings/i })
+      );
+      expect(screen.getByRole('menuitem', {
+        name: /minimize empty tracks/i,
+      })).toBeDisabled();
+      const restore = screen.getByRole('menuitem', {
+        name: /restore all tracks/i,
+      });
+      expect(restore).toBeEnabled();
+      await user.click(restore);
+
+      await user.click(
+        screen.getByRole('button', { name: /settings/i })
+      );
+      expect(screen.getByRole('menuitem', {
+        name: /restore all tracks/i,
+      })).toBeDisabled();
+    });
 });

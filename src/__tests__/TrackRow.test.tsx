@@ -358,3 +358,70 @@ describe('TrackRow layout and sub-components', () => {
       .toBeInTheDocument();
   });
 });
+
+describe('TrackRow minimized', () => {
+  const emptySteps = '0'.repeat(16);
+
+  it('has a caret and a line, and no step buttons', () => {
+    renderTrackRow({ steps: emptySteps, isMinimized: true });
+    expect(screen.getByRole('button', { name: 'Restore BD' }))
+      .toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /BD step/ }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mute/i }))
+      .not.toBeInTheDocument();
+    expect(document.querySelectorAll('[data-step]').length)
+      .toBe(0);
+  });
+
+  it('the caret and the line restore the track', () => {
+    const onRestore = vi.fn();
+    renderTrackRow({
+      steps: emptySteps, isMinimized: true, onRestore,
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Restore BD' })
+    );
+    const line = document.querySelector<HTMLElement>(
+      '[data-minimized] button[aria-hidden="true"]'
+    )!;
+    fireEvent.click(line);
+    expect(onRestore).toHaveBeenCalledTimes(2);
+    expect(onRestore).toHaveBeenCalledWith('bd');
+  });
+
+  it('the name plays the sound and does not restore', () => {
+    const onRestore = vi.fn();
+    const onPlayPreview = vi.fn();
+    renderTrackRow({
+      steps: emptySteps, isMinimized: true,
+      onRestore, onPlayPreview,
+    });
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'BD' }),
+      { button: 0 }
+    );
+    expect(onPlayPreview).toHaveBeenCalledWith('bd');
+    expect(onRestore).not.toHaveBeenCalled();
+  });
+
+  it('the line marks segments past the track length', () => {
+    renderTrackRow({
+      steps: '0'.repeat(12), trackLength: 12,
+      patternLength: 16, isMinimized: true,
+    });
+    const segs = document.querySelectorAll(
+      '[data-minimized] button[aria-hidden="true"] span span'
+    );
+    expect(segs.length).toBe(16);
+    expect(segs[11].className).toContain('bg-edge');
+    expect(segs[12].className).toContain('bg-well');
+  });
+
+  it('full rows have no caret', () => {
+    renderTrackRow();
+    expect(
+      screen.queryByRole('button', { name: /^Restore/ })
+    ).not.toBeInTheDocument();
+  });
+});

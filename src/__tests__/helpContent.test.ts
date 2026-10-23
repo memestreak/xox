@@ -49,4 +49,26 @@ describe('helpContent', () => {
     expect(platformText('(also ⌘-click)', true))
       .toBe('(also ⌘-click)');
   });
+
+  it('lists the minimize shortcuts and gestures', () => {
+    const rows = (isTouch: boolean) => getHelpTabs(isTouch)
+      .flatMap(t => t.sections)
+      .flatMap(sec => sec.rows.map(r => ({ ...r, section: sec.title })));
+    const desk = rows(false);
+    expect(desk).toContainEqual(expect.objectContaining({
+      keys: ['H'], text: 'Minimize empty tracks',
+    }));
+    expect(desk).toContainEqual(expect.objectContaining({
+      keys: ['shift', '+', 'H'], text: 'Restore all tracks',
+    }));
+    expect(desk).toContainEqual(expect.objectContaining({
+      section: 'Grid (blank area)', gesture: 'right-click',
+    }));
+    expect(desk).toContainEqual(expect.objectContaining({
+      section: 'Minimized track', text: 'Restore the track',
+    }));
+    expect(rows(true)).toContainEqual(expect.objectContaining({
+      text: 'Restore a minimized track',
+    }));
+  });
 });

@@ -86,6 +86,13 @@ from the URL.
 - `useDragPaint.ts` — pointer drag gestures on the grid
 - `useMasterVolume.ts` — master fader (localStorage,
   no `reset()`: Reset deliberately keeps it)
+- `useMinimizedTracks.ts` — which empty grid rows are
+  drawn minimized (`state.minimizedTracks`), H / Shift+H.
+  View state only: not in `SequencerConfig`, not saved.
+  A track that gains steps leaves the set; AC never
+  minimizes. `StepGrid` passes the visible track order
+  to `useDragPaint`/`useSelection` so drags skip
+  minimized rows
 - `useBlurOnEscape.ts` — mounted once in `Sequencer`:
   Esc after a mouse/touch click drops focus, so
   Chromium doesn't ring the clicked control (or the
@@ -98,7 +105,13 @@ all hook resets.
 
 **Component decomposition:**
 - `TrackRow.tsx` → `TrackNameButton.tsx`,
-  `TrackMixer.tsx`, `TrackEndBar.tsx`
+  `TrackMixer.tsx`, `TrackEndBar.tsx`; an
+  `isMinimized` row renders caret + name + step line
+- `StepGrid.tsx` → `GridContextMenu.tsx` (right-click
+  on a blank spot: minimize / restore all tracks; the
+  gear menu has the same items)
+- `menuStyles.ts` — menu item class strings shared by
+  the track name menu and the grid menu
 - `StepButton.tsx` → `stepColors.ts`, `StepBadges.tsx`
 - `StepPopover.tsx` → `ProbabilityEditor.tsx`,
   `CycleEditor.tsx`, `FillConditionEditor.tsx`,

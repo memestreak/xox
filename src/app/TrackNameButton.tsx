@@ -5,6 +5,9 @@ import {
 } from 'react';
 import type { TrackId } from './types';
 import Tooltip from './Tooltip';
+import {
+  MENU_HINT, MENU_ITEM, MENU_ITEM_BASE,
+} from './menuStyles';
 
 interface TrackNameButtonProps {
   size: 'sm' | 'lg';
@@ -16,18 +19,6 @@ interface TrackNameButtonProps {
   onClearTrack: () => void;
   onPlayPreview: () => void;
 }
-
-const MENU_ITEM_BASE =
-  'w-full text-left px-2.5 py-2 rounded-[5px] text-sm'
-  + ' hover:bg-[#2f2c27] transition-colors'
-  + ' flex items-center justify-between gap-3'
-  + ' focus-visible:outline-none focus-visible:bg-[#2f2c27]';
-
-const MENU_ITEM = MENU_ITEM_BASE + ' text-ink';
-
-const MENU_HINT =
-  'font-mono text-[10px] text-muted border border-edge'
-  + ' rounded px-1.5 py-px';
 
 /**
  * Track name button with optional popover menu.

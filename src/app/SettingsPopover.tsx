@@ -12,6 +12,13 @@ import { FEEDBACK_TIMEOUT_MS } from './constants';
 import Tooltip from './Tooltip';
 import SettingsModal from './SettingsModal';
 import { useHelp } from './HelpContext';
+import { MENU_HINT } from './menuStyles';
+
+const GEAR_ITEM =
+  'w-full text-left px-2.5 py-2 rounded-[5px] text-sm text-ink'
+  + ' hover:bg-[#2f2c27] flex items-center gap-2.5'
+  + ' focus-visible:outline-none focus-visible:bg-[#2f2c27]'
+  + ' disabled:text-faint disabled:hover:bg-transparent';
 
 /**
  * Gear icon button with a dropdown popover for settings.
@@ -21,7 +28,9 @@ import { useHelp } from './HelpContext';
  * updates the address bar.
  */
 export default function SettingsPopover() {
-  const { meta } = useSequencer();
+  const { state, actions, meta } = useSequencer();
+  const { minimizableCount, minimizedTracks } = state;
+  const { minimizeEmptyTracks, restoreAllTracks } = actions;
   const help = useHelp();
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -121,7 +130,7 @@ export default function SettingsPopover() {
         <div
           ref={popoverRef}
           role="menu"
-          className="ss-menu absolute right-0 top-full mt-2 w-52 p-1.5 z-30 flex flex-col"
+          className="ss-menu absolute right-0 top-full mt-2 w-60 p-1.5 z-30 flex flex-col"
         >
           <button
             role="menuitem"
@@ -133,6 +142,40 @@ export default function SettingsPopover() {
               <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
             </svg>
             {feedback || 'Copy share link'}
+          </button>
+          <div className="h-px bg-line mx-1.5 my-1" />
+          <button
+            role="menuitem"
+            disabled={minimizableCount === 0}
+            onClick={() => {
+              minimizeEmptyTracks();
+              setIsOpen(false);
+              buttonRef.current?.focus();
+            }}
+            className={GEAR_ITEM}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-muted shrink-0">
+              <path d="M4 5h16M4 19h16M8 9l4 3 4-3M8 15l4-3 4 3" />
+            </svg>
+            Minimize empty tracks
+            <span className={MENU_HINT + ' ml-auto'}>
+              {minimizableCount}
+            </span>
+          </button>
+          <button
+            role="menuitem"
+            disabled={minimizedTracks.size === 0}
+            onClick={() => {
+              restoreAllTracks();
+              setIsOpen(false);
+              buttonRef.current?.focus();
+            }}
+            className={GEAR_ITEM}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-muted shrink-0">
+              <path d="M4 12h16M8 8l4-4 4 4M8 16l4 4 4-4" />
+            </svg>
+            Restore all tracks
           </button>
           <div className="h-px bg-line mx-1.5 my-1" />
           <button

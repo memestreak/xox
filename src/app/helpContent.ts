@@ -2,7 +2,8 @@
  * Text for the Help dialog: shortcuts and gestures only
  * (longer usage docs belong in the repository). Keep it
  * in sync with the shortcut handlers (usePlayback, useFillMode,
- * usePatternMode, useSelection) and pointer gestures.
+ * usePatternMode, useSelection, useMinimizedTracks) and
+ * pointer gestures.
  */
 
 /**
@@ -54,6 +55,8 @@ const KEYS_TAB: HelpTab = {
           keys: ['T'], text: 'Make next selected pattern temporary',
           note: '(while playing)',
         },
+        { keys: ['H'], text: 'Minimize empty tracks' },
+        { keys: ['shift', '+', 'H'], text: 'Restore all tracks' },
         { keys: ['?'], text: 'Open or close this help' },
         {
           keys: ['Esc'],
@@ -142,6 +145,26 @@ const MOUSE_TAB: HelpTab = {
       ],
     },
     {
+      title: 'Grid (blank area)',
+      rows: [
+        {
+          gesture: 'right-click',
+          text: 'Minimize empty tracks / Restore all tracks',
+          note: '(also in the gear menu)',
+        },
+      ],
+    },
+    {
+      title: 'Minimized track',
+      rows: [
+        {
+          gesture: 'click the caret or line',
+          text: 'Restore the track',
+        },
+        { gesture: 'click the name', text: 'Preview the sound' },
+      ],
+    },
+    {
       title: 'Track end bar',
       rows: [
         {
@@ -200,6 +223,14 @@ const TOUCH_TAB: HelpTab = {
         { gesture: 'tap name', text: 'Preview the sound' },
         { gesture: 'drag end bar', text: 'Set the track length' },
         { gesture: 'hold end bar', text: 'Free-run on / off' },
+        {
+          gesture: 'gear menu',
+          text: 'Minimize empty tracks / Restore all tracks',
+        },
+        {
+          gesture: 'tap caret or line',
+          text: 'Restore a minimized track',
+        },
       ],
     },
     {
