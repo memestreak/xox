@@ -280,3 +280,72 @@ describe('useTrackConfig: steps added during Fill', () => {
     expect(conds?.[4]).toEqual({ fill: 'fill' });
   });
 });
+
+describe('useTrackConfig: preset cycling during Fill', () => {
+  // Base track for a shift+drag gesture: steps 0 and 4
+  // on, step 4 already has a probability.
+  const base = {
+    steps: '1000100000000000',
+    trigConditions: { 4: { probability: 50 } },
+  };
+
+  function setupBase() {
+    const s = setupFill();
+    act(() => {
+      s.r.current.tc.setTrackSteps('bd', base.steps);
+      s.r.current.tc.setTrigCondition('bd', 4, { probability: 50 });
+    });
+    return s;
+  }
+
+  it('gives Fill only to steps the preset turns on', () => {
+    const { r, fillActiveRef } = setupBase();
+    fillActiveRef.current = true;
+    act(() => r.current.tc.setTrackSteps(
+      'bd', '1010101000000000', base
+    ));
+    const bd = r.current.config.tracks.bd;
+    expect(bd.steps).toBe('1010101000000000');
+    expect(bd.trigConditions).toEqual({
+      2: { fill: 'fill' },
+      4: { probability: 50 },
+      6: { fill: 'fill' },
+    });
+  });
+
+  it('drops Fill from steps the next preset turns off', () => {
+    const { r, fillActiveRef } = setupBase();
+    fillActiveRef.current = true;
+    act(() => r.current.tc.setTrackSteps(
+      'bd', '1010101000000000', base
+    ));
+    act(() => r.current.tc.setTrackSteps(
+      'bd', '1000100010000000', base
+    ));
+    expect(r.current.config.tracks.bd.trigConditions).toEqual({
+      4: { probability: 50 },
+      8: { fill: 'fill' },
+    });
+  });
+
+  it('restoring the base (Escape) restores its conditions', () => {
+    const { r, fillActiveRef } = setupBase();
+    fillActiveRef.current = true;
+    act(() => r.current.tc.setTrackSteps(
+      'bd', '0000000011110000', base
+    ));
+    act(() => r.current.tc.setTrackSteps('bd', base.steps, base));
+    const bd = r.current.config.tracks.bd;
+    expect(bd.steps).toBe(base.steps);
+    expect(bd.trigConditions).toEqual(base.trigConditions);
+  });
+
+  it('adds nothing when Fill is off', () => {
+    const { r } = setupBase();
+    act(() => r.current.tc.setTrackSteps(
+      'bd', '1010101000000000', base
+    ));
+    expect(r.current.config.tracks.bd.trigConditions)
+      .toEqual(base.trigConditions);
+  });
+});

@@ -93,7 +93,9 @@ interface SequencerActions {
     value: '0' | '1'
   ) => void;
   setTrackSteps: (
-    trackId: TrackId, steps: string
+    trackId: TrackId,
+    steps: string,
+    base?: TrackConfig
   ) => void;
   setTrigCondition: (
     trackId: TrackId,

@@ -24,7 +24,9 @@ export interface UseTrackConfigReturn {
     value: '0' | '1'
   ) => void;
   setTrackSteps: (
-    trackId: TrackId, steps: string
+    trackId: TrackId,
+    steps: string,
+    base?: TrackConfig
   ) => void;
   toggleFreeRun: (trackId: TrackId) => void;
   setPatternLength: (length: number) => void;
@@ -176,11 +178,41 @@ export function useTrackConfig({
     [setConfig, setSelectedPatternId, fillActiveRef]
   );
 
+  /**
+   * Replaces a track's steps. `base` is the track as it
+   * was when a gesture began (shift+drag preset
+   * cycling): its conditions are restored on every
+   * call, and steps that are on now but were off in
+   * `base` get the Fill condition while Fill is active.
+   * Without `base`, the track's current state is the
+   * base and its conditions are only ever added to.
+   */
   const setTrackSteps = useCallback(
-    (trackId: TrackId, newSteps: string) => {
+    (
+      trackId: TrackId,
+      newSteps: string,
+      base?: TrackConfig
+    ) => {
+      const fillActive = !!fillActiveRef?.current;
       setConfig(prev => {
         const track = prev.tracks[trackId];
-        if (newSteps === track.steps) {
+        const from = base ?? track;
+        const conds: Record<number, StepConditions> = {
+          ...from.trigConditions,
+        };
+        if (fillActive) {
+          for (let i = 0; i < newSteps.length; i++) {
+            if (newSteps[i] === '1' && from.steps[i] !== '1') {
+              conds[i] = { ...conds[i], fill: 'fill' };
+            }
+          }
+        }
+        const trigConditions =
+          Object.keys(conds).length > 0 ? conds : undefined;
+        const condsUnchanged = fillActive
+          ? false
+          : from.trigConditions === track.trigConditions;
+        if (newSteps === track.steps && condsUnchanged) {
           return prev;
         }
         return {
@@ -190,13 +222,14 @@ export function useTrackConfig({
             [trackId]: {
               ...track,
               steps: newSteps,
+              trigConditions,
             },
           },
         };
       });
       setSelectedPatternId('custom');
     },
-    [setConfig, setSelectedPatternId]
+    [setConfig, setSelectedPatternId, fillActiveRef]
   );
 
   const toggleFreeRun = useCallback(
