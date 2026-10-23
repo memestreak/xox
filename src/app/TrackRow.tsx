@@ -310,7 +310,7 @@ function TrackRowInner({
   );
 
   return (
-    <div className={spare ? 'rounded-lg border border-dashed border-edge -mx-1 lg:-mx-2 px-1 lg:px-2 py-1.5 lg:py-2' : ''}>
+    <div className={spare ? 'rounded-lg outline-1 outline-dashed outline-edge -mx-1 lg:-mx-2 px-1 lg:px-2 py-1.5 lg:py-2' : ''}>
       {/* Mobile: track name + M/S above grid */}
       <div className="flex items-center gap-1 mb-1.5 lg:hidden">
         {nameButton('sm')}

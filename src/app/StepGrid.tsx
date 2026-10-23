@@ -66,46 +66,6 @@ export default function StepGrid({
   const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
 
-  // ─── MOCK: collapse empty tracks ─────────────
-  const mock = useMockVariant();
-  const isEmpty = (id: TrackId) =>
-    !config.tracks[id].steps.includes('1');
-  const emptyIds = TRACKS.filter(t => isEmpty(t.id)).map(t => t.id);
-  // A: hide-empty toggle + tracks shown again by hand
-  const [hideEmpty, setHideEmpty] = useState(true);
-  const [revealed, setRevealed] = useState<Set<TrackId>>(new Set());
-  // B: per-track fold (starts with empty tracks folded)
-  const [folded, setFolded] = useState<Set<TrackId> | null>(null);
-  const foldedSet = folded ?? new Set(emptyIds);
-  const toggleFold = (id: TrackId) => {
-    const next = new Set(foldedSet);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setFolded(next);
-  };
-  // D: which empty track the spare row edits
-  const [spareId, setSpareId] = useState<TrackId | null>(null);
-  const spare = spareId && isEmpty(spareId) ? spareId : emptyIds[0];
-  // E: right-click a blank spot to minimize empty tracks;
-  // a minimized row's caret restores it.
-  const [minimized, setMinimized] = useState<Set<TrackId>>(new Set());
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
-  useEffect(() => {
-    if (!ctxMenu) return;
-    const close = (e: Event) => {
-      if (e instanceof KeyboardEvent && e.key !== 'Escape') return;
-      if (e.target instanceof Element && e.target.closest('[role="menu"]')) return;
-      setCtxMenu(null);
-    };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', close);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', close);
-    };
-  }, [ctxMenu]);
-  const hiddenA = mock === 'A' && hideEmpty
-    ? emptyIds.filter(id => !revealed.has(id)) : [];
-
   const longPressActiveRef = useRef<boolean>(false);
   const popoverOpenRef = useRef<boolean>(false);
 
@@ -306,6 +266,46 @@ export default function StepGrid({
       }
     };
   }, [stepRef, stepQueueRef, flashTriggered, setPage]);
+
+  // ─── MOCK: collapse empty tracks ─────────────
+  const mock = useMockVariant();
+  const isEmpty = (id: TrackId) =>
+    !config.tracks[id].steps.includes('1');
+  const emptyIds = TRACKS.filter(t => isEmpty(t.id)).map(t => t.id);
+  // A: hide-empty toggle + tracks shown again by hand
+  const [hideEmpty, setHideEmpty] = useState(true);
+  const [revealed, setRevealed] = useState<Set<TrackId>>(new Set());
+  // B: per-track fold (starts with empty tracks folded)
+  const [folded, setFolded] = useState<Set<TrackId> | null>(null);
+  const foldedSet = folded ?? new Set(emptyIds);
+  const toggleFold = (id: TrackId) => {
+    const next = new Set(foldedSet);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setFolded(next);
+  };
+  // D: which empty track the spare row edits
+  const [spareId, setSpareId] = useState<TrackId | null>(null);
+  const spare = spareId && isEmpty(spareId) ? spareId : emptyIds[0];
+  // E: right-click a blank spot to minimize empty tracks;
+  // a minimized row's caret restores it.
+  const [minimized, setMinimized] = useState<Set<TrackId>>(new Set());
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent && e.key !== 'Escape') return;
+      if (e.target instanceof Element && e.target.closest('[role="menu"]')) return;
+      setCtxMenu(null);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [ctxMenu]);
+  const hiddenA = mock === 'A' && hideEmpty
+    ? emptyIds.filter(id => !revealed.has(id)) : [];
 
   return (
     <div
