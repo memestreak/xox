@@ -46,7 +46,7 @@ const KEYS_TAB: HelpTab = {
         { keys: ['F'], gesture: 'hold', text: 'Fill while held' },
         { keys: ['mod', '+', 'F'], text: 'Latch fill on / off' },
         {
-          keys: ['T'], text: 'Temp pattern change',
+          keys: ['T'], text: 'Make next selected pattern temporary',
           note: '(while playing)',
         },
         { keys: ['?'], text: 'Open or close this help' },
