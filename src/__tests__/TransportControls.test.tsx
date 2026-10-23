@@ -201,12 +201,14 @@ describe('TransportControls', () => {
     );
   });
 
-  it('BPM input clamps out-of-range values', () => {
+  it('BPM input clamps out-of-range values on blur', () => {
     renderTransport();
     const bpm = screen.getByLabelText('BPM');
     fireEvent.change(bpm, { target: { value: '999' } });
+    fireEvent.blur(bpm);
     expect(bpm).toHaveValue(BPM_MAX);
     fireEvent.change(bpm, { target: { value: '1' } });
+    fireEvent.blur(bpm);
     expect(bpm).toHaveValue(BPM_MIN);
   });
 
