@@ -523,7 +523,9 @@ describe('useDragPaint', () => {
 
   describe('pattern cycling mode', () => {
     let onSetTrackSteps: Mock<
-      (trackId: TrackId, steps: string) => void
+      (
+        trackId: TrackId, steps: string, base?: TrackConfig
+      ) => void
     >;
     let longPressActiveRef: React.RefObject<boolean>;
     let popoverOpenRef: React.RefObject<boolean>;
@@ -632,7 +634,8 @@ describe('useDragPaint', () => {
         // prefix = '1111', remaining = 12 zeros
         expect(onSetTrackSteps).toHaveBeenCalledWith(
           'bd',
-          '1111' + '000000000000'
+          '1111' + '000000000000',
+          tc.bd
         );
       }
     );
@@ -656,7 +659,7 @@ describe('useDragPaint', () => {
         }));
 
         const callsDown = onSetTrackSteps.mock.calls
-          .map((c: [TrackId, string]) => c[1]);
+          .map((c) => c[1]);
         onSetTrackSteps.mockClear();
 
         // Drag up 25px (clientY goes from 16 to -9)
@@ -672,7 +675,7 @@ describe('useDragPaint', () => {
         }));
 
         const callsUp = onSetTrackSteps.mock.calls
-          .map((c: [TrackId, string]) => c[1]);
+          .map((c) => c[1]);
 
         // Both directions should produce same result
         expect(callsDown).toEqual(callsUp);
@@ -746,7 +749,7 @@ describe('useDragPaint', () => {
 
         // Should restore snapshot
         expect(onSetTrackSteps).toHaveBeenCalledWith(
-          'bd', snapshot
+          'bd', snapshot, tc.bd
         );
       }
     );
@@ -776,7 +779,8 @@ describe('useDragPaint', () => {
 
         expect(onSetTrackSteps).toHaveBeenCalledWith(
           'bd',
-          '0000' + '101010101010'
+          '0000' + '101010101010',
+          expect.objectContaining({ steps: '0'.repeat(16) })
         );
       }
     );
@@ -810,7 +814,8 @@ describe('useDragPaint', () => {
 
         expect(onSetTrackSteps).toHaveBeenCalledWith(
           'bd',
-          '00' + '101010'
+          '00' + '101010',
+          tc.bd
         );
       }
     );
