@@ -86,6 +86,11 @@ from the URL.
 - `useDragPaint.ts` — pointer drag gestures on the grid
 - `useMasterVolume.ts` — master fader (localStorage,
   no `reset()`: Reset deliberately keeps it)
+- `useBlurOnEscape.ts` — mounted once in `Sequencer`:
+  Esc after a mouse/touch click drops focus, so
+  Chromium doesn't ring the clicked control (or the
+  opener a menu/dialog returns focus to). Keyboard
+  users keep focus and the ring
 
 Every hook that manages resettable state must expose a
 `reset()` method. The orchestrator's `clearAll` composes

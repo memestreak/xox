@@ -56,6 +56,25 @@ export default function SettingsPopover() {
       );
   }, [isOpen]);
 
+  // Dismiss on Escape. If focus was in the menu, put it
+  // back on the gear so keyboard users don't lose it.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const focusInMenu = popoverRef.current?.contains(
+        document.activeElement
+      );
+      setIsOpen(false);
+      if (focusInMenu) buttonRef.current?.focus();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () =>
+      document.removeEventListener(
+        'keydown', handleKeyDown
+      );
+  }, [isOpen]);
+
   const handleExport = useCallback(async () => {
     try {
       const hash = await encodeConfig(meta.config);
@@ -135,13 +154,12 @@ export default function SettingsPopover() {
           </button>
           <button
             role="menuitem"
-            onClick={(e) => {
+            onClick={() => {
               setIsOpen(false);
               // The menu item unmounts; park focus on the
               // gear so closing Help returns there.
               buttonRef.current?.focus();
-              // detail is 0 for a keyboard-activated click.
-              help.open({ viaPointer: e.detail > 0 });
+              help.open();
             }}
             className="w-full text-left px-2.5 py-2 rounded-[5px] text-sm text-ink hover:bg-[#2f2c27] flex items-center gap-2.5 focus-visible:outline-none focus-visible:bg-[#2f2c27]"
           >

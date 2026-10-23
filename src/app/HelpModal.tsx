@@ -13,13 +13,6 @@ import type {
 interface HelpModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /**
-   * The dialog returns focus to whatever opened it. After
-   * an Esc that focus shows a ring, which looks wrong
-   * when Help was opened with a click. When true, drop
-   * that focus instead.
-   */
-  blurOpenerOnClose?: boolean;
 }
 
 /** Touch-first device: lead with gestures. */
@@ -43,10 +36,8 @@ function isApple(): boolean {
 export default function HelpModal({
   isOpen,
   onClose,
-  blurOpenerOnClose = false,
 }: HelpModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [tabs] = useState(() => getHelpTabs(prefersTouch()));
@@ -57,7 +48,6 @@ export default function HelpModal({
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (isOpen && !dialog.open) {
-      openerRef.current = document.activeElement as HTMLElement | null;
       dialog.showModal();
       // showModal focuses the first control (the close
       // key), which then shows a focus ring when opened
@@ -68,20 +58,6 @@ export default function HelpModal({
       dialog.close();
     }
   }, [isOpen]);
-
-  // The native close event fires after the browser has
-  // put focus back on the opener.
-  const handleNativeClose = useCallback(() => {
-    const opener = openerRef.current;
-    if (
-      blurOpenerOnClose
-      && opener
-      && document.activeElement === opener
-    ) {
-      opener.blur();
-    }
-    onClose();
-  }, [blurOpenerOnClose, onClose]);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent<HTMLDialogElement>) => {
@@ -120,7 +96,7 @@ export default function HelpModal({
     <dialog
       ref={dialogRef}
       aria-labelledby="help-title"
-      onClose={handleNativeClose}
+      onClose={onClose}
       onClick={handleBackdropClick}
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
