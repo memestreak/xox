@@ -119,7 +119,7 @@ Supporting files:
 - `SettingsPopover.tsx` — Gear icon settings menu with
   Copy share link
 - `HelpContext.tsx` / `HelpModal.tsx` — Help dialog
-  (shortcuts, gestures, basics), opened by the header
+  (shortcuts and gestures), opened by the header
   "?" key (hidden below `sm`), the gear menu's Help item,
   or the `?` key. Its text lives in `helpContent.ts`:
   **update it whenever a shortcut or gesture changes**

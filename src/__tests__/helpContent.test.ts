@@ -9,20 +9,18 @@ import {
 describe('helpContent', () => {
   it('leads with Keys and offers Mouse on pointer devices', () => {
     expect(getHelpTabs(false).map((t) => t.id))
-      .toEqual(['keys', 'mouse', 'basics']);
+      .toEqual(['keys', 'mouse']);
   });
 
   it('leads with Touch and drops Mouse on touch devices', () => {
     expect(getHelpTabs(true).map((t) => t.id))
-      .toEqual(['touch', 'keys', 'basics']);
+      .toEqual(['touch', 'keys']);
   });
 
   it('every tab has content', () => {
     for (const tab of [...getHelpTabs(false), ...getHelpTabs(true)]) {
-      const count =
-        (tab.sections?.flatMap((s) => s.rows).length ?? 0)
-        + (tab.cards?.length ?? 0);
-      expect(count).toBeGreaterThan(0);
+      const rows = tab.sections.flatMap((s) => s.rows);
+      expect(rows.length).toBeGreaterThan(0);
     }
   });
 

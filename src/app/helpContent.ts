@@ -1,6 +1,7 @@
 /**
- * Text for the Help dialog. Keep it in sync with the
- * shortcut handlers (usePlayback, useFillMode,
+ * Text for the Help dialog: shortcuts and gestures only
+ * (longer usage docs belong in the repository). Keep it
+ * in sync with the shortcut handlers (usePlayback, useFillMode,
  * usePatternMode, useSelection) and pointer gestures.
  */
 
@@ -23,18 +24,12 @@ export interface HelpSection {
   rows: HelpRow[];
 }
 
-export interface HelpCard {
-  title: string;
-  body: string;
-}
-
-export type HelpTabId = 'keys' | 'mouse' | 'touch' | 'basics';
+export type HelpTabId = 'keys' | 'mouse' | 'touch';
 
 export interface HelpTab {
   id: HelpTabId;
   label: string;
-  sections?: HelpSection[];
-  cards?: HelpCard[];
+  sections: HelpSection[];
 }
 
 const KEYS_TAB: HelpTab = {
@@ -206,57 +201,6 @@ const TOUCH_TAB: HelpTab = {
   ],
 };
 
-const BASICS_TAB: HelpTab = {
-  id: 'basics',
-  label: 'Basics',
-  cards: [
-    {
-      title: 'Make a beat',
-      body: 'Each row is one drum. Light up a step to place a'
-        + ' hit; the playhead runs left to right. Steps are'
-        + ' colored in groups of four, one group per beat.',
-    },
-    {
-      title: 'Accent',
-      body: 'The AC row at the bottom makes every hit on its lit'
-        + ' steps louder. Its knob sets how much.',
-    },
-    {
-      title: 'Track length',
-      body: "Drag a track's end bar to shorten it (1–64 steps)"
-        + ' for polyrhythms. A free-run track keeps looping at'
-        + ' its own length instead of restarting with the'
-        + ' pattern.',
-    },
-    {
-      title: 'Step conditions',
-      body: 'Open the step editor (right-click, or long-press on'
-        + ' touch) to set a chance to play, a cycle like 1:2'
-        + ' (every other loop), fill-only, and per-step gain and'
-        + ' pan.',
-    },
-    {
-      title: 'Fill',
-      body: 'Hold FILL (or F) to play the steps marked fill and'
-        + ' mute the ones marked not fill. Latch it to keep it'
-        + ' on.',
-    },
-    {
-      title: 'Changing patterns',
-      body: 'Sequential waits for the loop to end. Direct start'
-        + ' switches now from step 1. Direct jump switches now'
-        + ' in place. TEMP plays the next pick once, then goes'
-        + ' back.',
-    },
-    {
-      title: 'Saving and sharing',
-      body: 'Your session saves itself in this browser. To send'
-        + ' a beat to someone, open the gear menu and choose'
-        + ' Copy share link.',
-    },
-  ],
-};
-
 /**
  * Tabs in display order. Touch screens lead with
  * gestures and drop the Mouse tab; the first tab is
@@ -264,8 +208,8 @@ const BASICS_TAB: HelpTab = {
  */
 export function getHelpTabs(isTouch: boolean): HelpTab[] {
   return isTouch
-    ? [TOUCH_TAB, KEYS_TAB, BASICS_TAB]
-    : [KEYS_TAB, MOUSE_TAB, BASICS_TAB];
+    ? [TOUCH_TAB, KEYS_TAB]
+    : [KEYS_TAB, MOUSE_TAB];
 }
 
 /** True on Apple platforms, where the modifier is ⌘. */

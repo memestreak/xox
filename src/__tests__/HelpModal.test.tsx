@@ -37,7 +37,7 @@ describe('HelpModal', () => {
     expect(document.querySelector('dialog')).toHaveAttribute('open');
     const tabs = screen.getAllByRole('tab');
     expect(tabs.map((t) => t.textContent))
-      .toEqual(['Keys', 'Mouse', 'Basics']);
+      .toEqual(['Keys', 'Mouse']);
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('Play / stop')).toBeInTheDocument();
   });
@@ -47,7 +47,7 @@ describe('HelpModal', () => {
     render(<HelpModal isOpen onClose={() => {}} />);
     const tabs = screen.getAllByRole('tab');
     expect(tabs.map((t) => t.textContent))
-      .toEqual(['Touch', 'Keys', 'Basics']);
+      .toEqual(['Touch', 'Keys']);
     expect(screen.getByText('Step editor')).toBeInTheDocument();
   });
 
@@ -55,10 +55,11 @@ describe('HelpModal', () => {
     mockPointer(false);
     const user = userEvent.setup();
     render(<HelpModal isOpen onClose={() => {}} />);
-    await user.click(screen.getByRole('tab', { name: 'Basics' }));
-    expect(screen.getByRole('tab', { name: 'Basics' }))
+    await user.click(screen.getByRole('tab', { name: 'Mouse' }));
+    expect(screen.getByRole('tab', { name: 'Mouse' }))
       .toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText('Make a beat')).toBeInTheDocument();
+    expect(screen.getByText('Paint steps along a row'))
+      .toBeInTheDocument();
   });
 
   it('moves between tabs with arrow keys', () => {
@@ -72,8 +73,9 @@ describe('HelpModal', () => {
       screen.getByRole('tab', { name: 'Mouse' }),
       { key: 'ArrowLeft' }
     );
+    // Left from the first tab wraps to the last.
     fireEvent.keyDown(keys, { key: 'ArrowLeft' });
-    expect(screen.getByRole('tab', { name: 'Basics' }))
+    expect(screen.getByRole('tab', { name: 'Mouse' }))
       .toHaveAttribute('aria-selected', 'true');
   });
 

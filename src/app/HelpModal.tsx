@@ -7,7 +7,7 @@ import {
   getHelpTabs, isApplePlatform, keyLabel, platformText,
 } from './helpContent';
 import type {
-  HelpCard, HelpRow, HelpSection, HelpTab,
+  HelpRow, HelpSection, HelpTab,
 } from './helpContent';
 
 interface HelpModalProps {
@@ -29,8 +29,8 @@ function isApple(): boolean {
 }
 
 /**
- * Help dialog: keyboard shortcuts, pointer gestures and
- * a short tour, in tabs. Full screen below `sm`.
+ * Help dialog: keyboard shortcuts and pointer gestures,
+ * in tabs. Full screen below `sm`.
  * Remount it (change its key) to start on the first tab.
  */
 export default function HelpModal({
@@ -174,18 +174,9 @@ export default function HelpModal({
 }
 
 function TabBody({ tab, apple }: { tab: HelpTab; apple: boolean }) {
-  if (tab.cards) {
-    return (
-      <div className="grid sm:grid-cols-2 gap-3">
-        {tab.cards.map((card) => (
-          <Card key={card.title} card={card} />
-        ))}
-      </div>
-    );
-  }
   return (
     <div className="grid sm:grid-cols-2 gap-x-9 gap-y-5">
-      {tab.sections?.map((section) => (
+      {tab.sections.map((section) => (
         <Section
           key={section.title}
           section={section}
@@ -246,18 +237,5 @@ function Row({ row, apple }: { row: HelpRow; apple: boolean }) {
         )}
       </span>
     </li>
-  );
-}
-
-function Card({ card }: { card: HelpCard }) {
-  return (
-    <div className="ss-panel rounded-lg px-4 py-3.5 sm:last:odd:col-span-2">
-      <h3 className="font-display font-bold text-base uppercase tracking-[0.08em] text-ink">
-        {card.title}
-      </h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted">
-        {card.body}
-      </p>
-    </div>
   );
 }
