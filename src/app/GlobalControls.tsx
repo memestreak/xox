@@ -40,10 +40,6 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
   );
 
   const handleReset = useCallback(() => {
-    const ok = window.confirm(
-      'Reset clears every track and setting. Continue?'
-    );
-    if (!ok) return;
     actions.clearAll();
     actions.setPatternLength(16);
     actions.setSwing(0);
