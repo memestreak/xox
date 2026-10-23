@@ -11,6 +11,7 @@ import { encodeConfig } from './configCodec';
 import { FEEDBACK_TIMEOUT_MS } from './constants';
 import Tooltip from './Tooltip';
 import SettingsModal from './SettingsModal';
+import { useHelp } from './HelpContext';
 
 /**
  * Gear icon button with a dropdown popover for settings.
@@ -21,6 +22,7 @@ import SettingsModal from './SettingsModal';
  */
 export default function SettingsPopover() {
   const { meta } = useSequencer();
+  const help = useHelp();
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -130,6 +132,24 @@ export default function SettingsPopover() {
               <circle cx="18" cy="18" r="2" />
             </svg>
             Settings…
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              setIsOpen(false);
+              // The menu item unmounts; park focus on the
+              // gear so closing Help returns there.
+              buttonRef.current?.focus();
+              help.open();
+            }}
+            className="w-full text-left px-2.5 py-2 rounded-[5px] text-sm text-ink hover:bg-[#2f2c27] flex items-center gap-2.5 focus-visible:outline-none focus-visible:bg-[#2f2c27]"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="text-muted shrink-0">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.3-2.4 3.8" />
+              <path d="M12 17h.01" />
+            </svg>
+            Help
           </button>
         </div>
       )}

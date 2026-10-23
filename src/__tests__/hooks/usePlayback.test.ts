@@ -236,6 +236,20 @@ describe('usePlayback', () => {
     expect(result.current.pb.isPlaying).toBe(false);
   });
 
+  it('spacebar is ignored while a modal dialog is open', async () => {
+    const r = await renderLoaded();
+    const dialog = document.createElement('dialog');
+    dialog.setAttribute('open', '');
+    document.body.appendChild(dialog);
+    act(() => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'Space' })
+      );
+    });
+    expect(r.current.pb.isPlaying).toBe(false);
+    dialog.remove();
+  });
+
   it('playPreview uses cubic gain and track pan', async () => {
     const r = await renderLoaded();
     act(() => r.current.setConfig(prev => ({

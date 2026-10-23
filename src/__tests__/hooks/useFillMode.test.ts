@@ -80,6 +80,18 @@ describe('useFillMode', () => {
     input.remove();
   });
 
+  it('ignores F while a modal dialog is open', () => {
+    const { result } = renderHook(() => useFillMode());
+    const dialog = document.createElement('dialog');
+    dialog.setAttribute('open', '');
+    document.body.appendChild(dialog);
+    act(() => press({}));
+    expect(result.current.fillMode).toBe('off');
+    act(() => press({ metaKey: true }));
+    expect(result.current.fillMode).toBe('off');
+    dialog.remove();
+  });
+
   it('reset clears latch, hold and ref', () => {
     const { result } = renderHook(() => useFillMode());
     act(() => {

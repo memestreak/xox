@@ -308,6 +308,24 @@ describe('useSelection', () => {
       expect(mockSetStep).not.toHaveBeenCalled();
     });
 
+    it('keys are ignored while a modal dialog is open', () => {
+      const { result, mockSetStep } = setup();
+      act(() => result.current.ctrlClickCell('bd', 3));
+      const dialog = document.createElement('dialog');
+      dialog.setAttribute('open', '');
+      document.body.appendChild(dialog);
+      for (const key of ['Delete', 'Escape']) {
+        act(() => {
+          document.dispatchEvent(
+            new KeyboardEvent('keydown', { key })
+          );
+        });
+      }
+      expect(mockSetStep).not.toHaveBeenCalled();
+      expect(result.current.selected.size).toBe(1);
+      dialog.remove();
+    });
+
     it('Delete is no-op when target is input', () => {
       const { result, mockSetStep } = setup();
       act(() => result.current.ctrlClickCell('bd', 3));

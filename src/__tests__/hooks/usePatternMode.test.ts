@@ -138,6 +138,20 @@ describe('usePatternMode', () => {
     expect(result.current.pm.tempState).toBe('armed');
   });
 
+  it('T key is ignored while a modal dialog is open', () => {
+    const { result } = renderHook(() => useHarness(true));
+    const dialog = document.createElement('dialog');
+    dialog.setAttribute('open', '');
+    document.body.appendChild(dialog);
+    act(() => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'KeyT' })
+      );
+    });
+    expect(result.current.pm.tempState).toBe('off');
+    dialog.remove();
+  });
+
   it('reset clears temp, snapshot and pending', () => {
     const { result } = renderHook(() => useHarness(true));
     act(() => result.current.pm.setPatternMode('sequential'));

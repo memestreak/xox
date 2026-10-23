@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
 } from 'react';
+import { shouldIgnoreShortcut } from '../keyboardUtils';
 
 export interface UseFillModeReturn {
   isFillActive: boolean;
@@ -56,17 +57,11 @@ export function useFillMode(): UseFillModeReturn {
     fillActiveRef.current = false;
   }, []);
 
-  // F-key keyboard shortcut
+  // F-key keyboard shortcut (listed in helpContent.ts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code !== 'KeyF' || e.repeat) return;
-      const tag =
-        (e.target as HTMLElement)?.tagName;
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT'
-      ) return;
+      if (shouldIgnoreShortcut(e)) return;
       e.preventDefault();
       if (e.metaKey || e.ctrlKey) {
         toggleFillLatch();

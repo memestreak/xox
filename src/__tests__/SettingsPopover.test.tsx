@@ -7,6 +7,7 @@ import {
 } from 'vitest';
 import SettingsPopover from '../app/SettingsPopover';
 import { TestWrapper } from './helpers/sequencer-wrapper';
+import { HelpProvider } from '../app/HelpContext';
 
 // jsdom doesn't implement HTMLDialogElement methods
 beforeAll(() => {
@@ -154,5 +155,26 @@ describe('SettingsPopover', () => {
     expect(
       screen.queryByRole('menu')
     ).not.toBeInTheDocument();
+  });
+
+  it('Help closes the menu and opens Help', async () => {
+    const user = userEvent.setup();
+    render(
+      <TestWrapper>
+        <HelpProvider>
+          <SettingsPopover />
+        </HelpProvider>
+      </TestWrapper>
+    );
+    const gear = screen.getByRole('button', { name: /settings/i });
+    await user.click(gear);
+    await user.click(
+      screen.getByRole('menuitem', { name: 'Help' })
+    );
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Help' })
+    ).toBeInTheDocument();
+    expect(gear).toHaveFocus();
   });
 });
