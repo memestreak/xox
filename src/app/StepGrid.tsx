@@ -85,6 +85,24 @@ export default function StepGrid({
   // D: which empty track the spare row edits
   const [spareId, setSpareId] = useState<TrackId | null>(null);
   const spare = spareId && isEmpty(spareId) ? spareId : emptyIds[0];
+  // E: right-click a blank spot to minimize empty tracks;
+  // a minimized row's caret restores it.
+  const [minimized, setMinimized] = useState<Set<TrackId>>(new Set());
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent && e.key !== 'Escape') return;
+      if (e.target instanceof Element && e.target.closest('[role="menu"]')) return;
+      setCtxMenu(null);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [ctxMenu]);
   const hiddenA = mock === 'A' && hideEmpty
     ? emptyIds.filter(id => !revealed.has(id)) : [];
 
@@ -290,7 +308,41 @@ export default function StepGrid({
   }, [stepRef, stepQueueRef, flashTriggered, setPage]);
 
   return (
-    <div className="ss-panel rounded-xl lg:rounded-2xl p-1 lg:p-2">
+    <div
+      className="ss-panel rounded-xl lg:rounded-2xl p-1 lg:p-2"
+      onContextMenu={mock === 'E' ? (e) => {
+        // Steps and track names handle their own right-click.
+        if (e.defaultPrevented) return;
+        e.preventDefault();
+        setCtxMenu({ x: e.clientX, y: e.clientY });
+      } : undefined}
+    >
+      {mock === 'E' && ctxMenu && (
+        <div
+          role="menu"
+          aria-label="Grid options"
+          style={{ position: 'fixed', left: ctxMenu.x, top: ctxMenu.y }}
+          className="ss-menu w-60 p-1.5 z-30 flex flex-col"
+        >
+          <button
+            role="menuitem"
+            disabled={emptyIds.length === 0}
+            onClick={() => { setMinimized(new Set(emptyIds)); setCtxMenu(null); }}
+            className="w-full text-left px-2.5 py-2 rounded-[5px] text-sm hover:bg-[#2f2c27] flex items-center justify-between gap-3 text-ink disabled:text-faint"
+          >
+            <span>Minimize empty tracks</span>
+            <span className="font-mono text-[10px] text-muted border border-edge rounded px-1.5 py-px">{emptyIds.length}</span>
+          </button>
+          <button
+            role="menuitem"
+            disabled={minimized.size === 0}
+            onClick={() => { setMinimized(new Set()); setCtxMenu(null); }}
+            className="w-full text-left px-2.5 py-2 rounded-[5px] text-sm hover:bg-[#2f2c27] flex items-center justify-between gap-3 text-ink disabled:text-faint"
+          >
+            <span>Restore all tracks</span>
+          </button>
+        </div>
+      )}
       {mock === 'A' && (
         <div className="flex items-center gap-2 px-2 lg:px-4 pt-2 lg:pt-2 pb-1 flex-wrap">
           <button
@@ -374,10 +426,20 @@ export default function StepGrid({
             key={track.id}
             mockLook={
               mock === 'B' && foldedSet.has(track.id) ? 'folded'
+              : mock === 'E' && minimized.has(track.id) ? 'folded'
               : mock === 'C' && isEmpty(track.id) ? 'slim'
               : 'full'
             }
-            onFold={mock === 'B' ? () => toggleFold(track.id) : undefined}
+            onFold={
+              mock === 'B' ? () => toggleFold(track.id)
+              : mock === 'E' && minimized.has(track.id)
+                ? () => setMinimized(prev => {
+                  const next = new Set(prev);
+                  next.delete(track.id);
+                  return next;
+                })
+                : undefined
+            }
             spare={mock === 'D' && isEmpty(track.id)}
             nameSlot={mock === 'D' && isEmpty(track.id) ? (
               <select
