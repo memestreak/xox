@@ -41,7 +41,7 @@ function TransportControlsInner({
 
   return (
     <header className="safe-area-top safe-area-x space-y-3 lg:space-y-[18px]">
-      {/* Row 1: Logo + tempo + transport */}
+      {/* Row 1: logo, then play, tempo, fill, volume, settings */}
       <div className="flex justify-between items-center gap-2">
         <div className="flex items-baseline gap-3 min-w-0">
           <h1 className="font-logo font-black text-2xl lg:text-[32px] leading-none tracking-[0.02em] text-accent">
@@ -52,12 +52,6 @@ function TransportControlsInner({
           </span>
         </div>
         <div className="flex gap-1.5 lg:gap-3 items-center">
-          <MasterVolume
-            variant="header"
-            position={master.position}
-            onChange={master.setPosition}
-          />
-          <TempoController bpm={bpm} setBpm={setBpm} />
           <Tooltip tooltipKey="play" position="bottom">
             <button
               onClick={togglePlay}
@@ -105,7 +99,14 @@ function TransportControlsInner({
               </span>
             </button>
           </Tooltip>
+          <TempoController bpm={bpm} setBpm={setBpm} />
           <FillButton />
+          {/* Desktop only; below lg it is a strip row. */}
+          <MasterVolume
+            variant="header"
+            position={master.position}
+            onChange={master.setPosition}
+          />
           <SettingsPopover />
         </div>
       </div>
