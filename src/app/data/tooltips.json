@@ -2,6 +2,7 @@
   "play": "Start / stop playback",
   "fill": "Hold to fill; ⌘+click to latch",
   "tap": "Tap repeatedly to set tempo",
+  "bpm": "Drag up / down to change; click to type",
   "swing": "Drag to adjust swing timing",
   "master": "Volume; double-click to mute",
   "reset": "Reset all settings to defaults",

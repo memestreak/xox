@@ -189,6 +189,17 @@ const MOUSE_TAB: HelpTab = {
       ],
     },
     {
+      title: 'Tempo',
+      rows: [
+        { gesture: 'drag up / down', text: 'Raise / lower the tempo' },
+        {
+          keys: ['shift'], gesture: 'drag',
+          text: 'Fine adjust', note: '(0.1 BPM)',
+        },
+        { gesture: 'click', text: 'Type a tempo' },
+      ],
+    },
+    {
       title: 'Fill key',
       rows: [
         { gesture: 'hold', text: 'Fill while held' },
@@ -231,6 +242,13 @@ const TOUCH_TAB: HelpTab = {
           gesture: 'tap caret or line',
           text: 'Restore a minimized track',
         },
+      ],
+    },
+    {
+      title: 'Tempo',
+      rows: [
+        { gesture: 'drag up / down', text: 'Raise / lower the tempo' },
+        { gesture: 'tap', text: 'Type a tempo' },
       ],
     },
     {

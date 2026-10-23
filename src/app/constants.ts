@@ -72,5 +72,11 @@ export const AUTOSAVE_DEBOUNCE_MS = 300;
 export const BPM_MIN = 20;
 export const BPM_MAX = 300;
 export const DEFAULT_BPM = 110;
+/** Vertical px of drag per tempo step on the BPM field. */
+export const BPM_DRAG_PX_PER_STEP = 4;
+/** Tempo change per drag step (BPM). */
+export const BPM_DRAG_STEP = 1;
+/** Tempo change per drag step with Shift held (BPM). */
+export const BPM_DRAG_FINE_STEP = 0.1;
 /** Maximum swing amount. */
 export const SWING_MAX = 100;
