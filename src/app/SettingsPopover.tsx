@@ -135,13 +135,12 @@ export default function SettingsPopover() {
           </button>
           <button
             role="menuitem"
-            onClick={(e) => {
+            onClick={() => {
               setIsOpen(false);
               // The menu item unmounts; park focus on the
               // gear so closing Help returns there.
               buttonRef.current?.focus();
-              // detail is 0 for a keyboard-activated click.
-              help.open({ viaPointer: e.detail > 0 });
+              help.open();
             }}
             className="w-full text-left px-2.5 py-2 rounded-[5px] text-sm text-ink hover:bg-[#2f2c27] flex items-center gap-2.5 focus-visible:outline-none focus-visible:bg-[#2f2c27]"
           >
