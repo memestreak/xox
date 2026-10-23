@@ -38,7 +38,7 @@ describe('MasterVolume', () => {
   it('shows the level in dB on the slider and readout', () => {
     renderFader(0.5);
     const slider = screen.getByRole('slider', {
-      name: 'Master volume',
+      name: 'Volume',
     });
     // 0.5 on the cubic curve is 0.125, about −18.1 dB.
     expect(slider).toHaveAttribute('aria-valuetext', '−18.1 dB');
@@ -48,7 +48,7 @@ describe('MasterVolume', () => {
   it('reports fader moves', () => {
     const onChange = renderFader(1);
     fireEvent.change(
-      screen.getByRole('slider', { name: 'Master volume' }),
+      screen.getByRole('slider', { name: 'Volume' }),
       { target: { value: '0.4' } },
     );
     expect(onChange).toHaveBeenCalledWith(0.4);
@@ -57,7 +57,7 @@ describe('MasterVolume', () => {
   it('returns to 0 dB on double-click', () => {
     const onChange = renderFader(0.3);
     fireEvent.doubleClick(
-      screen.getByRole('slider', { name: 'Master volume' })
+      screen.getByRole('slider', { name: 'Volume' })
     );
     expect(onChange).toHaveBeenCalledWith(1);
   });
@@ -66,7 +66,7 @@ describe('MasterVolume', () => {
     renderFader(1, 'header');
     renderFader(1, 'strip');
     const sliders = screen.getAllByRole('slider', {
-      name: 'Master volume',
+      name: 'Volume',
     });
     expect(new Set(sliders.map(s => s.id)).size).toBe(2);
   });

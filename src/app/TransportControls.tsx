@@ -81,17 +81,27 @@ function TransportControlsInner({
                 + (!isLoaded ? ' opacity-50 cursor-wait' : '')
               }
             >
-              {isPlaying ? (
-                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-                  <rect x="1" y="1" width="10" height="10" rx="1.5" fill="currentColor" />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-                  <path d="M3 1.5v11l9-5.5z" fill="currentColor" />
-                </svg>
-              )}
-              <span className="hidden sm:inline">
-                {isPlaying ? 'STOP' : 'PLAY'}
+              {/* Fixed-size icon box and both labels stacked
+                  in one grid cell, so the key keeps its width
+                  when it toggles between PLAY and STOP. */}
+              <span className="inline-flex items-center justify-center w-3.5 h-3.5" aria-hidden="true">
+                {isPlaying ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12">
+                    <rect x="1" y="1" width="10" height="10" rx="1.5" fill="currentColor" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 14 14">
+                    <path d="M3 1.5v11l9-5.5z" fill="currentColor" />
+                  </svg>
+                )}
+              </span>
+              <span className="hidden sm:grid" aria-hidden="true">
+                <span className={'col-start-1 row-start-1' + (isPlaying ? ' invisible' : '')}>
+                  PLAY
+                </span>
+                <span className={'col-start-1 row-start-1' + (isPlaying ? '' : ' invisible')}>
+                  STOP
+                </span>
               </span>
             </button>
           </Tooltip>

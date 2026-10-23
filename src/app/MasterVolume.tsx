@@ -20,8 +20,8 @@ interface MasterVolumeProps {
 }
 
 /**
- * Master volume fader with a stereo level meter and a
- * dB readout. Double-click the fader to return to 0 dB.
+ * Master volume fader (labelled "Volume") with a
+ * stereo level meter and a dB readout. Double-click the fader to return to 0 dB.
  */
 function MasterVolumeInner({
   position, onChange, variant,
@@ -56,7 +56,7 @@ function MasterVolumeInner({
             value={position}
             onChange={handleInput}
             onDoubleClick={handleReset}
-            aria-label="Master volume"
+            aria-label="Volume"
             aria-valuetext={readout}
             className={
               'ss-fader w-full'
@@ -82,7 +82,7 @@ function MasterVolumeInner({
     return (
       <div className="hidden lg:flex items-center gap-3 h-11 w-[260px] px-3 rounded-lg ss-panel">
         <label htmlFor={id} className="ss-label text-[10px]">
-          Master
+          Volume
         </label>
         {control}
       </div>
@@ -91,7 +91,7 @@ function MasterVolumeInner({
 
   return (
     <PanelSection
-      label="Master"
+      label="Volume"
       labelFor={id}
       className="col-span-6 lg:hidden"
     >

@@ -108,6 +108,10 @@ describe('TransportControls', () => {
       name: /start playback/i,
     });
     expect(play).toHaveTextContent('PLAY');
+    // STOP is laid out (so the key keeps its width)
+    // but hidden.
+    expect(screen.getByText('PLAY')).not.toHaveClass('invisible');
+    expect(screen.getByText('STOP')).toHaveClass('invisible');
   });
 
   it('kit selector renders with options', () => {
@@ -163,7 +167,8 @@ describe('TransportControls', () => {
         name: /stop playback/i,
       });
       expect(stop).toHaveAttribute('aria-pressed', 'true');
-      expect(stop).toHaveTextContent('STOP');
+      expect(screen.getByText('STOP')).not.toHaveClass('invisible');
+      expect(screen.getByText('PLAY')).toHaveClass('invisible');
     }
   );
 
