@@ -13,9 +13,17 @@ import type { ReactNode } from 'react';
 import HelpModal from './HelpModal';
 import { shouldIgnoreShortcut } from './keyboardUtils';
 
+interface OpenOptions {
+  /**
+   * Opened by a mouse or touch click. Focus then goes
+   * back to the opener on close without a focus ring.
+   */
+  viaPointer?: boolean;
+}
+
 interface HelpContextValue {
   isOpen: boolean;
-  open: () => void;
+  open: (options?: OpenOptions) => void;
   close: () => void;
   toggle: () => void;
 }
@@ -38,10 +46,12 @@ export function HelpProvider({ children }: { children: ReactNode }) {
   // first tab every time.
   const [openCount, setOpenCount] = useState(0);
   const isOpenRef = useRef(false);
+  const [viaPointer, setViaPointer] = useState(false);
 
-  const open = useCallback(() => {
+  const open = useCallback((options?: OpenOptions) => {
     if (isOpenRef.current) return;
     isOpenRef.current = true;
+    setViaPointer(options?.viaPointer ?? false);
     setOpenCount((n) => n + 1);
     setIsOpen(true);
   }, []);
@@ -89,6 +99,7 @@ export function HelpProvider({ children }: { children: ReactNode }) {
           key={openCount}
           isOpen={isOpen}
           onClose={close}
+          blurOpenerOnClose={viaPointer}
         />
       )}
     </HelpContext>

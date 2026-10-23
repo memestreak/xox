@@ -117,7 +117,8 @@ function TransportControlsInner({
           <Tooltip tooltipKey="help" position="bottom" align="right">
             <button
               type="button"
-              onClick={help.open}
+              // detail is 0 for a keyboard-activated click.
+              onClick={(e) => help.open({ viaPointer: e.detail > 0 })}
               aria-label="Help and shortcuts"
               aria-haspopup="dialog"
               className="ss-key hidden sm:flex w-10 h-10 lg:w-11 lg:h-11 rounded-lg items-center justify-center text-muted hover:text-ink font-display font-bold text-[22px] leading-none"
