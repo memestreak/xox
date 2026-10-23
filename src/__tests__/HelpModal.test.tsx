@@ -62,6 +62,21 @@ describe('HelpModal', () => {
       .toBeInTheDocument();
   });
 
+  it('keeps every panel mounted, showing only the active one', async () => {
+    // All panels share one grid cell so the dialog keeps
+    // the tallest panel's size when tabs change.
+    mockPointer(false);
+    const user = userEvent.setup();
+    render(<HelpModal isOpen onClose={() => {}} />);
+    const keys = document.getElementById('help-panel-keys')!;
+    const mouse = document.getElementById('help-panel-mouse')!;
+    expect(keys).not.toHaveClass('invisible');
+    expect(mouse).toHaveClass('invisible');
+    await user.click(screen.getByRole('tab', { name: 'Mouse' }));
+    expect(keys).toHaveClass('invisible');
+    expect(mouse).not.toHaveClass('invisible');
+  });
+
   it('moves between tabs with arrow keys', () => {
     mockPointer(false);
     render(<HelpModal isOpen onClose={() => {}} />);

@@ -85,8 +85,6 @@ export default function HelpModal({
     [activeIndex, selectTab, tabs.length]
   );
 
-  const active = tabs[activeIndex];
-
   return (
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <dialog
@@ -157,16 +155,35 @@ export default function HelpModal({
           ))}
         </div>
 
+        {/* Scroll region. Every panel is stacked in one grid
+            cell and only the active one is visible, so the
+            dialog keeps the tallest panel's size and doesn't
+            jump when switching tabs. */}
         <div
-          role="tabpanel"
-          id={`help-panel-${active.id}`}
-          aria-labelledby={`help-tab-${active.id}`}
           // Scrollable region must be reachable by keyboard.
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={0}
+          aria-label="Help content"
           className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] focus-visible:outline-none"
         >
-          <TabBody tab={active} apple={apple} />
+          <div className="grid">
+            {tabs.map((tab, i) => (
+              <div
+                key={tab.id}
+                role="tabpanel"
+                id={`help-panel-${tab.id}`}
+                aria-labelledby={`help-tab-${tab.id}`}
+                // visibility: hidden also hides it from
+                // screen readers and the tab order.
+                className={
+                  'col-start-1 row-start-1'
+                  + (i === activeIndex ? '' : ' invisible')
+                }
+              >
+                <TabBody tab={tab} apple={apple} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </dialog>
