@@ -49,9 +49,15 @@ beforeEach(() => {
     vi.fn() as never;
 });
 
-function renderTransport(
-  pageIndicator?: React.ReactNode
-) {
+const page = {
+  currentPage: 0,
+  pageCount: 1,
+  autoFollow: true,
+  setPage: vi.fn(),
+  setAutoFollow: vi.fn(),
+};
+
+function renderTransport() {
   const mockTrigger = (
     <button aria-label="Pattern">Mock Pattern</button>
   );
@@ -59,7 +65,7 @@ function renderTransport(
     <TestWrapper>
       <TransportControls
         patternTrigger={mockTrigger}
-        pageIndicator={pageIndicator}
+        page={page}
       />
     </TestWrapper>
   );
@@ -226,9 +232,18 @@ describe('TransportControls', () => {
     );
   });
 
-  it('renders the page indicator slot', () => {
-    renderTransport(<span data-testid="pager">1/2</span>);
-    expect(screen.getByTestId('pager')).toHaveTextContent('1/2');
+  it('renders Follow and page lights in the strip', () => {
+    render(
+      <TestWrapper>
+        <TransportControls page={{ ...page, pageCount: 2 }} />
+      </TestWrapper>
+    );
+    expect(
+      screen.getByRole('button', { name: /auto-follow playhead/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: /^Page \d/ })
+    ).toHaveLength(2);
   });
 
   it('renders the tap tempo and fill controls', () => {
@@ -249,7 +264,7 @@ describe('TransportControls', () => {
     render(
       <TestWrapper>
         <HelpProvider>
-          <TransportControls />
+          <TransportControls page={page} />
         </HelpProvider>
       </TestWrapper>
     );

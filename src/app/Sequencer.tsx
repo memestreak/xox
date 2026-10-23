@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  useRef, useState,
+  useMemo, useRef, useState,
 } from 'react';
 import { SequencerProvider, useSequencer }
   from './SequencerContext';
@@ -12,7 +12,7 @@ import TransportControls from './TransportControls';
 import StepGrid from './StepGrid';
 import ErrorBoundary from './ErrorBoundary';
 import StatusBanner from './StatusBanner';
-import PageIndicator from './PageIndicator';
+import type { PageNav } from './PageIndicator';
 import { getPatternLength } from './types';
 import PatternPicker from './PatternPicker';
 import patternsData from './data/patterns.json';
@@ -39,15 +39,14 @@ function SequencerInner() {
   );
   const pageOffset = clampedPage * 16;
 
-  const pageIndicator = (
-    <PageIndicator
-      currentPage={currentPage}
-      pageCount={pageCount}
-      autoFollow={autoFollow}
-      setPage={setCurrentPage}
-      setAutoFollow={setAutoFollow}
-    />
-  );
+  // Memoized so the memoized header can skip renders.
+  const page = useMemo<PageNav>(() => ({
+    currentPage: clampedPage,
+    pageCount,
+    autoFollow,
+    setPage: setCurrentPage,
+    setAutoFollow,
+  }), [clampedPage, pageCount, autoFollow]);
 
   const liveMessage = state.isPlaying
     ? `Playing at ${state.bpm} BPM`
@@ -77,7 +76,7 @@ function SequencerInner() {
           {({ trigger, drawer }) => (
             <>
               <TransportControls
-                pageIndicator={pageIndicator}
+                page={page}
                 patternTrigger={trigger}
               />
               {drawer}

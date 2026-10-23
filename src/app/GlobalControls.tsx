@@ -6,13 +6,20 @@ import PanelSection from './PanelSection';
 import { useSequencer } from './SequencerContext';
 import Tooltip from './Tooltip';
 import { getPatternLength } from './types';
+import { FollowToggle, PageLights } from './PageIndicator';
+import type { PageNav } from './PageIndicator';
+
+interface GlobalControlsProps {
+  page: PageNav;
+}
 
 /**
- * Global controls: pattern length, swing, and reset.
- * Renders three cells of the controls strip; the
- * parent places them (Reset sits last on desktop).
+ * Global controls: pattern length with page lights
+ * and Follow, swing, and reset. Renders three cells
+ * of the controls strip; the parent places them
+ * (Reset sits last on desktop).
  */
-function GlobalControlsInner() {
+function GlobalControlsInner({ page }: GlobalControlsProps) {
   const { state, actions, meta } = useSequencer();
   const patternLength = getPatternLength(meta.config.tracks);
 
@@ -44,31 +51,47 @@ function GlobalControlsInner() {
 
   return (
     <>
-      <PanelSection
-        label="Steps"
-        labelFor="global-steps"
-        className="col-span-2 rounded-tl-[11px] lg:rounded-bl-[11px]"
-      >
-        <Tooltip tooltipKey="steps">
-          <select
-            id="global-steps"
-            value={patternLength}
-            onChange={handlePatternLength}
-            className="ss-key ss-select h-9 w-full lg:w-[76px] pl-3 font-mono text-sm"
-          >
-            {Array.from(
-              { length: 64 },
-              (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {i + 1}
-                </option>
-              )
-            )}
-          </select>
-        </Tooltip>
+      {/* Below lg: Steps and Swing share row 1. The
+          page lights sit on the label line, centered
+          over Follow, so the cell never changes width
+          as pages come and go. */}
+      <PanelSection className="col-span-4 max-lg:order-1 rounded-tl-[11px] lg:rounded-bl-[11px]">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[76px_auto] items-center gap-x-1.5 lg:gap-x-2 gap-y-2">
+          <label htmlFor="global-steps" className="ss-label">
+            Steps
+          </label>
+          <div className="flex justify-center">
+            <PageLights
+              currentPage={page.currentPage}
+              pageCount={page.pageCount}
+              setPage={page.setPage}
+            />
+          </div>
+          <Tooltip tooltipKey="steps">
+            <select
+              id="global-steps"
+              value={patternLength}
+              onChange={handlePatternLength}
+              className="ss-key ss-select h-9 w-full pl-3 font-mono text-sm"
+            >
+              {Array.from(
+                { length: 64 },
+                (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                )
+              )}
+            </select>
+          </Tooltip>
+          <FollowToggle
+            autoFollow={page.autoFollow}
+            setAutoFollow={page.setAutoFollow}
+          />
+        </div>
       </PanelSection>
 
-      <PanelSection label="Swing" className="col-span-2">
+      <PanelSection label="Swing" className="col-span-2 max-lg:order-1 max-lg:rounded-tr-[11px]">
         <div className="flex items-center gap-2.5 h-9">
           <Tooltip tooltipKey="swing">
             <Knob
@@ -85,7 +108,7 @@ function GlobalControlsInner() {
         </div>
       </PanelSection>
 
-      <PanelSection className="col-span-2 justify-end lg:order-last rounded-tr-[11px] lg:rounded-br-[11px]">
+      <PanelSection className="col-span-2 justify-end max-lg:order-3 lg:order-last lg:rounded-r-[11px]">
         <Tooltip tooltipKey="reset" align="right">
           <button
             onClick={handleReset}
