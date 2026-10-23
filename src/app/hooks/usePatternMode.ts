@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
 } from 'react';
+import { shouldIgnoreShortcut } from '../keyboardUtils';
 import { audioEngine } from '../AudioEngine';
 import type {
   HomeSnapshot,
@@ -162,17 +163,11 @@ export function usePatternMode({
     pendingPatternRef.current = null;
   }, []);
 
-  // T-key keyboard shortcut
+  // T-key keyboard shortcut (listed in helpContent.ts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code !== 'KeyT' || e.repeat) return;
-      const tag =
-        (e.target as HTMLElement)?.tagName;
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT'
-      ) return;
+      if (shouldIgnoreShortcut(e)) return;
       e.preventDefault();
       toggleTemp();
     };

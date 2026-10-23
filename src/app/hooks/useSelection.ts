@@ -5,6 +5,9 @@ import {
 } from 'react';
 import type { RefObject } from 'react';
 import {
+  isFormFieldTarget, isModalDialogOpen,
+} from '../keyboardUtils';
+import {
   cellKey, parseCellKey,
 } from '../types';
 import type {
@@ -266,7 +269,10 @@ export function useSelection({
   // Registered in capture phase so F key can be
   // intercepted before SequencerContext's fill handler.
   useEffect(() => {
+    // Keep the shortcut list in helpContent.ts in sync.
     const handler = (e: KeyboardEvent) => {
+      // Help or Settings is open: leave keys to it.
+      if (isModalDialogOpen()) return;
       if (e.key === 'Escape') {
         // Layered dismissal: popover closes first
         if (popoverOpenRef.current) return;
@@ -277,12 +283,7 @@ export function useSelection({
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedRef.current.size === 0) return;
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (
-          tag === 'INPUT' ||
-          tag === 'TEXTAREA' ||
-          tag === 'SELECT'
-        ) return;
+        if (isFormFieldTarget(e.target)) return;
         e.preventDefault();
         deleteSelected();
         (document.activeElement as HTMLElement)
@@ -293,12 +294,7 @@ export function useSelection({
       // All remaining shortcuts require selection
       if (selectedRef.current.size === 0) return;
       if (popoverOpenRef.current) return;
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT'
-      ) return;
+      if (isFormFieldTarget(e.target)) return;
 
       // F: uniform fill cycle (none -> fill -> !fill)
       if (

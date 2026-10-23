@@ -118,6 +118,14 @@ Supporting files:
 - `TempoController.tsx` — BPM input (clamped 20-300)
 - `SettingsPopover.tsx` — Gear icon settings menu with
   Copy share link
+- `HelpContext.tsx` / `HelpModal.tsx` — Help dialog
+  (shortcuts and gestures), opened by the header
+  "?" key (hidden below `sm`), the gear menu's Help item,
+  or the `?` key. Its text lives in `helpContent.ts`:
+  **update it whenever a shortcut or gesture changes**
+- `keyboardUtils.ts` — `shouldIgnoreShortcut` for global
+  key handlers: skips form fields and any open modal
+  `<dialog>` (Help, Settings)
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `data/patterns.json` — preset patterns, one binary step
   string per track (`"1010101010101010"`)
@@ -155,6 +163,8 @@ matching `<Component>.test.tsx`):
 - `helpers/` — `TestWrapper`, compression polyfill,
   `encodeRaw` for building arbitrary share links
 - `constants.test.ts` — snapshot of every constant
+- `HelpModal.test.tsx`, `HelpContext.test.tsx`,
+  `helpContent.test.ts` — help dialog, `?` key, tabs
 
 Run `npm test` after any logic change. Run `npm test --
 -u` to update snapshots after intentional format changes.

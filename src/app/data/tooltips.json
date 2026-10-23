@@ -9,6 +9,7 @@
   "kit": "Choose sample kit",
   "pattern": "Browse preset patterns",
   "settings": "Settings",
+  "help": "Help and shortcuts (?)",
   "mute": "Mute this track",
   "solo": "Solo this track",
   "step": "Click to toggle; long-press to edit",

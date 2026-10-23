@@ -12,6 +12,7 @@ import { computeStep } from '../computeStep';
 import { GAIN_EXPONENT } from '../constants';
 import { getPatternLength } from '../types';
 import { enqueueStep } from '../stepQueue';
+import { isModalDialogOpen } from '../keyboardUtils';
 import type { StepEvent } from '../stepQueue';
 import type {
   HomeSnapshot,
@@ -356,7 +357,7 @@ export function usePlayback({
     homeSnapshotRef, setConfig, setSelectedPatternId,
     patternModeReset, isPlayingRef]);
 
-  // Spacebar shortcut
+  // Spacebar shortcut (listed in helpContent.ts)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isLoaded) return;
@@ -366,6 +367,8 @@ export function usePlayback({
         return;
       }
       if (spaceBelongsToTarget(event.target)) return;
+      // Help or Settings is open: Space belongs to it.
+      if (isModalDialogOpen()) return;
       event.preventDefault();
       togglePlay();
     };

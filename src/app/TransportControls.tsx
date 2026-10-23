@@ -11,6 +11,7 @@ import PatternModeSelector from './PatternModeSelector';
 import { useSequencer } from './SequencerContext';
 import Tooltip from './Tooltip';
 import PanelSection from './PanelSection';
+import { useHelp } from './HelpContext';
 import MasterVolume from './MasterVolume';
 import { useMasterVolume } from './hooks/useMasterVolume';
 
@@ -38,6 +39,7 @@ function TransportControlsInner({
   // One state for both placements (header on desktop,
   // strip row below lg) so they never disagree.
   const master = useMasterVolume();
+  const help = useHelp();
 
   return (
     <header className="safe-area-top safe-area-x space-y-3 lg:space-y-[18px]">
@@ -110,6 +112,19 @@ function TransportControlsInner({
             onGestureStart={master.beginGesture}
           />
           <SettingsPopover />
+          {/* No room in row 1 on phones; there Help is
+              in the gear menu. */}
+          <Tooltip tooltipKey="help" position="bottom" align="right">
+            <button
+              type="button"
+              onClick={help.open}
+              aria-label="Help and shortcuts"
+              aria-haspopup="dialog"
+              className="ss-key hidden sm:flex w-10 h-10 lg:w-11 lg:h-11 rounded-lg items-center justify-center text-muted hover:text-ink font-display font-bold text-[22px] leading-none"
+            >
+              ?
+            </button>
+          </Tooltip>
         </div>
       </div>
       {/* Row 2: one panel strip, hairline dividers. No

@@ -9,6 +9,7 @@ import { TestWrapper } from './helpers/sequencer-wrapper';
 import { audioEngine } from '../app/AudioEngine';
 import kitsData from '../app/data/kits.json';
 import { BPM_MAX, BPM_MIN } from '../app/constants';
+import { HelpProvider } from '../app/HelpContext';
 
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
@@ -237,6 +238,26 @@ describe('TransportControls', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /fill/i })
+    ).toBeInTheDocument();
+  });
+
+  it('help key has a label and opens Help', () => {
+    HTMLDialogElement.prototype.showModal =
+      vi.fn(function (this: HTMLDialogElement) {
+        this.setAttribute('open', '');
+      });
+    render(
+      <TestWrapper>
+        <HelpProvider>
+          <TransportControls />
+        </HelpProvider>
+      </TestWrapper>
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Help and shortcuts' })
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Help' })
     ).toBeInTheDocument();
   });
 });
