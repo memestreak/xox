@@ -66,7 +66,7 @@ describe('PatternModeSelector Temp button', () => {
       await waitFor(() => expect(temp).toBeEnabled());
       expect(tempTooltip(temp))
         .toHaveTextContent(
-          'Temporary mode change while playing'
+          'Make next selected pattern temporary'
         );
     });
 });
