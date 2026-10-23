@@ -129,13 +129,15 @@ function TransportControlsInner({
       </div>
       {/* Row 2: one panel strip, hairline dividers. No
           overflow-hidden here: it would clip the tooltips.
-          The corner cells round themselves instead. */}
+          The corner cells round themselves instead.
+          Below lg, Pattern gets its own row above Kit and
+          Pattern change (order-1 on those cells). */}
       <div className="grid grid-cols-6 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
         <GlobalControls />
         <PanelSection
           label="Kit"
           labelFor="kit-select"
-          className="col-span-2"
+          className="col-span-2 max-lg:order-1"
         >
           <Tooltip tooltipKey="kit">
             <select
@@ -157,10 +159,9 @@ function TransportControlsInner({
             </select>
           </Tooltip>
         </PanelSection>
-        <PatternModeSelector />
         <PanelSection
           label="Pattern"
-          className="col-span-6 lg:flex-1 rounded-b-[11px] lg:rounded-none"
+          className="col-span-6 lg:flex-1"
         >
           <div className="flex items-center gap-1.5">
             <div className="flex-1 min-w-0">
@@ -169,6 +170,7 @@ function TransportControlsInner({
             {pageIndicator}
           </div>
         </PanelSection>
+        <PatternModeSelector />
         <MasterVolume
           variant="strip"
           position={master.position}
