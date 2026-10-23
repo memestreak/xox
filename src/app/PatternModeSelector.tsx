@@ -37,7 +37,7 @@ export default function PatternModeSelector() {
     <PanelSection
       label="Pattern change"
       labelFor="mode-select"
-      className="col-span-4 max-lg:order-1"
+      className="col-span-4 max-lg:order-4"
     >
       <div className="flex gap-1.5 items-stretch">
         <Tooltip tooltipKey="mode" position="bottom">

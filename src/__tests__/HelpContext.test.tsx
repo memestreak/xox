@@ -1,5 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll, beforeAll, describe, expect, it, vi,
+} from 'vitest';
 import { HelpProvider, useHelp } from '../app/HelpContext';
 
 beforeAll(() => {
@@ -83,5 +85,75 @@ describe('HelpProvider', () => {
     expect(screen.getByText('open')).toBeInTheDocument();
     act(() => screen.getByText('open').click());
     expect(screen.getByText('closed')).toBeInTheDocument();
+  });
+});
+
+describe('HelpProvider focus on close', () => {
+  // Mimic the browser: close() puts focus back on what
+  // was focused at showModal(), then fires `close`.
+  let previous: HTMLElement | null = null;
+  const realShowModal = HTMLDialogElement.prototype.showModal;
+  const realClose = HTMLDialogElement.prototype.close;
+
+  beforeAll(() => {
+    HTMLDialogElement.prototype.showModal =
+      function (this: HTMLDialogElement) {
+        previous = document.activeElement as HTMLElement | null;
+        this.setAttribute('open', '');
+      };
+    HTMLDialogElement.prototype.close =
+      function (this: HTMLDialogElement) {
+        this.removeAttribute('open');
+        previous?.focus();
+        this.dispatchEvent(new Event('close'));
+      };
+  });
+
+  afterAll(() => {
+    HTMLDialogElement.prototype.showModal = realShowModal;
+    HTMLDialogElement.prototype.close = realClose;
+  });
+
+  function Opener({ viaPointer }: { viaPointer: boolean }) {
+    const help = useHelp();
+    return (
+      <button
+        type="button"
+        onClick={() => help.open({ viaPointer })}
+      >
+        opener
+      </button>
+    );
+  }
+
+  function openThenEscape(viaPointer: boolean) {
+    render(
+      <HelpProvider>
+        <Opener viaPointer={viaPointer} />
+      </HelpProvider>
+    );
+    const opener = screen.getByText('opener');
+    act(() => {
+      opener.focus();
+      opener.click();
+    });
+    const dialog = document.querySelector('dialog')!;
+    act(() => {
+      dialog.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Escape', bubbles: true,
+      }));
+    });
+    expect(dialog).not.toHaveAttribute('open');
+    return opener;
+  }
+
+  it('drops focus from a clicked opener', () => {
+    const opener = openThenEscape(true);
+    expect(document.activeElement).not.toBe(opener);
+  });
+
+  it('keeps focus on a keyboard opener', () => {
+    const opener = openThenEscape(false);
+    expect(document.activeElement).toBe(opener);
   });
 });

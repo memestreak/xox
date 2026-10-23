@@ -21,6 +21,14 @@ vi.mock('../app/AudioEngine', () => ({
   },
 }));
 
+const page = {
+  currentPage: 0,
+  pageCount: 1,
+  autoFollow: true,
+  setPage: vi.fn(),
+  setAutoFollow: vi.fn(),
+};
+
 // TransportControls renders PatternModeSelector and
 // the play button that enables Temp.
 function renderSelector() {
@@ -28,6 +36,7 @@ function renderSelector() {
     <TestWrapper>
       <TransportControls
         patternTrigger={<button>Pattern</button>}
+        page={page}
       />
     </TestWrapper>
   );

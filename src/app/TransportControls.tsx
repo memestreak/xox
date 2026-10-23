@@ -2,6 +2,7 @@
 
 import { memo } from 'react';
 import type { ReactNode } from 'react';
+import type { PageNav } from './PageIndicator';
 import kitsData from './data/kits.json';
 import TempoController from './TempoController';
 import SettingsPopover from './SettingsPopover';
@@ -16,7 +17,7 @@ import MasterVolume from './MasterVolume';
 import { useMasterVolume } from './hooks/useMasterVolume';
 
 interface TransportControlsProps {
-  pageIndicator?: ReactNode;
+  page: PageNav;
   patternTrigger?: ReactNode;
 }
 
@@ -25,7 +26,7 @@ interface TransportControlsProps {
  * play/stop, kit and pattern selectors.
  */
 function TransportControlsInner({
-  pageIndicator,
+  page,
   patternTrigger,
 }: TransportControlsProps) {
   const { state, actions } = useSequencer();
@@ -117,7 +118,8 @@ function TransportControlsInner({
           <Tooltip tooltipKey="help" position="bottom" align="right">
             <button
               type="button"
-              onClick={help.open}
+              // detail is 0 for a keyboard-activated click.
+              onClick={(e) => help.open({ viaPointer: e.detail > 0 })}
               aria-label="Help and shortcuts"
               aria-haspopup="dialog"
               className="ss-key hidden sm:flex w-10 h-10 lg:w-11 lg:h-11 rounded-lg items-center justify-center text-muted hover:text-ink font-display font-bold text-[22px] leading-none"
@@ -130,14 +132,15 @@ function TransportControlsInner({
       {/* Row 2: one panel strip, hairline dividers. No
           overflow-hidden here: it would clip the tooltips.
           The corner cells round themselves instead.
-          Below lg, Pattern gets its own row above Kit and
-          Pattern change (order-1 on those cells). */}
+          Below lg the rows are Steps + Swing, Pattern +
+          Reset, Kit + Pattern change, then Volume (set
+          by max-lg:order-* on the cells). */}
       <div className="grid grid-cols-6 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
-        <GlobalControls />
+        <GlobalControls page={page} />
         <PanelSection
           label="Kit"
           labelFor="kit-select"
-          className="col-span-2 max-lg:order-1"
+          className="col-span-2 max-lg:order-4"
         >
           <Tooltip tooltipKey="kit">
             <select
@@ -161,14 +164,9 @@ function TransportControlsInner({
         </PanelSection>
         <PanelSection
           label="Pattern"
-          className="col-span-6 lg:flex-1"
+          className="col-span-4 lg:flex-1 max-lg:order-2"
         >
-          <div className="flex items-center gap-1.5">
-            <div className="flex-1 min-w-0">
-              {patternTrigger}
-            </div>
-            {pageIndicator}
-          </div>
+          {patternTrigger}
         </PanelSection>
         <PatternModeSelector />
         <MasterVolume

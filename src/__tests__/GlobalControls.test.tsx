@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import GlobalControls from '../app/GlobalControls';
+import type { PageNav } from '../app/PageIndicator';
 
 // Mock SequencerContext
 const mockSetPatternLength = vi.fn();
@@ -37,9 +38,24 @@ vi.mock('../app/SequencerContext', () => ({
   }),
 }));
 
+function makePage(overrides: Partial<PageNav> = {}): PageNav {
+  return {
+    currentPage: 0,
+    pageCount: 1,
+    autoFollow: true,
+    setPage: vi.fn(),
+    setAutoFollow: vi.fn(),
+    ...overrides,
+  };
+}
+
+function renderControls(page = makePage()) {
+  return render(<GlobalControls page={page} />);
+}
+
 describe('GlobalControls', () => {
   it('renders steps dropdown', () => {
-    render(<GlobalControls />);
+    renderControls();
     const select = screen.getByRole('combobox');
     expect(select).toBeDefined();
     expect(
@@ -48,19 +64,19 @@ describe('GlobalControls', () => {
   });
 
   it('renders swing knob', () => {
-    render(<GlobalControls />);
+    renderControls();
     const knob = screen.getByRole('slider');
     expect(knob).toBeDefined();
   });
 
   it('renders clear button', () => {
-    render(<GlobalControls />);
-    const btn = screen.getByRole('button');
+    renderControls();
+    const btn = screen.getByRole('button', { name: /reset/i });
     expect(btn).toBeDefined();
   });
 
   it('steps change calls setPatternLength', () => {
-    render(<GlobalControls />);
+    renderControls();
     const select = screen.getByRole('combobox');
     fireEvent.change(select, {
       target: { value: '8' },
@@ -68,29 +84,19 @@ describe('GlobalControls', () => {
     expect(mockSetPatternLength).toHaveBeenCalledWith(8);
   });
 
-  it('clear button calls clearAll after confirming', () => {
-    const confirm = vi.spyOn(window, 'confirm')
-      .mockReturnValue(true);
-    render(<GlobalControls />);
-    const btn = screen.getByRole('button');
+  it('clear button resets without asking', () => {
+    const confirm = vi.spyOn(window, 'confirm');
+    renderControls();
+    const btn = screen.getByRole('button', { name: /reset/i });
     fireEvent.click(btn);
-    expect(confirm).toHaveBeenCalled();
+    expect(confirm).not.toHaveBeenCalled();
     expect(mockClearAll).toHaveBeenCalled();
-    confirm.mockRestore();
-  });
-
-  it('clear button does nothing if not confirmed', () => {
-    mockClearAll.mockClear();
-    const confirm = vi.spyOn(window, 'confirm')
-      .mockReturnValue(false);
-    render(<GlobalControls />);
-    fireEvent.click(screen.getByRole('button'));
-    expect(mockClearAll).not.toHaveBeenCalled();
+    expect(mockSetPatternLength).toHaveBeenCalledWith(16);
     confirm.mockRestore();
   });
 
   it('swing knob calls setSwing', () => {
-    render(<GlobalControls />);
+    renderControls();
     const knob = screen.getByRole('slider');
     // Simulate keyboard interaction (ArrowUp)
     fireEvent.keyDown(knob, { key: 'ArrowUp' });
@@ -98,11 +104,40 @@ describe('GlobalControls', () => {
   });
 
   it('renders 64 step options', () => {
-    render(<GlobalControls />);
+    renderControls();
     const select = screen.getByRole('combobox');
     const options = select.querySelectorAll('option');
     expect(options.length).toBe(64);
     expect(options[0].value).toBe('1');
     expect(options[63].value).toBe('64');
+  });
+
+  it('renders the Follow toggle in the Steps cell', () => {
+    const setAutoFollow = vi.fn();
+    renderControls(makePage({ setAutoFollow }));
+    const follow = screen.getByRole('button', {
+      name: /auto-follow playhead/i,
+    });
+    expect(follow.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(follow);
+    expect(setAutoFollow).toHaveBeenCalledWith(false);
+  });
+
+  it('renders one page light per page', () => {
+    const setPage = vi.fn();
+    renderControls(makePage({ pageCount: 3, setPage }));
+    const lights = screen.getAllByRole('button', {
+      name: /^Page \d/,
+    });
+    expect(lights).toHaveLength(3);
+    fireEvent.click(lights[2]);
+    expect(setPage).toHaveBeenCalledWith(2);
+  });
+
+  it('shows no page lights for a single page', () => {
+    renderControls();
+    expect(
+      screen.queryAllByRole('button', { name: /^Page \d/ })
+    ).toHaveLength(0);
   });
 });

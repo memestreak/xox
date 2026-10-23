@@ -24,7 +24,10 @@ interface UseDragPaintOptions {
     value: '0' | '1'
   ) => void;
   patterns?: TrackPattern[];
-  onSetTrackSteps?: (trackId: TrackId, steps: string) => void;
+  /** `base` is the track as it was when cycling began. */
+  onSetTrackSteps?: (
+    trackId: TrackId, steps: string, base?: TrackConfig
+  ) => void;
   longPressActiveRef?: RefObject<boolean>;
   popoverOpenRef?: RefObject<boolean>;
   pageOffset?: number;
@@ -50,6 +53,7 @@ interface DragState {
   cycleTrackId: TrackId | null;
   cycleStartStep: number;
   cycleSnapshot: string;
+  cycleBase: TrackConfig | null;
   cyclePatternIdx: number;
   escapeHandler: ((e: KeyboardEvent) => void) | null;
   selectionMode: boolean;
@@ -101,6 +105,7 @@ export function useDragPaint({
     cycleTrackId: null,
     cycleStartStep: 0,
     cycleSnapshot: '',
+    cycleBase: null,
     cyclePatternIdx: -1,
     escapeHandler: null,
     selectionMode: false,
@@ -342,6 +347,7 @@ export function useDragPaint({
         drag.cycleTrackId = trackId;
         drag.cycleStartStep = stepIndex;
         drag.cycleSnapshot = stepsAtDown.current[trackId];
+        drag.cycleBase = tracks[trackId];
         drag.cyclePatternIdx = -1;
         return;
       }
@@ -460,7 +466,9 @@ export function useDragPaint({
               && onSetTrackSteps
             ) {
               onSetTrackSteps(
-                d.cycleTrackId, d.cycleSnapshot
+                d.cycleTrackId,
+                d.cycleSnapshot,
+                d.cycleBase ?? undefined
               );
             }
             document.removeEventListener(
@@ -503,7 +511,11 @@ export function useDragPaint({
             drag.cycleSnapshot,
             idx
           );
-          onSetTrackSteps(drag.cycleTrackId, newSteps);
+          onSetTrackSteps(
+            drag.cycleTrackId,
+            newSteps,
+            drag.cycleBase ?? undefined
+          );
         }
 
         return;
