@@ -26,6 +26,12 @@ interface UseSelectionOptions {
   tracks: Record<TrackId, TrackConfig>;
   /** Ref indicating whether a popover is open. */
   popoverOpenRef: RefObject<boolean>;
+  /**
+   * The cell region. A press anywhere outside it clears
+   * the selection. Presses inside are left to the grid's
+   * own gesture handling.
+   */
+  regionRef?: RefObject<HTMLElement | null>;
   /** Set a single step value. */
   setStep: (
     trackId: TrackId, stepIndex: number,
@@ -92,6 +98,7 @@ export function useSelection({
   trackOrder,
   tracks,
   popoverOpenRef,
+  regionRef,
   setStep,
   clearTrigCondition,
   clearParameterLock,
@@ -378,6 +385,39 @@ export function useSelection({
     applyFillToSelected, clearTrigCondition,
     clearParameterLock, openBulkPopover,
   ]);
+
+  // Clear the selection on a press outside the cell
+  // region (mouse click or touch tap).
+  useEffect(() => {
+    if (!regionRef) return;
+    const handler = (e: PointerEvent) => {
+      if (selectedRef.current.size === 0) return;
+      // Only the primary button: a right-click outside
+      // shouldn't drop the selection.
+      if (e.button !== 0) return;
+      // Layered dismissal, like Escape: a press outside
+      // an open step popover closes the popover first,
+      // and presses inside it edit the selection.
+      if (popoverOpenRef.current) return;
+      // Help or Settings is open: the press belongs to it.
+      if (isModalDialogOpen()) return;
+      const region = regionRef.current;
+      if (
+        region
+        && e.target instanceof Node
+        && region.contains(e.target)
+      ) {
+        return;
+      }
+      clearSelection();
+    };
+    document.addEventListener('pointerdown', handler);
+    return () => {
+      document.removeEventListener(
+        'pointerdown', handler
+      );
+    };
+  }, [regionRef, popoverOpenRef, clearSelection]);
 
   // Pre-compute per-track selected step sets
   const selectedByTrack = useMemo(() => {
