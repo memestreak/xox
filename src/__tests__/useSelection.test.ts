@@ -29,6 +29,7 @@ const TRACK_ORDER: TrackId[] = [
 function setup(overrides?: {
   tracks?: Record<TrackId, TrackConfig>;
   popoverOpen?: boolean;
+  regionRef?: RefObject<HTMLElement | null>;
 }) {
   const mockSetStep = vi.fn();
   const mockClearTrig = vi.fn();
@@ -42,6 +43,7 @@ function setup(overrides?: {
       trackOrder: TRACK_ORDER,
       tracks: overrides?.tracks ?? makeTracks(),
       popoverOpenRef,
+      regionRef: overrides?.regionRef,
       setStep: mockSetStep,
       clearTrigCondition: mockClearTrig,
       clearParameterLock: mockClearLock,
@@ -342,6 +344,86 @@ describe('useSelection', () => {
       });
       expect(mockSetStep).not.toHaveBeenCalled();
       document.body.removeChild(input);
+    });
+  });
+
+  describe('outside press', () => {
+    function makeRegion() {
+      const region = document.createElement('div');
+      const cell = document.createElement('button');
+      region.appendChild(cell);
+      const outside = document.createElement('button');
+      document.body.append(region, outside);
+      return {
+        region, cell, outside,
+        regionRef: { current: region },
+        cleanup: () => {
+          region.remove();
+          outside.remove();
+        },
+      };
+    }
+
+    function press(
+      target: Element, init: PointerEventInit = {}
+    ) {
+      // jsdom has no PointerEvent constructor; a
+      // MouseEvent with the right type works the same
+      // for document listeners.
+      target.dispatchEvent(new MouseEvent('pointerdown', {
+        bubbles: true, button: 0, ...init,
+      }));
+    }
+
+    it('clears the selection on a press outside', () => {
+      const r = makeRegion();
+      const { result } = setup({ regionRef: r.regionRef });
+      act(() => result.current.ctrlClickCell('bd', 3));
+      act(() => press(r.outside));
+      expect(result.current.selected.size).toBe(0);
+      r.cleanup();
+    });
+
+    it('keeps the selection on a press inside the region', () => {
+      const r = makeRegion();
+      const { result } = setup({ regionRef: r.regionRef });
+      act(() => result.current.ctrlClickCell('bd', 3));
+      act(() => press(r.cell));
+      expect(result.current.selected.size).toBe(1);
+      r.cleanup();
+    });
+
+    it('keeps the selection while the popover is open', () => {
+      const r = makeRegion();
+      const { result } = setup({
+        regionRef: r.regionRef, popoverOpen: true,
+      });
+      act(() => result.current.ctrlClickCell('bd', 3));
+      act(() => press(r.outside));
+      expect(result.current.selected.size).toBe(1);
+      r.cleanup();
+    });
+
+    it('ignores a right-click outside', () => {
+      const r = makeRegion();
+      const { result } = setup({ regionRef: r.regionRef });
+      act(() => result.current.ctrlClickCell('bd', 3));
+      act(() => press(r.outside, { button: 2 }));
+      expect(result.current.selected.size).toBe(1);
+      r.cleanup();
+    });
+
+    it('keeps the selection while a modal dialog is open', () => {
+      const r = makeRegion();
+      const dialog = document.createElement('dialog');
+      dialog.setAttribute('open', '');
+      document.body.appendChild(dialog);
+      const { result } = setup({ regionRef: r.regionRef });
+      act(() => result.current.ctrlClickCell('bd', 3));
+      act(() => press(dialog));
+      expect(result.current.selected.size).toBe(1);
+      dialog.remove();
+      r.cleanup();
     });
   });
 

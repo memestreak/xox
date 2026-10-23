@@ -120,6 +120,10 @@ export default function StepGrid({
     []
   );
 
+  // The cell region: drag gestures and the outside-press
+  // boundary for clearing the selection.
+  const dragContainerRef = useRef<HTMLDivElement>(null);
+
   const {
     selected,
     selectedByTrack,
@@ -133,6 +137,7 @@ export default function StepGrid({
     trackOrder: SELECTABLE_TRACKS,
     tracks: config.tracks,
     popoverOpenRef,
+    regionRef: dragContainerRef,
     setStep,
     clearTrigCondition,
     clearParameterLock,
@@ -154,7 +159,6 @@ export default function StepGrid({
     }
   }, [pageOffset, clearSelection]);
 
-  const dragContainerRef = useRef<HTMLDivElement>(null);
   const dragPaint = useDragPaint({
     containerRef: dragContainerRef,
     trackOrder: TRACK_ORDER,

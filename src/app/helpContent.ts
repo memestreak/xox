@@ -124,6 +124,10 @@ const MOUSE_TAB: HelpTab = {
           gesture: 'click a selected step',
           text: 'Flip every selected step on / off',
         },
+        {
+          gesture: 'click outside the grid',
+          text: 'Clear the selection',
+        },
       ],
     },
     {

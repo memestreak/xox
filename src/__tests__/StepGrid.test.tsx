@@ -1,4 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import {
+  act, fireEvent, render, screen,
+} from '@testing-library/react';
 import {
   describe, expect, it, vi, beforeEach,
 } from 'vitest';
@@ -102,5 +104,44 @@ describe('StepGrid', () => {
       '[data-track]'
     );
     expect(trackDivs.length).toBe(12);
+  });
+
+  describe('outside press clears the selection', () => {
+    function pressOn(target: Element) {
+      // jsdom has no PointerEvent constructor
+      act(() => {
+        target.dispatchEvent(new MouseEvent('pointerdown', {
+          bubbles: true, button: 0,
+        }));
+      });
+    }
+
+    function selectFirstKick() {
+      const step = screen.getByRole('button', {
+        name: 'BD step 1',
+      });
+      fireEvent.click(step, { ctrlKey: true });
+      return step;
+    }
+
+    it('clears on a press outside the grid', () => {
+      renderGrid();
+      const outside = document.createElement('button');
+      document.body.appendChild(outside);
+      const step = selectFirstKick();
+      expect(step.className).toContain('ring-2');
+      pressOn(outside);
+      expect(step.className).not.toContain('ring-2');
+      outside.remove();
+    });
+
+    it('keeps it on a press inside the grid', () => {
+      renderGrid();
+      const step = selectFirstKick();
+      pressOn(screen.getByRole('button', {
+        name: 'SD step 5',
+      }));
+      expect(step.className).toContain('ring-2');
+    });
   });
 });
