@@ -3,6 +3,16 @@ import {
 } from 'vitest';
 import type { TrackId } from '../app/types';
 
+// Nodes the mock AudioContext created, for inspection.
+const mockGains: {
+  gain: { value: number; setTargetAtTime: ReturnType<typeof vi.fn> };
+  channelCountMode: string;
+}[] = [];
+const mockAnalysers: {
+  fftSize: number;
+  getFloatTimeDomainData: ReturnType<typeof vi.fn>;
+}[] = [];
+
 // Mutable currentTime that the mock AudioContext reads.
 let mockCurrentTime = 0;
 
@@ -18,10 +28,28 @@ class MockAudioContext {
   }
 
   createGain() {
-    return {
-      gain: { value: 1 },
+    const node = {
+      gain: { value: 1, setTargetAtTime: vi.fn() },
       connect: vi.fn(),
+      channelCount: 2,
+      channelCountMode: 'max',
+      channelInterpretation: 'speakers',
     };
+    mockGains.push(node);
+    return node;
+  }
+
+  createChannelSplitter() {
+    return { connect: vi.fn() };
+  }
+
+  createAnalyser() {
+    const node = {
+      fftSize: 2048,
+      getFloatTimeDomainData: vi.fn(),
+    };
+    mockAnalysers.push(node);
+    return node;
   }
 
   createBuffer() {
@@ -585,7 +613,78 @@ describe('AudioEngine master limiter (#125)', () => {
     expect(engine.limiter.ratio.value).toBe(20);
     expect(engine.masterGain.connect)
       .toHaveBeenCalledWith(engine.limiter);
+    // Limiter → master volume → speakers.
     expect(engine.limiter.connect)
+      .toHaveBeenCalledWith(engine.outputGain);
+    expect(engine.outputGain.connect)
       .toHaveBeenCalledWith(engine.ctx.destination);
+  });
+});
+
+describe('AudioEngine master volume and meter', () => {
+  // A fresh engine per test, so "before the context
+  // exists" really is before.
+  async function freshEngine() {
+    vi.resetModules();
+    mockGains.length = 0;
+    mockAnalysers.length = 0;
+    const mod = await import('../app/AudioEngine');
+    return mod.audioEngine;
+  }
+  const outputGain = () => mockGains.find(
+    g => g.channelCountMode === 'explicit'
+  );
+
+  it('reports silence before the context exists', async () => {
+    const engine = await freshEngine();
+    expect(engine.getOutputPeaks()).toEqual([0, 0]);
+  });
+
+  it('applies a volume set before init when the context is created', async () => {
+    const engine = await freshEngine();
+    engine.setOutputVolume(0.25);
+    await engine.start(120, vi.fn());
+    engine.stop();
+    expect(outputGain()?.gain.value).toBe(0.25);
+  });
+
+  it('glides the output gain after init and clamps to 0-1', async () => {
+    const engine = await freshEngine();
+    await engine.start(120, vi.fn());
+    engine.stop();
+    const gain = outputGain()!.gain;
+    engine.setOutputVolume(0.5);
+    expect(gain.setTargetAtTime).toHaveBeenLastCalledWith(
+      0.5, expect.any(Number), expect.any(Number)
+    );
+    engine.setOutputVolume(4);
+    expect(gain.setTargetAtTime).toHaveBeenLastCalledWith(
+      1, expect.any(Number), expect.any(Number)
+    );
+    engine.setOutputVolume(-1);
+    expect(gain.setTargetAtTime).toHaveBeenLastCalledWith(
+      0, expect.any(Number), expect.any(Number)
+    );
+  });
+
+  it('returns the peak absolute sample of each channel', async () => {
+    const engine = await freshEngine();
+    await engine.start(120, vi.fn());
+    engine.stop();
+    const [left, right] = mockAnalysers;
+    left.getFloatTimeDomainData.mockImplementation(
+      (data: Float32Array) => {
+        data.fill(0);
+        data[3] = -0.5;
+        data[9] = 0.25;
+      }
+    );
+    right.getFloatTimeDomainData.mockImplementation(
+      (data: Float32Array) => {
+        data.fill(0);
+        data[0] = 0.75;
+      }
+    );
+    expect(engine.getOutputPeaks()).toEqual([0.5, 0.75]);
   });
 });

@@ -51,7 +51,12 @@ tracks play; otherwise non-muted tracks play.
 Accented steps multiply gain by `1 + accentLevel × 2`
 (2x at the default accent level of 0.5, up to 3x). The
 master bus runs through a limiter (`AudioEngine.init`)
-so summed and accented hits don't clip.
+so summed and accented hits don't clip. Master volume
+(`MasterVolume.tsx`, `hooks/useMasterVolume.ts`) is a
+gain after the limiter; it's a per-device setting in
+its own localStorage key, not in `SequencerConfig`, so
+share links and Reset leave it alone. `LevelMeter.tsx`
+reads `audioEngine.getOutputPeaks()` each frame.
 
 **SequencerConfig (`src/app/types.ts`)** — Canonical type for
 all persistable state (kit, BPM, steps, mixer). Single source
@@ -77,6 +82,8 @@ from the URL.
 - `usePlayback.ts` — audio engine, handleStep, spacebar
 - `useSelection.ts` — multi-step selection (Ctrl/Shift)
 - `useDragPaint.ts` — pointer drag gestures on the grid
+- `useMasterVolume.ts` — master fader (localStorage,
+  no `reset()`: Reset deliberately keeps it)
 
 Every hook that manages resettable state must expose a
 `reset()` method. The orchestrator's `clearAll` composes
