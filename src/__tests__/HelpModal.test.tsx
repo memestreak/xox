@@ -62,6 +62,12 @@ describe('HelpModal', () => {
       .toBeInTheDocument();
   });
 
+  it('starts with focus on the content, not the close key', () => {
+    mockPointer(false);
+    render(<HelpModal isOpen onClose={() => {}} />);
+    expect(screen.getByLabelText('Help content')).toHaveFocus();
+  });
+
   it('keeps every panel mounted, showing only the active one', async () => {
     // All panels share one grid cell so the dialog keeps
     // the tallest panel's size when tabs change.

@@ -166,8 +166,9 @@ describe('SettingsPopover', () => {
         </HelpProvider>
       </TestWrapper>
     );
-    const gear = screen.getByRole('button', { name: /settings/i });
-    await user.click(gear);
+    await user.click(
+      screen.getByRole('button', { name: /settings/i })
+    );
     await user.click(
       screen.getByRole('menuitem', { name: 'Help' })
     );
@@ -175,6 +176,6 @@ describe('SettingsPopover', () => {
     expect(
       screen.getByRole('heading', { name: 'Help' })
     ).toBeInTheDocument();
-    expect(gear).toHaveFocus();
+    expect(screen.getByLabelText('Help content')).toHaveFocus();
   });
 });

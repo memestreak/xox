@@ -38,6 +38,7 @@ export default function HelpModal({
   onClose,
 }: HelpModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [tabs] = useState(() => getHelpTabs(prefersTouch()));
   const [apple] = useState(isApple);
@@ -48,6 +49,11 @@ export default function HelpModal({
     if (!dialog) return;
     if (isOpen && !dialog.open) {
       dialog.showModal();
+      // showModal focuses the first control (the close
+      // key), which then shows a focus ring when opened
+      // from the keyboard. Start on the content instead:
+      // no ring, and arrow keys scroll it.
+      contentRef.current?.focus();
     } else if (!isOpen && dialog.open) {
       dialog.close();
     }
@@ -160,6 +166,7 @@ export default function HelpModal({
             dialog keeps the tallest panel's size and doesn't
             jump when switching tabs. */}
         <div
+          ref={contentRef}
           // Scrollable region must be reachable by keyboard.
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={0}
