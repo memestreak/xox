@@ -5,12 +5,13 @@ import type { CSSProperties } from 'react';
 import LevelMeter from './LevelMeter';
 import PanelSection from './PanelSection';
 import Tooltip from './Tooltip';
-import { MASTER_VOLUME_DEFAULT } from './constants';
 import { formatDb, positionToGain } from './hooks/useMasterVolume';
 
 interface MasterVolumeProps {
   position: number;
   onChange: (position: number) => void;
+  /** Mute, or unmute back to the previous level. */
+  onToggleMute: () => void;
   /**
    * "header": compact box in header row 1 (desktop).
    * "strip": full-width row of the controls strip
@@ -21,10 +22,11 @@ interface MasterVolumeProps {
 
 /**
  * Master volume fader (labelled "Volume") with a
- * stereo level meter and a dB readout. Double-click the fader to return to 0 dB.
+ * stereo level meter and a dB readout. Double-click
+ * the fader to mute, and again to unmute.
  */
 function MasterVolumeInner({
-  position, onChange, variant,
+  position, onChange, onToggleMute, variant,
 }: MasterVolumeProps) {
   const id = `master-volume-${variant}`;
   const readout = formatDb(positionToGain(position));
@@ -35,10 +37,6 @@ function MasterVolumeInner({
     },
     [onChange]
   );
-
-  const handleReset = useCallback(() => {
-    onChange(MASTER_VOLUME_DEFAULT);
-  }, [onChange]);
 
   const control = (
     <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -55,7 +53,7 @@ function MasterVolumeInner({
             step={0.01}
             value={position}
             onChange={handleInput}
-            onDoubleClick={handleReset}
+            onDoubleClick={onToggleMute}
             aria-label="Volume"
             aria-valuetext={readout}
             className={

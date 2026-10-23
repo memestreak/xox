@@ -182,6 +182,49 @@ describe('usePlayback', () => {
     expect(r.current.pb.isPlaying).toBe(true);
   });
 
+  it.each([
+    ['range slider', 'input', 'range'],
+    ['BPM number field', 'input', 'number'],
+    ['select', 'select', ''],
+  ])('spacebar toggles play from a focused %s', async (
+    _name, tag, type
+  ) => {
+    const r = await renderLoaded();
+    const el = document.createElement(tag);
+    if (type) (el as HTMLInputElement).type = type;
+    document.body.appendChild(el);
+    const event = new KeyboardEvent('keydown', {
+      code: 'Space', bubbles: true, cancelable: true,
+    });
+    act(() => {
+      el.dispatchEvent(event);
+    });
+    expect(r.current.pb.isPlaying).toBe(true);
+    // Default (e.g. opening the select) is suppressed.
+    expect(event.defaultPrevented).toBe(true);
+    el.remove();
+  });
+
+  it.each([
+    ['text field', 'input', 'text'],
+    ['checkbox', 'input', 'checkbox'],
+    ['textarea', 'textarea', ''],
+  ])('spacebar is left to a focused %s', async (
+    _name, tag, type
+  ) => {
+    const r = await renderLoaded();
+    const el = document.createElement(tag);
+    if (type) (el as HTMLInputElement).type = type;
+    document.body.appendChild(el);
+    act(() => {
+      el.dispatchEvent(new KeyboardEvent('keydown', {
+        code: 'Space', bubbles: true, cancelable: true,
+      }));
+    });
+    expect(r.current.pb.isPlaying).toBe(false);
+    el.remove();
+  });
+
   it('spacebar is ignored before the kit loads', () => {
     engine.preloadKit.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useHarness());

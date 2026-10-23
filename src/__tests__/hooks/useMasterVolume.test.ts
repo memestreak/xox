@@ -79,6 +79,26 @@ describe('useMasterVolume', () => {
     expect(a.result.current.position).toBe(1);
   });
 
+  it('mutes, then unmutes to the previous level', () => {
+    const { result } = renderHook(() => useMasterVolume());
+    act(() => result.current.setPosition(0.6));
+    act(() => result.current.toggleMute());
+    expect(result.current.position).toBe(0);
+    expect(audioEngine.setOutputVolume)
+      .toHaveBeenLastCalledWith(0);
+    act(() => result.current.toggleMute());
+    expect(result.current.position).toBe(0.6);
+  });
+
+  it('unmutes a saved-muted fader to 0 dB', () => {
+    window.localStorage.setItem(
+      MASTER_VOLUME_STORAGE_KEY, '0'
+    );
+    const { result } = renderHook(() => useMasterVolume());
+    act(() => result.current.toggleMute());
+    expect(result.current.position).toBe(1);
+  });
+
   it('still works when localStorage throws', () => {
     const get = vi.spyOn(Storage.prototype, 'getItem')
       .mockImplementation(() => { throw new Error('denied'); });

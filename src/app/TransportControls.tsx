@@ -106,6 +106,7 @@ function TransportControlsInner({
             variant="header"
             position={master.position}
             onChange={master.setPosition}
+            onToggleMute={master.toggleMute}
           />
           <SettingsPopover />
         </div>
@@ -156,6 +157,7 @@ function TransportControlsInner({
           variant="strip"
           position={master.position}
           onChange={master.setPosition}
+          onToggleMute={master.toggleMute}
         />
       </div>
     </header>

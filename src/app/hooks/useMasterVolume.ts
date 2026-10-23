@@ -60,6 +60,8 @@ function savePosition(position: number) {
 // is unavailable (some private modes), so the fader
 // still works there; it just isn't remembered.
 let sessionPosition = MASTER_VOLUME_DEFAULT;
+// Level to return to when unmuting.
+let lastAudiblePosition = MASTER_VOLUME_DEFAULT;
 const listeners = new Set<() => void>();
 
 function getSnapshot(): number {
@@ -79,13 +81,29 @@ function subscribe(listener: () => void) {
 
 function setPosition(next: number) {
   sessionPosition = clamp(next);
+  if (sessionPosition > 0) lastAudiblePosition = sessionPosition;
   savePosition(sessionPosition);
   listeners.forEach(listener => listener());
+}
+
+/**
+ * Mute, or when already muted, return to the last
+ * audible level (0 dB if there was none this session).
+ */
+function toggleMute() {
+  const current = getSnapshot();
+  if (current > 0) {
+    lastAudiblePosition = current;
+    setPosition(0);
+  } else {
+    setPosition(lastAudiblePosition);
+  }
 }
 
 /** Test helper: forget the in-memory value. */
 export function resetMasterVolumeForTests() {
   sessionPosition = MASTER_VOLUME_DEFAULT;
+  lastAudiblePosition = MASTER_VOLUME_DEFAULT;
 }
 
 /**
@@ -107,5 +125,5 @@ export function useMasterVolume() {
     audioEngine.setOutputVolume(positionToGain(position));
   }, [position]);
 
-  return { position, setPosition };
+  return { position, setPosition, toggleMute };
 }

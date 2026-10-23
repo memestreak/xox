@@ -39,6 +39,31 @@ const TRACK_NAMES: Record<TrackId, string> = {
   cb: 'CB',
 };
 
+// Input types where Space types a character or toggles
+// the control, so it must not start or stop playback.
+const SPACE_INPUT_TYPES = new Set([
+  'text', 'search', 'email', 'url', 'tel', 'password',
+  'checkbox', 'radio',
+]);
+
+/**
+ * True when Space should go to the focused element
+ * rather than toggle playback: text fields, checkboxes
+ * and radios. Everything else (sliders, the BPM field,
+ * selects, buttons) leaves Space to play/stop.
+ */
+export function spaceBelongsToTarget(
+  target: EventTarget | null
+): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  if (target.tagName === 'TEXTAREA') return true;
+  if (target instanceof HTMLInputElement) {
+    return SPACE_INPUT_TYPES.has(target.type);
+  }
+  return false;
+}
+
 export interface UsePlaybackReturn {
   isPlaying: boolean;
   isLoaded: boolean;
@@ -340,13 +365,7 @@ export function usePlayback({
         event.preventDefault();
         return;
       }
-      const target = event.target as HTMLElement;
-      const tag = target?.tagName;
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT'
-      ) return;
+      if (spaceBelongsToTarget(event.target)) return;
       event.preventDefault();
       togglePlay();
     };

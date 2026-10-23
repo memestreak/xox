@@ -18,16 +18,18 @@ function renderFader(
   variant: 'header' | 'strip' = 'strip',
 ) {
   const onChange = vi.fn();
+  const onToggleMute = vi.fn();
   render(
     <TooltipProvider>
       <MasterVolume
         position={position}
         onChange={onChange}
+        onToggleMute={onToggleMute}
         variant={variant}
       />
     </TooltipProvider>
   );
-  return onChange;
+  return Object.assign(onChange, { onToggleMute });
 }
 
 beforeEach(() => {
@@ -54,12 +56,12 @@ describe('MasterVolume', () => {
     expect(onChange).toHaveBeenCalledWith(0.4);
   });
 
-  it('returns to 0 dB on double-click', () => {
-    const onChange = renderFader(0.3);
+  it('toggles mute on double-click', () => {
+    const { onToggleMute } = renderFader(0.3);
     fireEvent.doubleClick(
       screen.getByRole('slider', { name: 'Volume' })
     );
-    expect(onChange).toHaveBeenCalledWith(1);
+    expect(onToggleMute).toHaveBeenCalledTimes(1);
   });
 
   it('labels each placement with a distinct id', () => {
