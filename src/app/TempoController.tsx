@@ -66,9 +66,9 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
         min={MIN_BPM}
         max={MAX_BPM}
         onChange={(e) => setBpm(Math.max(MIN_BPM, Math.min(MAX_BPM, Number(e.target.value) || MIN_BPM)))}
-        className="w-12 lg:w-16 bg-transparent text-right font-mono font-bold text-lg lg:text-2xl text-lcd [text-shadow:0_0_10px_rgb(245_160_58/0.45)] tabular-nums focus-visible:outline-none focus-visible:underline decoration-accent underline-offset-4 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="w-[5ch] p-0 bg-transparent text-right font-mono font-bold text-lg lg:text-2xl text-lcd [text-shadow:0_0_10px_rgb(245_160_58/0.45)] tabular-nums focus-visible:outline-none focus-visible:underline decoration-accent underline-offset-4 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
-      <span className="ss-label text-[10px] mx-1.5 lg:mx-2" aria-hidden="true">
+      <span className="ss-label text-[10px] mx-1 lg:mx-2" aria-hidden="true">
         BPM
       </span>
       <Tooltip tooltipKey="tap" position="bottom">
