@@ -2,9 +2,9 @@ import {
   render, screen, fireEvent,
 } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import PageIndicator from '../app/PageIndicator';
+import { FollowToggle, PageLights } from '../app/PageIndicator';
 
-describe('PageIndicator', () => {
+describe('PageLights and FollowToggle', () => {
   const defaults = {
     currentPage: 0,
     pageCount: 4,
@@ -14,7 +14,7 @@ describe('PageIndicator', () => {
   };
 
   it('renders correct number of page dots', () => {
-    render(<PageIndicator {...defaults} />);
+    render(<PageLights {...defaults} />);
     const dots = screen.getAllByRole('button', {
       name: /^Page \d/,
     });
@@ -23,7 +23,7 @@ describe('PageIndicator', () => {
 
   it('hides the dots when there is only one page', () => {
     render(
-      <PageIndicator {...defaults} pageCount={1} />
+      <PageLights {...defaults} pageCount={1} />
     );
     const dots = screen.queryAllByRole('button', {
       name: /^Page \d/,
@@ -34,7 +34,7 @@ describe('PageIndicator', () => {
   it('clicking a dot calls setPage', () => {
     const setPage = vi.fn();
     render(
-      <PageIndicator {...defaults} setPage={setPage} />
+      <PageLights {...defaults} setPage={setPage} />
     );
     const dots = screen.getAllByRole('button', {
       name: /^Page \d/,
@@ -45,7 +45,7 @@ describe('PageIndicator', () => {
 
   it('active dot has orange styling', () => {
     render(
-      <PageIndicator {...defaults} currentPage={1} />
+      <PageLights {...defaults} currentPage={1} />
     );
     const dots = screen.getAllByRole('button', {
       name: /^Page \d/,
@@ -55,7 +55,7 @@ describe('PageIndicator', () => {
 
   it('follow toggle shows active state', () => {
     render(
-      <PageIndicator {...defaults} autoFollow={true} />
+      <FollowToggle {...defaults} />
     );
     const toggle = screen.getByRole('button', {
       name: /follow/i,
@@ -66,7 +66,7 @@ describe('PageIndicator', () => {
   it('follow toggle click calls setAutoFollow', () => {
     const setAutoFollow = vi.fn();
     render(
-      <PageIndicator
+      <FollowToggle
         {...defaults}
         setAutoFollow={setAutoFollow}
       />
@@ -80,11 +80,22 @@ describe('PageIndicator', () => {
 
   it('dynamic dot count: 2 dots for pageCount=2', () => {
     render(
-      <PageIndicator {...defaults} pageCount={2} />
+      <PageLights {...defaults} pageCount={2} />
     );
     const dots = screen.getAllByRole('button', {
       name: /^Page \d/,
     });
     expect(dots.length).toBe(2);
+  });
+
+  it('marks the current page light', () => {
+    render(
+      <PageLights {...defaults} currentPage={2} />
+    );
+    const dots = screen.getAllByRole('button', {
+      name: /^Page \d/,
+    });
+    expect(dots[2].getAttribute('aria-current')).toBe('true');
+    expect(dots[0].hasAttribute('aria-current')).toBe(false);
   });
 });
