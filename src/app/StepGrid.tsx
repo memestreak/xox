@@ -9,6 +9,7 @@ import TrackRow from './TrackRow';
 import AccentRow from './AccentRow';
 import StepPopover from './StepPopover';
 import ErrorBoundary from './ErrorBoundary';
+import GridContextMenu from './GridContextMenu';
 import { useDragPaint } from './hooks/useDragPaint';
 import { useSelection } from './hooks/useSelection';
 import type { TrackId, TrackPattern } from './types';
@@ -23,14 +24,13 @@ import trackPatternData from './data/trackPatterns.json';
 const TRACK_PATTERNS: TrackPattern[] =
   trackPatternData.patterns;
 
-const TRACK_ORDER: TrackId[] = [
-  ...TRACKS.map(t => t.id),
-  'ac' as TrackId,
-];
-
-/** Track order for selection (no accent row). */
-const SELECTABLE_TRACKS: TrackId[] =
-  TRACKS.map(t => t.id);
+/**
+ * Right-clicks on these keep their own behavior (or the
+ * browser's); anywhere else in the panel opens the grid
+ * menu.
+ */
+const OWN_CONTEXT_MENU =
+  'button, input, select, [role="slider"], [data-step]';
 
 interface StepGridProps {
   scrollContainerRef: RefObject<HTMLDivElement | null>;
@@ -53,7 +53,8 @@ export default function StepGrid({
   setPage,
 }: StepGridProps) {
   const { state, actions, meta } = useSequencer();
-  const { trackStates } = state;
+  const { trackStates, minimizedTracks, minimizableCount } =
+    state;
   const {
     toggleStep, setStep, setTrackSteps,
     toggleMute, toggleSolo,
@@ -61,12 +62,52 @@ export default function StepGrid({
     clearTrack, playPreview,
     clearTrigCondition, clearParameterLock,
     setTrigCondition,
+    minimizeEmptyTracks, restoreTrack, restoreAllTracks,
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
 
+  // Rows that drags and selection boxes can reach:
+  // minimized rows are skipped, so a drag from BD to OH
+  // doesn't paint a minimized SD in between.
+  const selectableTracks = useMemo<TrackId[]>(
+    () => TRACKS
+      .map(t => t.id)
+      .filter(id => !minimizedTracks.has(id)),
+    [minimizedTracks]
+  );
+  const paintableTracks = useMemo<TrackId[]>(
+    () => [...selectableTracks, 'ac'],
+    [selectableTracks]
+  );
+
   const longPressActiveRef = useRef<boolean>(false);
+  // True while the step editor or the grid menu is open,
+  // so Escape and outside presses close it before they
+  // clear the selection.
   const popoverOpenRef = useRef<boolean>(false);
+
+  const [gridMenu, setGridMenu] = useState<{
+    x: number; y: number;
+  } | null>(null);
+  const closeGridMenu = useCallback(
+    () => setGridMenu(null), []
+  );
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (e.defaultPrevented) return;
+      if (
+        e.target instanceof Element
+        && e.target.closest(OWN_CONTEXT_MENU)
+      ) {
+        return;
+      }
+      e.preventDefault();
+      setGridMenu({ x: e.clientX, y: e.clientY });
+    },
+    []
+  );
 
   const [openPopover, setOpenPopover] = useState<{
     trackId: TrackId;
@@ -76,8 +117,9 @@ export default function StepGrid({
   } | null>(null);
 
   useEffect(() => {
-    popoverOpenRef.current = openPopover !== null;
-  }, [openPopover]);
+    popoverOpenRef.current =
+      openPopover !== null || gridMenu !== null;
+  }, [openPopover, gridMenu]);
 
   // Stable so it doesn't defeat TrackRow's memo
   const openStepPopover = useCallback(
@@ -134,7 +176,7 @@ export default function StepGrid({
     clearSelection,
     toggleSelected,
   } = useSelection({
-    trackOrder: SELECTABLE_TRACKS,
+    trackOrder: selectableTracks,
     tracks: config.tracks,
     popoverOpenRef,
     regionRef: dragContainerRef,
@@ -161,7 +203,7 @@ export default function StepGrid({
 
   const dragPaint = useDragPaint({
     containerRef: dragContainerRef,
-    trackOrder: TRACK_ORDER,
+    trackOrder: paintableTracks,
     tracks: config.tracks,
     onSetStep: setStep,
     patterns: TRACK_PATTERNS,
@@ -173,6 +215,21 @@ export default function StepGrid({
     onSelectionUpdate: updateRectDrag,
     onClearSelection: clearSelection,
   });
+
+  // Minimizing drops the selection and closes the step
+  // editor, which may point at a row that just shrank.
+  const prevMinimizedRef = useRef(minimizedTracks);
+  useEffect(() => {
+    const prev = prevMinimizedRef.current;
+    prevMinimizedRef.current = minimizedTracks;
+    const grew = [...minimizedTracks].some(
+      id => !prev.has(id)
+    );
+    if (grew) {
+      clearSelection();
+      setOpenPopover(null);
+    }
+  }, [minimizedTracks, clearSelection]);
 
   // When the popover's anchor cell is in the selection,
   // apply edits to all selected cells.
@@ -267,7 +324,14 @@ export default function StepGrid({
   }, [stepRef, stepQueueRef, flashTriggered, setPage]);
 
   return (
-    <div className="ss-panel rounded-xl lg:rounded-2xl p-1 lg:p-2">
+    // Right-click on a blank spot opens the grid menu.
+    // Keyboard users get the same items from H / Shift+H
+    // and the gear menu.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    <div
+      className="ss-panel rounded-xl lg:rounded-2xl p-1 lg:p-2"
+      onContextMenu={handleContextMenu}
+    >
       {/* Column header: labels + step numbers */}
       <div
         aria-hidden="true"
@@ -307,9 +371,16 @@ export default function StepGrid({
         {...dragPaint}
         className="space-y-2.5 lg:space-y-2 select-none p-2 lg:px-4 lg:pt-2 lg:pb-4"
       >
-        {TRACKS.map(track => (
+        {TRACKS.map((track, i) => (
           <TrackRow
             key={track.id}
+            isMinimized={minimizedTracks.has(track.id)}
+            tightBelow={
+              minimizedTracks.has(track.id)
+              && i + 1 < TRACKS.length
+              && minimizedTracks.has(TRACKS[i + 1].id)
+            }
+            onRestore={restoreTrack}
             trackId={track.id}
             trackName={track.name}
             steps={config.tracks[track.id].steps}
@@ -394,6 +465,17 @@ export default function StepGrid({
           focusSection={openPopover.focusSection}
         />
         </ErrorBoundary>
+      ) : null}
+      {gridMenu !== null ? (
+        <GridContextMenu
+          x={gridMenu.x}
+          y={gridMenu.y}
+          minimizableCount={minimizableCount}
+          canRestore={minimizedTracks.size > 0}
+          onMinimize={minimizeEmptyTracks}
+          onRestoreAll={restoreAllTracks}
+          onClose={closeGridMenu}
+        />
       ) : null}
     </div>
   );

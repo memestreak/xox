@@ -1455,3 +1455,63 @@ describe('context value memoization', () => {
     }
   );
 });
+
+// -------------------------------------------------------
+// Minimized tracks (view state only)
+// -------------------------------------------------------
+describe('minimized tracks', () => {
+  beforeEach(() => {
+    window.location.hash = '';
+  });
+
+  it('Reset opens every row', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.minimizeEmptyTracks();
+    });
+    expect(result.current.state.minimizedTracks.size)
+      .toBeGreaterThan(0);
+    act(() => {
+      result.current.actions.clearAll();
+    });
+    expect(result.current.state.minimizedTracks.size)
+      .toBe(0);
+  });
+
+  it('a pattern load keeps still-empty tracks minimized',
+    () => {
+      const { result } = renderSequencer();
+      act(() => {
+        result.current.actions.minimizeEmptyTracks();
+      });
+      const next = patternsData.patterns.find(p =>
+        p.tracks.sd.steps.includes('1')
+        && !p.tracks.ch.steps.includes('1')
+      );
+      expect(next).toBeDefined();
+      act(() => {
+        result.current.actions.setPattern(next as Pattern);
+      });
+      const shown = result.current.state.minimizedTracks;
+      expect(shown.has('sd')).toBe(false);
+      expect(shown.has('ch')).toBe(true);
+    });
+
+  it('never reaches the saved session or share link',
+    async () => {
+      const { result } = renderSequencer();
+      act(() => {
+        result.current.actions.minimizeEmptyTracks();
+      });
+      await act(async () => {
+        result.current.actions.setBpm(133);
+      });
+      await waitFor(() => {
+        expect(loadSession()?.config.bpm).toBe(133);
+      });
+      expect(JSON.stringify(loadSession()))
+        .not.toMatch(/minimi/i);
+      expect(Object.keys(result.current.meta.config))
+        .toEqual(Object.keys(defaultConfig()));
+    });
+});

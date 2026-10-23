@@ -144,4 +144,167 @@ describe('StepGrid', () => {
       expect(step.className).toContain('ring-2');
     });
   });
+
+  describe('minimize empty tracks', () => {
+    // The default pattern (House 01) has steps on BD, OH
+    // and CP only.
+    function openGridMenu() {
+      const gap = document.querySelector<HTMLElement>(
+        '[data-track="bd"]'
+      )!.closest<HTMLElement>('.select-none')!;
+      fireEvent.contextMenu(gap, { clientX: 50, clientY: 50 });
+    }
+
+    function minimize() {
+      openGridMenu();
+      fireEvent.click(screen.getByRole('menuitem', {
+        name: /minimize empty tracks/i,
+      }));
+    }
+
+    const minimizedNames = () => [
+      ...document.querySelectorAll<HTMLElement>(
+        '[data-minimized]'
+      ),
+    ].map(el => el.dataset.minimized);
+
+    it('right-click on a gap opens the grid menu', () => {
+      renderGrid();
+      openGridMenu();
+      expect(screen.getByRole('menu', {
+        name: 'Grid options',
+      })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', {
+        name: /minimize empty tracks/i,
+      })).toHaveTextContent('8');
+      expect(screen.getByRole('menuitem', {
+        name: /restore all tracks/i,
+      })).toBeDisabled();
+    });
+
+    it('right-click on a step or knob does not', () => {
+      renderGrid();
+      fireEvent.contextMenu(screen.getByRole('button', {
+        name: 'BD step 1',
+      }));
+      fireEvent.contextMenu(
+        screen.getAllByRole('slider')[0]
+      );
+      expect(screen.queryByRole('menu', {
+        name: 'Grid options',
+      })).not.toBeInTheDocument();
+    });
+
+    it('Escape closes the menu', () => {
+      renderGrid();
+      openGridMenu();
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByRole('menu', {
+        name: 'Grid options',
+      })).not.toBeInTheDocument();
+    });
+
+    it('choosing Minimize renders minimized rows', () => {
+      renderGrid();
+      minimize();
+      expect(screen.queryByRole('menu', {
+        name: 'Grid options',
+      })).not.toBeInTheDocument();
+      expect(minimizedNames()).toEqual(
+        ['SD', 'CH', 'CY', 'HT', 'MT', 'LT', 'RS', 'CB']
+      );
+      expect(screen.queryByRole('button', {
+        name: 'SD step 1',
+      })).not.toBeInTheDocument();
+      // Full rows and the accent row are unchanged
+      expect(screen.getByRole('button', {
+        name: 'BD step 1',
+      })).toBeInTheDocument();
+      expect(
+        document.querySelector('[data-track="ac"]')
+      ).not.toBeNull();
+    });
+
+    it('the caret restores one track', () => {
+      renderGrid();
+      minimize();
+      fireEvent.click(screen.getByRole('button', {
+        name: 'Restore SD',
+      }));
+      expect(minimizedNames()).not.toContain('SD');
+      expect(screen.getByRole('button', {
+        name: 'SD step 1',
+      })).toBeInTheDocument();
+      // No caret on the restored row
+      expect(screen.queryByRole('button', {
+        name: 'Restore SD',
+      })).not.toBeInTheDocument();
+    });
+
+    it('Restore all tracks brings every row back', () => {
+      renderGrid();
+      minimize();
+      openGridMenu();
+      fireEvent.click(screen.getByRole('menuitem', {
+        name: /restore all tracks/i,
+      }));
+      expect(minimizedNames()).toEqual([]);
+    });
+
+    it('minimizing clears the selection', () => {
+      renderGrid();
+      const step = screen.getByRole('button', {
+        name: 'BD step 1',
+      });
+      fireEvent.click(step, { ctrlKey: true });
+      expect(step.className).toContain('ring-2');
+      minimize();
+      expect(screen.getByRole('button', {
+        name: 'BD step 1',
+      }).className).not.toContain('ring-2');
+    });
+
+    it('a drag across a minimized row leaves it untouched',
+      () => {
+        renderGrid();
+        minimize();
+        const container = document.querySelector<HTMLElement>(
+          '[data-track="bd"]'
+        )!.closest<HTMLElement>('.select-none')!;
+        // y=0 → BD row, y=100 → OH row; SD and CH sit
+        // minimized between them.
+        const cellAt = (track: string, step: number) =>
+          document.querySelector(
+            `[data-track="${track}"] [data-step="${step}"]`
+          );
+        const original = document.elementFromPoint;
+        document.elementFromPoint = ((_x: number, y: number) =>
+          y < 50 ? cellAt('bd', 1) : cellAt('oh', 1)
+        ) as typeof document.elementFromPoint;
+        try {
+          const opts = {
+            button: 0, pointerId: 1, pointerType: 'mouse',
+            clientX: 10,
+          };
+          fireEvent.pointerDown(container, {
+            ...opts, clientY: 0,
+          });
+          fireEvent.pointerMove(container, {
+            ...opts, clientY: 100,
+          });
+          fireEvent.pointerUp(container, {
+            ...opts, clientY: 100,
+          });
+        } finally {
+          document.elementFromPoint = original;
+        }
+        // Painting SD or CH would have opened them
+        expect(minimizedNames()).toContain('SD');
+        expect(minimizedNames()).toContain('CH');
+        // ...and the drag did reach OH
+        expect(screen.getByRole('button', {
+          name: 'OH step 2',
+        })).toHaveAttribute('aria-pressed', 'true');
+      });
+  });
 });

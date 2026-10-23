@@ -60,6 +60,125 @@ export interface TrackRowProps {
   ) => void;
   onPlainClick?: () => boolean;
   onClearSelection?: () => void;
+  /** Draw as a thin row: caret, name, step line. */
+  isMinimized?: boolean;
+  /** Restores a minimized row (caret or line click). */
+  onRestore?: (trackId: TrackId) => void;
+  /**
+   * The next row is minimized too: pull it closer
+   * (a margin, not a border, so nothing reflows).
+   */
+  tightBelow?: boolean;
+}
+
+interface MinimizedTrackRowProps {
+  trackName: string;
+  trackLength: number;
+  patternLength: number;
+  pageOffset: number;
+  isTriggered: boolean;
+  tightBelow: boolean;
+  onRestore: () => void;
+  onPlayPreview: () => void;
+}
+
+/**
+ * A minimized (empty) track: a caret and the name, then
+ * a thin line under the step columns. The caret or the
+ * line restores the row; the name plays the sound.
+ */
+function MinimizedTrackRow({
+  trackName,
+  trackLength,
+  patternLength,
+  pageOffset,
+  isTriggered,
+  tightBelow,
+  onRestore,
+  onPlayPreview,
+}: MinimizedTrackRowProps) {
+  return (
+    <div
+      data-minimized={trackName}
+      className={
+        'flex gap-2 lg:gap-4 items-center'
+        + (tightBelow ? ' mb-1 lg:mb-0.5' : '')
+      }
+    >
+      <div className="relative flex items-center gap-1 lg:gap-2 w-[76px] lg:w-56 shrink-0">
+        <button
+          type="button"
+          aria-label={`Restore ${trackName}`}
+          aria-expanded={false}
+          onClick={onRestore}
+          className="w-5 h-6 lg:h-4 shrink-0 flex items-center justify-center rounded text-muted hover:text-ink hover:bg-raised lg:absolute lg:-left-6 focus-visible:outline-2 focus-visible:outline-accent"
+        >
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            aria-hidden="true"
+          >
+            <path
+              d="M3 1.5 L7 5 L3 8.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onPointerDown={e => {
+            if (e.button === 0) onPlayPreview();
+          }}
+          onClick={e => {
+            // Keyboard activation (no pointer press)
+            if (e.detail === 0) onPlayPreview();
+          }}
+          className={
+            'lg:w-14 px-1 text-left font-display font-bold'
+            + ' uppercase tracking-[0.08em] text-[15px]'
+            + ' leading-none rounded transition-colors'
+            + ' focus-visible:outline-2'
+            + ' focus-visible:outline-accent'
+            + (isTriggered
+              ? ' text-lcd'
+              : ' text-muted hover:text-ink')
+          }
+        >
+          {trackName}
+        </button>
+      </div>
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-hidden="true"
+        onClick={onRestore}
+        className="flex-1 py-1 cursor-pointer"
+      >
+        <span className="grid grid-cols-16 gap-[3px] lg:gap-1.5 h-2 items-center">
+          {Array.from({ length: 16 }, (_, i) => {
+            const globalIdx = pageOffset + i;
+            const inTrack =
+              globalIdx < trackLength
+              && globalIdx < patternLength;
+            return (
+              <span
+                key={i}
+                className={
+                  'h-1 rounded-full '
+                  + (inTrack ? 'bg-edge' : 'bg-well')
+                }
+              />
+            );
+          })}
+        </span>
+      </button>
+    </div>
+  );
 }
 
 /**
@@ -99,6 +218,9 @@ function TrackRowInner({
   onShiftClick,
   onPlainClick,
   onClearSelection,
+  isMinimized = false,
+  onRestore,
+  tightBelow = false,
 }: TrackRowProps) {
   const stepGridRef = useRef<HTMLDivElement>(null);
   // ─── Bound callbacks ──────────────────────────
@@ -168,6 +290,26 @@ function TrackRowInner({
       onShiftClick?.(tid, localStep + pageOffset),
     [onShiftClick, pageOffset]
   );
+
+  const handleRestore = useCallback(
+    () => onRestore?.(trackId),
+    [onRestore, trackId]
+  );
+
+  if (isMinimized) {
+    return (
+      <MinimizedTrackRow
+        trackName={trackName}
+        trackLength={trackLength}
+        patternLength={patternLength}
+        pageOffset={pageOffset}
+        isTriggered={isTriggered}
+        tightBelow={tightBelow}
+        onRestore={handleRestore}
+        onPlayPreview={handlePlayPreview}
+      />
+    );
+  }
 
   return (
     <div>

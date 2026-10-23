@@ -20,6 +20,7 @@ import { useFillMode } from './hooks/useFillMode';
 import { usePatternMode } from './hooks/usePatternMode';
 import { useTrackConfig } from './hooks/useTrackConfig';
 import { usePlayback } from './hooks/usePlayback';
+import { useMinimizedTracks } from './hooks/useMinimizedTracks';
 import type {
   Kit,
   PatternMode,
@@ -61,6 +62,13 @@ interface SequencerState {
   selectedPatternId: string;
   /** Problem with a share link opened from the URL. */
   importNotice: string | null;
+  /**
+   * Empty grid tracks drawn as thin rows. A view
+   * setting: not saved, not in share links.
+   */
+  minimizedTracks: ReadonlySet<TrackId>;
+  /** Empty tracks that minimizeEmptyTracks would add. */
+  minimizableCount: number;
 }
 
 interface SequencerActions {
@@ -120,6 +128,9 @@ interface SequencerActions {
   playPreview: (trackId: TrackId) => void;
   dismissError: () => void;
   dismissImportNotice: () => void;
+  minimizeEmptyTracks: () => void;
+  restoreTrack: (trackId: TrackId) => void;
+  restoreAllTracks: () => void;
 }
 
 interface SequencerMeta {
@@ -342,12 +353,17 @@ export function SequencerProvider({
     patternModeReset: pm.reset,
   });
 
+  const minimize = useMinimizedTracks({
+    tracks: config.tracks,
+  });
+
   // ─── clearAll composes all hook resets ────────
   // Depend on the (stable) reset callbacks, not the
   // hook return objects, which are new every render.
   const fillReset = fill.reset;
   const pmReset = pm.reset;
   const trackConfigReset = trackConfig.reset;
+  const minimizeReset = minimize.reset;
   const clearAll = useCallback(() => {
     setConfig(prev => {
       const newTracks = {} as Record<
@@ -366,7 +382,8 @@ export function SequencerProvider({
     fillReset();
     pmReset();
     trackConfigReset();
-  }, [fillReset, pmReset, trackConfigReset]);
+    minimizeReset();
+  }, [fillReset, pmReset, trackConfigReset, minimizeReset]);
 
   // ─── Context value ────────────────────────────
   // Every action is a stable callback (useCallback or
@@ -378,6 +395,7 @@ export function SequencerProvider({
   } = playback;
   const { isFillActive, fillMode } = fill;
   const { patternMode, tempState } = pm;
+  const { minimizedTracks, minimizableCount } = minimize;
 
   const state = useMemo<SequencerState>(() => ({
     isPlaying,
@@ -393,11 +411,13 @@ export function SequencerProvider({
     tempState,
     selectedPatternId,
     importNotice,
+    minimizedTracks,
+    minimizableCount,
   }), [
     isPlaying, config.bpm, currentKit, trackStates,
     isLoaded, loadError, config.swing, isFillActive,
     fillMode, patternMode, tempState, selectedPatternId,
-    importNotice,
+    importNotice, minimizedTracks, minimizableCount,
   ]);
 
   const {
@@ -407,6 +427,9 @@ export function SequencerProvider({
     setPattern, setPatternMode, toggleTemp,
   } = pm;
   const { toggleFillLatch, setFillHeld } = fill;
+  const {
+    minimizeEmptyTracks, restoreTrack, restoreAllTracks,
+  } = minimize;
   const {
     toggleStep, setStep, setTrackSteps, toggleMute,
     toggleSolo, setGain, setPan, toggleFreeRun,
@@ -444,6 +467,9 @@ export function SequencerProvider({
     playPreview,
     dismissError,
     dismissImportNotice,
+    minimizeEmptyTracks,
+    restoreTrack,
+    restoreAllTracks,
   }), [
     togglePlay, setBpm, setKit, setPattern, toggleStep,
     setStep, setTrackSteps, toggleMute, toggleSolo,
@@ -453,6 +479,7 @@ export function SequencerProvider({
     clearTrigCondition, setParameterLock,
     clearParameterLock, setPatternMode, toggleTemp,
     playPreview, dismissError, dismissImportNotice,
+    minimizeEmptyTracks, restoreTrack, restoreAllTracks,
   ]);
 
   const meta = useMemo<SequencerMeta>(() => ({
