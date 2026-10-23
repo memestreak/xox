@@ -196,3 +196,87 @@ describe('useTrackConfig: reset', () => {
     }
   });
 });
+
+/** Like useHarness, with a controllable Fill flag. */
+function useFillHarness(fillActiveRef: { current: boolean }) {
+  const [config, setConfig] =
+    useState<SequencerConfig>(defaultConfig);
+  const [, setSelectedPatternId] = useState('start');
+  const tc = useTrackConfig({
+    setConfig, setSelectedPatternId, fillActiveRef,
+  });
+  return { tc, config };
+}
+
+function setupFill() {
+  const fillActiveRef = { current: false };
+  const { result } = renderHook(
+    () => useFillHarness(fillActiveRef)
+  );
+  act(() => {
+    for (const id of TRACK_IDS) {
+      result.current.tc.setTrackSteps(id, '0'.repeat(16));
+    }
+  });
+  return { r: result, fillActiveRef };
+}
+
+describe('useTrackConfig: steps added during Fill', () => {
+  it('toggleStep on during Fill adds the Fill condition', () => {
+    const { r, fillActiveRef } = setupFill();
+    fillActiveRef.current = true;
+    act(() => r.current.tc.toggleStep('bd', 2));
+    const bd = r.current.config.tracks.bd;
+    expect(bd.steps[2]).toBe('1');
+    expect(bd.trigConditions?.[2]).toEqual({ fill: 'fill' });
+  });
+
+  it('setStep (drag paint) on during Fill adds it too', () => {
+    const { r, fillActiveRef } = setupFill();
+    fillActiveRef.current = true;
+    act(() => r.current.tc.setStep('sd', 5, '1'));
+    expect(r.current.config.tracks.sd.trigConditions?.[5])
+      .toEqual({ fill: 'fill' });
+  });
+
+  it('leaves steps plain when Fill is off', () => {
+    const { r } = setupFill();
+    act(() => r.current.tc.toggleStep('bd', 2));
+    act(() => r.current.tc.setStep('bd', 3, '1'));
+    expect(r.current.config.tracks.bd.trigConditions)
+      .toBeUndefined();
+  });
+
+  it('turning a step off during Fill changes only the step', () => {
+    const { r, fillActiveRef } = setupFill();
+    act(() => r.current.tc.toggleStep('bd', 2));
+    fillActiveRef.current = true;
+    act(() => r.current.tc.toggleStep('bd', 2));
+    const bd = r.current.config.tracks.bd;
+    expect(bd.steps[2]).toBe('0');
+    expect(bd.trigConditions).toBeUndefined();
+  });
+
+  it('keeps probability and cycle, replaces not-fill', () => {
+    const { r, fillActiveRef } = setupFill();
+    act(() => r.current.tc.setTrigCondition('ch', 1, {
+      probability: 50, cycle: { a: 1, b: 2 }, fill: '!fill',
+    }));
+    fillActiveRef.current = true;
+    act(() => r.current.tc.toggleStep('ch', 1));
+    expect(r.current.config.tracks.ch.trigConditions?.[1])
+      .toEqual({
+        probability: 50, cycle: { a: 1, b: 2 }, fill: 'fill',
+      });
+  });
+
+  it('does not touch other steps on the track', () => {
+    const { r, fillActiveRef } = setupFill();
+    act(() => r.current.tc.toggleStep('bd', 0));
+    fillActiveRef.current = true;
+    act(() => r.current.tc.toggleStep('bd', 4));
+    const conds = r.current.config.tracks.bd.trigConditions;
+    expect(conds?.[0]).toBeUndefined();
+    expect(conds?.[4]).toEqual({ fill: 'fill' });
+  });
+});

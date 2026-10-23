@@ -46,6 +46,11 @@ const KEYS_TAB: HelpTab = {
         { keys: ['F'], gesture: 'hold', text: 'Fill while held' },
         { keys: ['mod', '+', 'F'], text: 'Latch fill on / off' },
         {
+          keys: ['F'], gesture: 'hold + click step',
+          text: 'Add a step that plays only in fills',
+          note: '(also while latched)',
+        },
+        {
           keys: ['T'], text: 'Temp pattern change',
           note: '(while playing)',
         },
@@ -160,7 +165,10 @@ const MOUSE_TAB: HelpTab = {
       title: 'Fill key',
       rows: [
         { gesture: 'hold', text: 'Fill while held' },
-        { keys: ['mod'], gesture: 'click', text: 'Latch fill on / off' },
+        {
+          keys: ['mod'], gesture: 'click', text: 'Latch fill on / off',
+          note: '(steps you add while it is on play only in fills)',
+        },
       ],
     },
   ],
@@ -196,6 +204,10 @@ const TOUCH_TAB: HelpTab = {
         { gesture: 'drag', text: 'Adjust a knob' },
         { gesture: 'double-tap', text: 'Reset a knob to default' },
         { gesture: 'hold FILL', text: 'Fill while held' },
+        {
+          gesture: 'hold FILL + tap step',
+          text: 'Add a step that plays only in fills',
+        },
       ],
     },
   ],

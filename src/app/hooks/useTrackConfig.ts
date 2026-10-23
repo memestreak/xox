@@ -70,6 +70,43 @@ interface UseTrackConfigArgs {
   setSelectedPatternId: React.Dispatch<
     React.SetStateAction<string>
   >;
+  /**
+   * True while Fill is held or latched. Steps turned
+   * on while it is true get the Fill condition.
+   */
+  fillActiveRef?: React.RefObject<boolean>;
+}
+
+/**
+ * Returns `track` with step `stepIndex` set to `bit`.
+ * Turning a step on while Fill is active also gives it
+ * the Fill condition (plays only during fills), keeping
+ * any probability or cycle it already has.
+ */
+function withStepBit(
+  track: TrackConfig,
+  stepIndex: number,
+  bit: '0' | '1',
+  fillActive: boolean
+): TrackConfig {
+  const steps =
+    track.steps.substring(0, stepIndex) +
+    bit +
+    track.steps.substring(stepIndex + 1);
+  if (bit === '0' || !fillActive) {
+    return { ...track, steps };
+  }
+  return {
+    ...track,
+    steps,
+    trigConditions: {
+      ...track.trigConditions,
+      [stepIndex]: {
+        ...track.trigConditions?.[stepIndex],
+        fill: 'fill',
+      },
+    },
+  };
 }
 
 /**
@@ -79,6 +116,7 @@ interface UseTrackConfigArgs {
 export function useTrackConfig({
   setConfig,
   setSelectedPatternId,
+  fillActiveRef,
 }: UseTrackConfigArgs): UseTrackConfigReturn {
   const cycleCountRef = useRef<
     Record<TrackId, number>
@@ -86,32 +124,28 @@ export function useTrackConfig({
 
   const toggleStep = useCallback(
     (trackId: TrackId, stepIndex: number) => {
+      // Read before setConfig: the updater can run later.
+      const fillActive = !!fillActiveRef?.current;
       setConfig(prev => {
         const track = prev.tracks[trackId];
         if (stepIndex >= track.steps.length) {
           return prev;
         }
-        const cur = track.steps;
         const bit =
-          cur[stepIndex] === '1' ? '0' : '1';
-        const next =
-          cur.substring(0, stepIndex) +
-          bit +
-          cur.substring(stepIndex + 1);
+          track.steps[stepIndex] === '1' ? '0' : '1';
         return {
           ...prev,
           tracks: {
             ...prev.tracks,
-            [trackId]: {
-              ...track,
-              steps: next,
-            },
+            [trackId]: withStepBit(
+              track, stepIndex, bit, fillActive
+            ),
           },
         };
       });
       setSelectedPatternId('custom');
     },
-    [setConfig, setSelectedPatternId]
+    [setConfig, setSelectedPatternId, fillActiveRef]
   );
 
   const setStep = useCallback(
@@ -120,31 +154,26 @@ export function useTrackConfig({
       stepIndex: number,
       value: '0' | '1'
     ) => {
+      const fillActive = !!fillActiveRef?.current;
       setConfig(prev => {
         const track = prev.tracks[trackId];
         if (stepIndex >= track.steps.length) {
           return prev;
         }
-        const cur = track.steps;
-        if (cur[stepIndex] === value) return prev;
-        const next =
-          cur.substring(0, stepIndex) +
-          value +
-          cur.substring(stepIndex + 1);
+        if (track.steps[stepIndex] === value) return prev;
         return {
           ...prev,
           tracks: {
             ...prev.tracks,
-            [trackId]: {
-              ...track,
-              steps: next,
-            },
+            [trackId]: withStepBit(
+              track, stepIndex, value, fillActive
+            ),
           },
         };
       });
       setSelectedPatternId('custom');
     },
-    [setConfig, setSelectedPatternId]
+    [setConfig, setSelectedPatternId, fillActiveRef]
   );
 
   const setTrackSteps = useCallback(

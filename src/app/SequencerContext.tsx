@@ -314,6 +314,7 @@ export function SequencerProvider({
   const trackConfig = useTrackConfig({
     setConfig,
     setSelectedPatternId,
+    fillActiveRef: fill.fillActiveRef,
   });
 
   const pm = usePatternMode({

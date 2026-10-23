@@ -705,6 +705,39 @@ describe('fill state', () => {
     ).toBe(false);
   });
 
+  it('steps added while latched or held get Fill', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setTrackSteps(
+        'bd', '0'.repeat(16)
+      );
+      result.current.actions.toggleFillLatch();
+    });
+    act(() => {
+      result.current.actions.toggleStep('bd', 1);
+    });
+    act(() => {
+      result.current.actions.toggleFillLatch();
+    });
+    act(() => {
+      result.current.actions.setFillHeld(true);
+    });
+    act(() => {
+      result.current.actions.setStep('bd', 2, '1');
+    });
+    act(() => {
+      result.current.actions.setFillHeld(false);
+    });
+    act(() => {
+      result.current.actions.toggleStep('bd', 3);
+    });
+    const conds =
+      result.current.meta.config.tracks.bd.trigConditions;
+    expect(conds?.[1]).toEqual({ fill: 'fill' });
+    expect(conds?.[2]).toEqual({ fill: 'fill' });
+    expect(conds?.[3]).toBeUndefined();
+  });
+
   it('clearAll resets fill state', () => {
     const { result } = renderSequencer();
     act(() => {

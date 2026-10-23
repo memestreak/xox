@@ -78,7 +78,9 @@ from the URL.
 **Hooks (`src/app/hooks/`)** — All custom hooks live here:
 - `useFillMode.ts` — fill latch/momentary state, F-key
 - `usePatternMode.ts` — pattern mode state machine, temp
-- `useTrackConfig.ts` — all track/mixer config actions
+- `useTrackConfig.ts` — all track/mixer config actions;
+  a step turned on while Fill is active gets the Fill
+  condition (reads `fillActiveRef`)
 - `usePlayback.ts` — audio engine, handleStep, spacebar
 - `useSelection.ts` — multi-step selection (Ctrl/Shift)
 - `useDragPaint.ts` — pointer drag gestures on the grid
