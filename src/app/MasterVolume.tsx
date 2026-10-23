@@ -12,6 +12,8 @@ interface MasterVolumeProps {
   onChange: (position: number) => void;
   /** Mute, or unmute back to the previous level. */
   onToggleMute: () => void;
+  /** Called when a press on the widget begins. */
+  onGestureStart: () => void;
   /**
    * "header": compact box in header row 1 (desktop).
    * "strip": full-width row of the controls strip
@@ -23,10 +25,10 @@ interface MasterVolumeProps {
 /**
  * Master volume fader (labelled "Volume") with a
  * stereo level meter and a dB readout. Double-click
- * the fader to mute, and again to unmute.
+ * anywhere on it to mute, and again to unmute.
  */
 function MasterVolumeInner({
-  position, onChange, onToggleMute, variant,
+  position, onChange, onToggleMute, onGestureStart, variant,
 }: MasterVolumeProps) {
   const id = `master-volume-${variant}`;
   const readout = formatDb(positionToGain(position));
@@ -37,6 +39,23 @@ function MasterVolumeInner({
     },
     [onChange]
   );
+
+  // Only the first press of a double-click marks the
+  // level to work from.
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.detail <= 1) onGestureStart();
+    },
+    [onGestureStart]
+  );
+
+  // Double-click anywhere on the widget (label, fader,
+  // meter, readout) toggles mute. A mouse shortcut on
+  // top of the slider, which stays keyboard operable.
+  const gestureProps = {
+    onMouseDown: handleMouseDown,
+    onDoubleClick: onToggleMute,
+  };
 
   const control = (
     <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -53,7 +72,6 @@ function MasterVolumeInner({
             step={0.01}
             value={position}
             onChange={handleInput}
-            onDoubleClick={onToggleMute}
             aria-label="Volume"
             aria-valuetext={readout}
             className={
@@ -78,7 +96,10 @@ function MasterVolumeInner({
 
   if (variant === 'header') {
     return (
-      <div className="hidden lg:flex items-center gap-3 h-11 w-[260px] px-3 rounded-lg ss-panel">
+      <div
+        {...gestureProps}
+        className="hidden lg:flex items-center gap-3 h-11 w-[260px] px-3 rounded-lg ss-panel select-none"
+      >
         <label htmlFor={id} className="ss-label text-[10px]">
           Volume
         </label>
@@ -91,7 +112,8 @@ function MasterVolumeInner({
     <PanelSection
       label="Volume"
       labelFor={id}
-      className="col-span-6 lg:hidden"
+      className="col-span-6 lg:hidden select-none"
+      {...gestureProps}
     >
       {control}
     </PanelSection>

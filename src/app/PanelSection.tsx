@@ -7,6 +7,9 @@ interface PanelSectionProps {
   labelFor?: string;
   className?: string;
   children: ReactNode;
+  /** Mouse handlers for the whole cell, if any. */
+  onMouseDown?: (e: React.MouseEvent) => void;
+  onDoubleClick?: (e: React.MouseEvent) => void;
 }
 
 /**
@@ -19,9 +22,16 @@ export default function PanelSection({
   labelFor,
   className = '',
   children,
+  onMouseDown,
+  onDoubleClick,
 }: PanelSectionProps) {
   return (
+    // Mouse handlers here are shortcuts for controls
+    // that are keyboard operable on their own.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
+      onMouseDown={onMouseDown}
+      onDoubleClick={onDoubleClick}
       className={
         'bg-panel px-3 pt-2.5 pb-3 lg:px-4'
         + ' flex flex-col gap-2 min-w-0 '

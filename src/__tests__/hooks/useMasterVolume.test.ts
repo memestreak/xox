@@ -90,6 +90,25 @@ describe('useMasterVolume', () => {
     expect(result.current.position).toBe(0.6);
   });
 
+  it('ignores where the first click of a double-click moved the knob', () => {
+    const { result } = renderHook(() => useMasterVolume());
+    act(() => result.current.setPosition(0.6));
+    // Double-click on the bar: the first press jumps the
+    // knob to 0.2 before the double-click registers.
+    act(() => {
+      result.current.beginGesture();
+      result.current.setPosition(0.2);
+      result.current.toggleMute();
+    });
+    expect(result.current.position).toBe(0);
+    act(() => {
+      result.current.beginGesture();
+      result.current.setPosition(0.9);
+      result.current.toggleMute();
+    });
+    expect(result.current.position).toBe(0.6);
+  });
+
   it('unmutes a saved-muted fader to 0 dB', () => {
     window.localStorage.setItem(
       MASTER_VOLUME_STORAGE_KEY, '0'

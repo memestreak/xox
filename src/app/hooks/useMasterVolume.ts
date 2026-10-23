@@ -86,17 +86,37 @@ function setPosition(next: number) {
   listeners.forEach(listener => listener());
 }
 
+// Levels captured when a click on the widget began,
+// before a click on the fader bar moved the knob.
+let gestureStart: { position: number; lastAudible: number } | null = null;
+
+/**
+ * Call on the first press of a possible double-click,
+ * so toggleMute() works from the level before the
+ * press rather than wherever the press moved the knob.
+ */
+function beginGesture() {
+  gestureStart = {
+    position: getSnapshot(),
+    lastAudible: lastAudiblePosition,
+  };
+}
+
 /**
  * Mute, or when already muted, return to the last
  * audible level (0 dB if there was none this session).
  */
 function toggleMute() {
-  const current = getSnapshot();
-  if (current > 0) {
-    lastAudiblePosition = current;
+  const start = gestureStart ?? {
+    position: getSnapshot(),
+    lastAudible: lastAudiblePosition,
+  };
+  gestureStart = null;
+  if (start.position > 0) {
+    lastAudiblePosition = start.position;
     setPosition(0);
   } else {
-    setPosition(lastAudiblePosition);
+    setPosition(start.lastAudible);
   }
 }
 
@@ -104,6 +124,7 @@ function toggleMute() {
 export function resetMasterVolumeForTests() {
   sessionPosition = MASTER_VOLUME_DEFAULT;
   lastAudiblePosition = MASTER_VOLUME_DEFAULT;
+  gestureStart = null;
 }
 
 /**
@@ -125,5 +146,5 @@ export function useMasterVolume() {
     audioEngine.setOutputVolume(positionToGain(position));
   }, [position]);
 
-  return { position, setPosition, toggleMute };
+  return { position, setPosition, toggleMute, beginGesture };
 }

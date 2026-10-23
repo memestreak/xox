@@ -19,17 +19,19 @@ function renderFader(
 ) {
   const onChange = vi.fn();
   const onToggleMute = vi.fn();
+  const onGestureStart = vi.fn();
   render(
     <TooltipProvider>
       <MasterVolume
         position={position}
         onChange={onChange}
         onToggleMute={onToggleMute}
+        onGestureStart={onGestureStart}
         variant={variant}
       />
     </TooltipProvider>
   );
-  return Object.assign(onChange, { onToggleMute });
+  return Object.assign(onChange, { onToggleMute, onGestureStart });
 }
 
 beforeEach(() => {
@@ -54,6 +56,25 @@ describe('MasterVolume', () => {
       { target: { value: '0.4' } },
     );
     expect(onChange).toHaveBeenCalledWith(0.4);
+  });
+
+  it.each(['header', 'strip'] as const)(
+    'toggles mute on a double-click anywhere (%s)',
+    (variant) => {
+      const { onToggleMute } = renderFader(0.3, variant);
+      fireEvent.doubleClick(screen.getByText('Volume'));
+      fireEvent.doubleClick(screen.getByTestId('level-meter'));
+      fireEvent.doubleClick(screen.getByText(/dB$/));
+      expect(onToggleMute).toHaveBeenCalledTimes(3);
+    }
+  );
+
+  it('marks the start level on the first press only', () => {
+    const { onGestureStart } = renderFader(0.3);
+    const slider = screen.getByRole('slider', { name: 'Volume' });
+    fireEvent.mouseDown(slider, { detail: 1 });
+    fireEvent.mouseDown(slider, { detail: 2 });
+    expect(onGestureStart).toHaveBeenCalledTimes(1);
   });
 
   it('toggles mute on double-click', () => {
