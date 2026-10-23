@@ -3,6 +3,8 @@
 import { useCallback } from 'react';
 import { useSequencer } from './SequencerContext';
 import Tooltip from './Tooltip';
+import LatchKey from './LatchKey';
+import { useForcedLook, useLatchVariant } from './mockLatch';
 
 /**
  * Fill button: momentary by default (hold to
@@ -11,6 +13,8 @@ import Tooltip from './Tooltip';
 export default function FillButton() {
   const { state, actions } = useSequencer();
   const { isFillActive, fillMode } = state;
+  const mock = useLatchVariant();
+  const forced = useForcedLook('fill');
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -47,6 +51,25 @@ export default function FillButton() {
       + ' shadow-[0_0_18px_rgb(240_102_42/0.4)]';
   } else {
     look = 'text-ink';
+  }
+
+  if (mock) {
+    const latched = forced ? forced.latched : fillMode === 'latched';
+    let body = forced ? forced.body
+      : fillMode === 'momentary' ? 'held' as const : 'off' as const;
+    if (latched && body === 'off') body = 'active';
+    return (
+      <LatchKey
+        variant={mock}
+        label="FILL"
+        size="header"
+        body={body}
+        latched={latched}
+        onBodyDown={() => actions.setFillHeld(true)}
+        onBodyUp={() => actions.setFillHeld(false)}
+        onLatch={actions.toggleFillLatch}
+      />
+    );
   }
 
   return (

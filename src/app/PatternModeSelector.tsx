@@ -4,6 +4,9 @@ import { useSequencer } from './SequencerContext';
 import type { PatternMode } from './types';
 import Tooltip from './Tooltip';
 import PanelSection from './PanelSection';
+import { useState } from 'react';
+import LatchKey from './LatchKey';
+import { useForcedLook, useLatchVariant } from './mockLatch';
 
 const MODE_OPTIONS: {
   value: PatternMode;
@@ -17,6 +20,13 @@ const MODE_OPTIONS: {
 export default function PatternModeSelector() {
   const { state, actions } = useSequencer();
   const { patternMode, tempState, isPlaying } = state;
+  const mock = useLatchVariant();
+  const forced = useForcedLook('temp');
+  const [mockLatched, setMockLatched] = useState(false);
+  const tLatched = forced ? forced.latched : mockLatched;
+  let tBody = forced ? forced.body : tempState === 'off' ? 'off' as const : tempState;
+  if (tLatched && tBody === 'off') tBody = 'armed';
+  const tDisabled = forced ? forced.disabled : !isPlaying;
 
   // Temp: blinking LED while armed, lit while active.
   let tempLook: string;
@@ -58,6 +68,18 @@ export default function PatternModeSelector() {
             ))}
           </select>
         </Tooltip>
+        {mock ? (
+          <LatchKey
+            variant={mock}
+            label="TEMP"
+            size="strip"
+            body={tBody}
+            latched={tLatched}
+            disabled={tDisabled}
+            onBodyClick={() => actions.toggleTemp()}
+            onLatch={() => setMockLatched(v => !v)}
+          />
+        ) : (<>
         {/* The span carries the tooltip so it isn't
             dimmed with the disabled button. */}
         <Tooltip
@@ -83,6 +105,7 @@ export default function PatternModeSelector() {
             </button>
           </span>
         </Tooltip>
+        </>)}
       </div>
     </PanelSection>
   );
