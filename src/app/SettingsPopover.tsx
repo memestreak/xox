@@ -147,6 +147,7 @@ export default function SettingsPopover() {
           <button
             role="menuitem"
             disabled={minimizableCount === 0}
+            aria-keyshortcuts="H"
             onClick={() => {
               minimizeEmptyTracks();
               setIsOpen(false);
@@ -158,13 +159,14 @@ export default function SettingsPopover() {
               <path d="M4 5h16M4 19h16M8 9l4 3 4-3M8 15l4-3 4 3" />
             </svg>
             Minimize empty tracks
-            <span className={MENU_HINT + ' ml-auto'}>
-              {minimizableCount}
+            <span aria-hidden="true" className={MENU_HINT + ' ml-auto'}>
+              H
             </span>
           </button>
           <button
             role="menuitem"
             disabled={minimizedTracks.size === 0}
+            aria-keyshortcuts="Shift+H"
             onClick={() => {
               restoreAllTracks();
               setIsOpen(false);
@@ -176,6 +178,9 @@ export default function SettingsPopover() {
               <path d="M4 12h16M8 8l4-4 4 4M8 16l4 4 4-4" />
             </svg>
             Restore all tracks
+            <span aria-hidden="true" className={MENU_HINT + ' ml-auto'}>
+              ⇧H
+            </span>
           </button>
           <div className="h-px bg-line mx-1.5 my-1" />
           <button

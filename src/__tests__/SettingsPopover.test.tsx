@@ -223,10 +223,13 @@ describe('SettingsPopover', () => {
         name: /minimize empty tracks/i,
       });
       expect(minimize).toBeEnabled();
-      expect(minimize).toHaveTextContent('8');
-      expect(screen.getByRole('menuitem', {
+      expect(minimize).toHaveTextContent(/^Minimize empty tracksH$/);
+      expect(minimize).toHaveAttribute('aria-keyshortcuts', 'H');
+      const restoreItem = screen.getByRole('menuitem', {
         name: /restore all tracks/i,
-      })).toBeDisabled();
+      });
+      expect(restoreItem).toHaveTextContent(/^Restore all tracks⇧H$/);
+      expect(restoreItem).toBeDisabled();
 
       await user.click(minimize);
       expect(screen.queryByRole('menu')).not.toBeInTheDocument();

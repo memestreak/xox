@@ -12,8 +12,8 @@ interface GridContextMenuProps {
   /** Pointer position the menu opens at (viewport px). */
   x: number;
   y: number;
-  /** Empty tracks not yet minimized. */
-  minimizableCount: number;
+  /** True when some empty track isn't minimized yet. */
+  canMinimize: boolean;
   /** True when at least one row is minimized. */
   canRestore: boolean;
   onMinimize: () => void;
@@ -31,7 +31,7 @@ interface GridContextMenuProps {
 export default function GridContextMenu({
   x,
   y,
-  minimizableCount,
+  canMinimize,
   canRestore,
   onMinimize,
   onRestoreAll,
@@ -162,7 +162,8 @@ export default function GridContextMenu({
     >
       <button
         role="menuitem"
-        disabled={minimizableCount === 0}
+        disabled={!canMinimize}
+        aria-keyshortcuts="H"
         onClick={() => {
           onMinimize();
           onClose();
@@ -170,11 +171,12 @@ export default function GridContextMenu({
         className={MENU_ITEM}
       >
         <span>Minimize empty tracks</span>
-        <span className={MENU_HINT}>{minimizableCount}</span>
+        <span aria-hidden="true" className={MENU_HINT}>H</span>
       </button>
       <button
         role="menuitem"
         disabled={!canRestore}
+        aria-keyshortcuts="Shift+H"
         onClick={() => {
           onRestoreAll();
           onClose();
@@ -182,6 +184,7 @@ export default function GridContextMenu({
         className={MENU_ITEM}
       >
         <span>Restore all tracks</span>
+        <span aria-hidden="true" className={MENU_HINT}>⇧H</span>
       </button>
     </div>
   );
