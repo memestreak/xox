@@ -421,9 +421,15 @@ export default function StepGrid({
         }).concat(
           mock === 'D' && spare
             ? TRACKS.filter(t => t.id === spare) : []
-        ).map(track => (
+        ).map((track, i, rows) => (
           <TrackRow
             key={track.id}
+            tightBelow={
+              mock === 'E'
+              && minimized.has(track.id)
+              && rows[i + 1] !== undefined
+              && minimized.has(rows[i + 1].id)
+            }
             mockLook={
               mock === 'B' && foldedSet.has(track.id) ? 'folded'
               : mock === 'E' && minimized.has(track.id) ? 'folded'

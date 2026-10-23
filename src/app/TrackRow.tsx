@@ -65,6 +65,7 @@ export interface TrackRowProps {
   onFold?: () => void;
   nameSlot?: ReactNode;
   spare?: boolean;
+  tightBelow?: boolean;
 }
 
 /** MOCK: fold chevron for variant B. */
@@ -148,6 +149,7 @@ function TrackRowInner({
   onFold,
   nameSlot,
   spare,
+  tightBelow,
 }: TrackRowProps) {
   const stepGridRef = useRef<HTMLDivElement>(null);
   // ─── Bound callbacks ──────────────────────────
@@ -221,7 +223,7 @@ function TrackRowInner({
   // ─── MOCK B: folded row ───────────────────────
   if (mockLook === 'folded') {
     return (
-      <div className="flex gap-2 lg:gap-4 items-center">
+      <div className={'flex gap-2 lg:gap-4 items-center' + (tightBelow ? ' mb-1! lg:mb-0.5!' : '')}>
         <div className="relative flex items-center gap-1 lg:gap-2 w-[76px] lg:w-56 shrink-0">
           <FoldChevron folded trackName={trackName} onClick={onFold!} className="lg:absolute lg:-left-6" />
           <button
