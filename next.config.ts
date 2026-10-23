@@ -1,15 +1,17 @@
 import { execSync } from "child_process";
 import type { NextConfig } from "next";
 
-const commitHash = (() => {
+function gitRevParse(args: string): string | undefined {
   try {
-    return execSync("git rev-parse --short HEAD")
-      .toString()
-      .trim();
+    return execSync(`git rev-parse ${args}`).toString().trim();
   } catch {
-    return "dev";
+    return undefined;
   }
-})();
+}
+
+const commitHash = gitRevParse("--short HEAD") ?? "dev";
+// Full hash for the GitHub commit link; empty when git is unavailable.
+const commitSha = gitRevParse("HEAD") ?? "";
 
 const nextConfig: NextConfig = {
   output: 'export',
@@ -18,6 +20,7 @@ const nextConfig: NextConfig = {
   },
   env: {
     NEXT_PUBLIC_COMMIT_HASH: commitHash,
+    NEXT_PUBLIC_COMMIT_SHA: commitSha,
   },
 };
 

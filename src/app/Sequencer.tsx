@@ -112,7 +112,20 @@ function SequencerInner() {
               Source Code
             </a>
             <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint text-right">
-              Built at commit {process.env.NEXT_PUBLIC_COMMIT_HASH ?? 'dev'}
+              Built at commit{' '}
+              {process.env.NEXT_PUBLIC_COMMIT_SHA ? (
+                <a
+                  href={`https://github.com/memestreak/xox/commit/${process.env.NEXT_PUBLIC_COMMIT_SHA}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`View commit ${process.env.NEXT_PUBLIC_COMMIT_HASH} on GitHub`}
+                  className="underline decoration-dotted underline-offset-2 hover:text-accent transition-colors"
+                >
+                  {process.env.NEXT_PUBLIC_COMMIT_HASH}
+                </a>
+              ) : (
+                process.env.NEXT_PUBLIC_COMMIT_HASH ?? 'dev'
+              )}
             </span>
           </footer>
         </div>
