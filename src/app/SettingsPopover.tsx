@@ -56,6 +56,25 @@ export default function SettingsPopover() {
       );
   }, [isOpen]);
 
+  // Dismiss on Escape. If focus was in the menu, put it
+  // back on the gear so keyboard users don't lose it.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const focusInMenu = popoverRef.current?.contains(
+        document.activeElement
+      );
+      setIsOpen(false);
+      if (focusInMenu) buttonRef.current?.focus();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () =>
+      document.removeEventListener(
+        'keydown', handleKeyDown
+      );
+  }, [isOpen]);
+
   const handleExport = useCallback(async () => {
     try {
       const hash = await encodeConfig(meta.config);

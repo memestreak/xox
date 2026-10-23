@@ -78,6 +78,38 @@ describe('SettingsPopover', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('Escape closes popover', async () => {
+    const user = userEvent.setup();
+    renderPopover();
+    await user.click(
+      screen.getByRole('button', { name: /settings/i })
+    );
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(
+      screen.queryByRole('menu')
+    ).not.toBeInTheDocument();
+  });
+
+  it('Escape from a menu item returns focus to the gear', async () => {
+    const user = userEvent.setup();
+    renderPopover();
+    const gear = screen.getByRole(
+      'button', { name: /^settings$/i }
+    );
+    await user.click(gear);
+    screen.getByRole(
+      'menuitem', { name: /copy share link/i }
+    ).focus();
+
+    await user.keyboard('{Escape}');
+    expect(
+      screen.queryByRole('menu')
+    ).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(gear);
+  });
+
   it('export copies a share URL without changing the address bar', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {

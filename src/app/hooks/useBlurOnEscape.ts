@@ -62,7 +62,10 @@ export function useBlurOnEscape(): void {
       // to their opener first.
       setTimeout(() => {
         const el = document.activeElement;
-        if (
+        if (el instanceof SVGElement) {
+          // The knobs are focusable <svg> sliders.
+          el.blur();
+        } else if (
           el instanceof HTMLElement
           && el !== document.body
           && !isTextEntry(el)

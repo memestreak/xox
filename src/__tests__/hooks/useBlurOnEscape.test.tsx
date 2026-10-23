@@ -11,11 +11,12 @@ function Harness() {
       <button type="button">key</button>
       <input aria-label="bpm" type="number" />
       <input aria-label="volume" type="range" />
+      <svg role="slider" aria-label="swing" tabIndex={0} />
     </>
   );
 }
 
-function pointerDown(el: HTMLElement) {
+function pointerDown(el: Element) {
   el.dispatchEvent(new Event('pointerdown', { bubbles: true }));
 }
 
@@ -52,6 +53,15 @@ describe('useBlurOnEscape', () => {
     slider.focus();
     press('Escape');
     expect(document.activeElement).not.toBe(slider);
+  });
+
+  it('drops focus from a clicked SVG knob on Esc', () => {
+    const knob = screen.getByLabelText('swing');
+    pointerDown(knob);
+    (knob as unknown as SVGElement).focus();
+    expect(document.activeElement).toBe(knob);
+    press('Escape');
+    expect(document.activeElement).not.toBe(knob);
   });
 
   it('keeps focus when the keyboard was used last', () => {
