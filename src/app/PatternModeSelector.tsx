@@ -58,23 +58,30 @@ export default function PatternModeSelector() {
             ))}
           </select>
         </Tooltip>
-        <Tooltip tooltipKey="temp" position="bottom">
-          <button
-            onClick={() => actions.toggleTemp()}
-            disabled={!isPlaying}
-            aria-pressed={tempState !== 'off'}
-            aria-label="Temp mode"
-            className={
-              'ss-key ss-cap h-9 px-2.5 text-xs'
-              + ' inline-flex items-center gap-1.5'
-              + ' disabled:opacity-40'
-              + ' disabled:cursor-not-allowed '
-              + tempLook
-            }
-          >
-            <span className={'ss-led ' + ledLook} />
-            Temp
-          </button>
+        {/* The span carries the tooltip so it isn't
+            dimmed with the disabled button. */}
+        <Tooltip
+          tooltipKey={isPlaying ? 'temp' : 'tempStopped'}
+          position="bottom"
+        >
+          <span className="inline-flex">
+            <button
+              onClick={() => actions.toggleTemp()}
+              disabled={!isPlaying}
+              aria-pressed={tempState !== 'off'}
+              aria-label="Temp mode"
+              className={
+                'ss-key ss-cap h-9 px-2.5 text-xs'
+                + ' inline-flex items-center gap-1.5'
+                + ' disabled:opacity-40'
+                + ' disabled:cursor-not-allowed '
+                + tempLook
+              }
+            >
+              <span className={'ss-led ' + ledLook} />
+              Temp
+            </button>
+          </span>
         </Tooltip>
       </div>
     </PanelSection>
