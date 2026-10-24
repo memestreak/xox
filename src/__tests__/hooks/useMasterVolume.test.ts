@@ -3,6 +3,7 @@ import {
   beforeEach, describe, expect, it, vi,
 } from 'vitest';
 import { audioEngine } from '../../app/AudioEngine';
+import { MASTER_VOLUME_DEFAULT } from '../../app/constants';
 import {
   MASTER_VOLUME_STORAGE_KEY,
   formatDb,
@@ -42,11 +43,21 @@ describe('formatDb', () => {
 });
 
 describe('useMasterVolume', () => {
-  it('defaults to 0 dB and tells the engine', () => {
+  it('defaults to about −6 dB and tells the engine', () => {
+    const { result } = renderHook(() => useMasterVolume());
+    expect(result.current.position).toBe(MASTER_VOLUME_DEFAULT);
+    expect(formatDb(positionToGain(MASTER_VOLUME_DEFAULT)))
+      .toBe('−5.8 dB');
+    expect(audioEngine.setOutputVolume)
+      .toHaveBeenLastCalledWith(positionToGain(MASTER_VOLUME_DEFAULT));
+  });
+
+  it('keeps a saved full-volume level', () => {
+    window.localStorage.setItem(
+      MASTER_VOLUME_STORAGE_KEY, '1'
+    );
     const { result } = renderHook(() => useMasterVolume());
     expect(result.current.position).toBe(1);
-    expect(audioEngine.setOutputVolume)
-      .toHaveBeenLastCalledWith(1);
   });
 
   it('restores the saved position', () => {
@@ -64,7 +75,7 @@ describe('useMasterVolume', () => {
       MASTER_VOLUME_STORAGE_KEY, 'loud'
     );
     const { result } = renderHook(() => useMasterVolume());
-    expect(result.current.position).toBe(1);
+    expect(result.current.position).toBe(MASTER_VOLUME_DEFAULT);
   });
 
   it('saves, clamps and shares changes between users', () => {
@@ -109,13 +120,13 @@ describe('useMasterVolume', () => {
     expect(result.current.position).toBe(0.6);
   });
 
-  it('unmutes a saved-muted fader to 0 dB', () => {
+  it('unmutes a saved-muted fader to the default', () => {
     window.localStorage.setItem(
       MASTER_VOLUME_STORAGE_KEY, '0'
     );
     const { result } = renderHook(() => useMasterVolume());
     act(() => result.current.toggleMute());
-    expect(result.current.position).toBe(1);
+    expect(result.current.position).toBe(MASTER_VOLUME_DEFAULT);
   });
 
   it('still works when localStorage throws', () => {
