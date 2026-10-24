@@ -174,12 +174,19 @@ describe('StepGrid', () => {
       expect(screen.getByRole('menu', {
         name: 'Grid options',
       })).toBeInTheDocument();
-      expect(screen.getByRole('menuitem', {
-        name: /minimize empty tracks/i,
-      })).toHaveTextContent('8');
-      expect(screen.getByRole('menuitem', {
-        name: /restore all tracks/i,
-      })).toBeDisabled();
+      // Each item shows its shortcut, not a count
+      const minimize = screen.getByRole('menuitem', {
+        name: 'Minimize empty tracks',
+      });
+      expect(minimize).toHaveTextContent(/^Minimize empty tracksH$/);
+      expect(minimize).toHaveAttribute('aria-keyshortcuts', 'H');
+      const restore = screen.getByRole('menuitem', {
+        name: 'Restore all tracks',
+      });
+      expect(restore).toHaveTextContent(/^Restore all tracks⇧H$/);
+      expect(restore)
+        .toHaveAttribute('aria-keyshortcuts', 'Shift+H');
+      expect(restore).toBeDisabled();
     });
 
     it('right-click on a step or knob does not', () => {

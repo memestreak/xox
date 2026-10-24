@@ -470,7 +470,7 @@ export default function StepGrid({
         <GridContextMenu
           x={gridMenu.x}
           y={gridMenu.y}
-          minimizableCount={minimizableCount}
+          canMinimize={minimizableCount > 0}
           canRestore={minimizedTracks.size > 0}
           onMinimize={minimizeEmptyTracks}
           onRestoreAll={restoreAllTracks}
