@@ -29,7 +29,7 @@
   "track-ac": "Accent",
   "track-cb": "Cowbell",
   "lengthHandle": "Drag to set track length",
-  "follow": "Auto-follow playhead during playback",
+  "follow": "Auto-follow playhead in multi-page patterns",
   "page": "Jump to page",
   "accentIntensity": "Accent intensity",
   "mode": "Pattern playback mode",
