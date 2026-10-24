@@ -27,15 +27,20 @@ export default function PatternModeSelector() {
       className="col-span-4 max-lg:order-4"
     >
       <div className="flex gap-1.5 items-stretch">
-        <Tooltip tooltipKey="mode" position="bottom">
-          <LcdSelect
-            id="mode-select"
-            value={patternMode}
-            options={MODE_OPTIONS}
-            onChange={actions.setPatternMode}
-            className="h-9 w-full lg:w-[140px]"
-          />
-        </Tooltip>
+        {/* min-w-0: on narrow phones the key gives way
+            (its text truncates) instead of pushing Temp
+            out of the panel. */}
+        <div className="min-w-0 flex-1 lg:flex-none">
+          <Tooltip tooltipKey="mode" position="bottom">
+            <LcdSelect
+              id="mode-select"
+              value={patternMode}
+              options={MODE_OPTIONS}
+              onChange={actions.setPatternMode}
+              className="h-9 w-full lg:w-[140px]"
+            />
+          </Tooltip>
+        </div>
         <LatchKey
           label="TEMP"
           name="Temp"
