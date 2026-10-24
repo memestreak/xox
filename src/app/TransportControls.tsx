@@ -15,6 +15,12 @@ import PanelSection from './PanelSection';
 import { useHelp } from './HelpContext';
 import MasterVolume from './MasterVolume';
 import { useMasterVolume } from './hooks/useMasterVolume';
+import LcdSelect from './LcdSelect';
+
+const KIT_OPTIONS = kitsData.kits.map(k => ({
+  value: k.id,
+  label: k.name,
+}));
 
 interface TransportControlsProps {
   page: PageNav;
@@ -142,23 +148,18 @@ function TransportControlsInner({
           className="col-span-2 max-lg:order-4 lg:rounded-l-[11px]"
         >
           <Tooltip tooltipKey="kit" position="bottom">
-            <select
+            <LcdSelect
               id="kit-select"
               value={currentKit.id}
-              onChange={(e) => {
+              options={KIT_OPTIONS}
+              onChange={(id) => {
                 const kit = kitsData.kits.find(
-                  k => k.id === e.target.value
+                  k => k.id === id
                 );
                 if (kit) setKit(kit);
               }}
-              className="ss-key ss-select h-9 w-full lg:w-24 pl-3 text-sm"
-            >
-              {kitsData.kits.map(k => (
-                <option key={k.id} value={k.id}>
-                  {k.name}
-                </option>
-              ))}
-            </select>
+              className="h-9 w-full lg:w-24"
+            />
           </Tooltip>
         </PanelSection>
         <PanelSection

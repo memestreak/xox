@@ -58,18 +58,16 @@ describe('StepPopover', () => {
 
   it('cycle defaults to 1:1', () => {
     render(<StepPopover {...base} />);
-    const sel = screen.getByRole(
-      'combobox'
-    ) as HTMLSelectElement;
-    expect(sel.value).toBe('1:1');
+    expect(screen.getByRole('combobox'))
+      .toHaveTextContent('1:1');
   });
 
   it('changing cycle calls setTrigCondition',
     () => {
       render(<StepPopover {...base} />);
-      fireEvent.change(
-        screen.getByRole('combobox'),
-        { target: { value: '2:4' } }
+      fireEvent.click(screen.getByRole('combobox'));
+      fireEvent.click(
+        screen.getByRole('option', { name: '2:4' })
       );
       expect(mockSet).toHaveBeenCalledWith(
         'bd', 3, { cycle: { a: 2, b: 4 } }
@@ -200,10 +198,8 @@ describe('StepPopover', () => {
         screen.getByRole('slider', { name: 'Probability' })
           .getAttribute('aria-valuenow')
       ).toBe('75');
-      const sel2 = screen.getByRole(
-        'combobox'
-      ) as HTMLSelectElement;
-      expect(sel2.value).toBe('1:3');
+      expect(screen.getByRole('combobox'))
+        .toHaveTextContent('1:3');
     }
   );
 });

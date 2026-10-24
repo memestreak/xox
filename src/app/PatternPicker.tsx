@@ -25,6 +25,7 @@ import {
   shouldIgnoreShortcut,
 } from './keyboardUtils';
 import Tooltip from './Tooltip';
+import { LcdCaret } from './LcdSelect';
 
 interface PatternPickerProps {
   categories: PatternCategory[];
@@ -353,11 +354,8 @@ export default function PatternPicker({
             ? `Pattern, ${pendingName} cued for the next bar`
             : 'Pattern'
         }
-        className={
-          'ss-key h-9 w-full pl-3 pr-2.5 text-sm font-medium'
-          + ' flex items-center justify-between gap-2'
-          + (isOpen ? ' border-accent' : ' border-edge')
-        }
+        data-open={isOpen || undefined}
+        className="ss-lcd-select h-9 w-full"
       >
         <span className="block truncate">{displayName}</span>
         {pendingPatternId && (
@@ -367,24 +365,7 @@ export default function PatternPicker({
             className="ss-led ss-led-cue animate-temp-blink ml-auto"
           />
         )}
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          aria-hidden="true"
-          className={
-            'shrink-0 text-muted transition-transform'
-            + (isOpen ? ' rotate-180' : '')
-          }
-        >
-          <path
-            d="M3 4.5l3 3 3-3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
+        <LcdCaret open={isOpen} />
       </button>
     </Tooltip>
   );

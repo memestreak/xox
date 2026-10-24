@@ -5,11 +5,10 @@ import type { PatternMode } from './types';
 import Tooltip from './Tooltip';
 import PanelSection from './PanelSection';
 import LatchKey from './LatchKey';
+import LcdSelect from './LcdSelect';
+import type { LcdSelectOption } from './LcdSelect';
 
-const MODE_OPTIONS: {
-  value: PatternMode;
-  label: string;
-}[] = [
+const MODE_OPTIONS: LcdSelectOption<PatternMode>[] = [
   { value: 'sequential', label: 'Sequential' },
   { value: 'direct-start', label: 'Direct start' },
   { value: 'direct-jump', label: 'Direct jump' },
@@ -29,22 +28,13 @@ export default function PatternModeSelector() {
     >
       <div className="flex gap-1.5 items-stretch">
         <Tooltip tooltipKey="mode" position="bottom">
-          <select
+          <LcdSelect
             id="mode-select"
             value={patternMode}
-            onChange={(e) => {
-              actions.setPatternMode(
-                e.target.value as PatternMode
-              );
-            }}
-            className="ss-key ss-select h-9 w-full lg:w-[140px] pl-3 text-sm"
-          >
-            {MODE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            options={MODE_OPTIONS}
+            onChange={actions.setPatternMode}
+            className="h-9 w-full lg:w-[140px]"
+          />
         </Tooltip>
         <LatchKey
           label="TEMP"
