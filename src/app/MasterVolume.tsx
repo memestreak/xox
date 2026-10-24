@@ -84,7 +84,7 @@ function MasterVolumeInner({
       </div>
       <output
         htmlFor={id}
-        className="font-mono text-[13px] text-ink tabular-nums w-[58px] text-right shrink-0"
+        className="font-mono text-[13px] text-ink tabular-nums w-[9ch] text-right whitespace-nowrap shrink-0"
       >
         {readout}
       </output>
