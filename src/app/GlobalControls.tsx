@@ -16,9 +16,10 @@ interface GlobalControlsProps {
 
 /**
  * Global controls: pattern length with page lights
- * and Follow, swing, and reset. Renders three cells
- * of the controls strip; the parent places them
- * after Pattern change on desktop (Reset last).
+ * and Follow, and swing. Renders two cells of the
+ * controls strip; the parent places them after
+ * Pattern change on desktop (Swing last). Reset lives
+ * in the grid menu (GridContextMenu).
  */
 function GlobalControlsInner({ page }: GlobalControlsProps) {
   const { state, actions, meta } = useSequencer();
@@ -30,12 +31,6 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
     },
     [actions]
   );
-
-  const handleReset = useCallback(() => {
-    actions.clearAll();
-    actions.setPatternLength(16);
-    actions.setSwing(0);
-  }, [actions]);
 
   return (
     <>
@@ -67,7 +62,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
         </div>
       </PanelSection>
 
-      <PanelSection label="Swing" className="col-span-2 max-lg:order-1 max-lg:rounded-tr-[11px]">
+      <PanelSection label="Swing" className="col-span-2 max-lg:order-1 max-lg:rounded-tr-[11px] lg:rounded-r-[11px]">
         <div className="flex items-center gap-2.5 h-9">
           <Tooltip tooltipKey="swing" position="bottom">
             <Knob
@@ -85,20 +80,6 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
         </div>
       </PanelSection>
 
-      <PanelSection className="col-span-2 justify-end max-lg:order-3 lg:order-last lg:rounded-r-[11px]">
-        <Tooltip
-          tooltipKey="reset"
-          position="bottom"
-          align="right"
-        >
-          <button
-            onClick={handleReset}
-            className="ss-key ss-cap h-9 px-3 text-xs text-muted hover:text-step1"
-          >
-            Reset
-          </button>
-        </Tooltip>
-      </PanelSection>
     </>
   );
 }

@@ -3,6 +3,7 @@
 import {
   useCallback, useEffect, useLayoutEffect, useRef, useState,
 } from 'react';
+import type { RefObject } from 'react';
 import { MENU_HINT, MENU_ITEM } from './menuStyles';
 
 /** Space kept between the menu and the viewport edge. */
@@ -18,13 +19,22 @@ interface GridContextMenuProps {
   canRestore: boolean;
   onMinimize: () => void;
   onRestoreAll: () => void;
+  /** Clears the pattern (the app's Reset). */
+  onReset: () => void;
   onClose: () => void;
+  /**
+   * The key that toggles the menu. A press on it is not
+   * an outside press, so the key's own click can close
+   * the menu instead of reopening it.
+   */
+  anchorRef?: RefObject<HTMLElement | null>;
 }
 
 /**
- * Right-click menu for blank parts of the step grid:
- * minimize empty tracks / restore all tracks. Opens at
- * the pointer, kept inside the viewport. Closes on a
+ * Grid menu: minimize empty tracks, restore all tracks,
+ * reset. Opens at the pointer on a right-click in a
+ * blank part of the grid, or under the ⋯ key over the
+ * track names; kept inside the viewport. Closes on a
  * choice, Escape, a press outside, scroll or resize,
  * and returns focus to where it was.
  */
@@ -35,7 +45,9 @@ export default function GridContextMenu({
   canRestore,
   onMinimize,
   onRestoreAll,
+  onReset,
   onClose,
+  anchorRef,
 }: GridContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: x, top: y });
@@ -81,9 +93,11 @@ export default function GridContextMenu({
   // Dismiss on a press outside, Escape, scroll, resize.
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (anchorRef?.current?.contains(target)) return;
       if (
         menuRef.current
-        && !menuRef.current.contains(e.target as Node)
+        && !menuRef.current.contains(target)
       ) {
         onClose();
       }
@@ -113,7 +127,7 @@ export default function GridContextMenu({
         'resize', onScrollOrResize
       );
     };
-  }, [onClose]);
+  }, [onClose, anchorRef]);
 
   // Arrow keys, Home and End move between usable items
   // (WAI-ARIA menu pattern). Focus wraps at both ends.
@@ -185,6 +199,17 @@ export default function GridContextMenu({
       >
         <span>Restore all tracks</span>
         <span aria-hidden="true" className={MENU_HINT}>⇧H</span>
+      </button>
+      <div role="separator" className="h-px bg-line mx-1.5 my-1" />
+      <button
+        role="menuitem"
+        onClick={() => {
+          onReset();
+          onClose();
+        }}
+        className={MENU_ITEM}
+      >
+        <span>Reset pattern</span>
       </button>
     </div>
   );
