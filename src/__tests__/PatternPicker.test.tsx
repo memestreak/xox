@@ -383,7 +383,7 @@ describe('PatternPicker', () => {
       expect(option('Funk 2')).toHaveFocus();
     });
 
-    it('P again closes and focuses the Pattern key', async () => {
+    it('P again closes and leaves the Pattern key alone', async () => {
       const user = userEvent.setup();
       renderPicker();
       await user.keyboard('p');
@@ -393,7 +393,38 @@ describe('PatternPicker', () => {
       );
       expect(
         screen.getByRole('button', { name: /pattern/i }),
-      ).toHaveFocus();
+      ).not.toHaveFocus();
+      expect(document.body).toHaveFocus();
+    });
+
+    it('closing a P-open restores focus and hidden rings', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      const other = document.createElement('button');
+      document.body.appendChild(other);
+      other.focus();
+      document.documentElement.dataset.input = 'pointer';
+      await user.keyboard('p');
+      expect(document.documentElement.dataset.input)
+        .toBeUndefined();
+      await user.keyboard('{Escape}');
+      expect(other).toHaveFocus();
+      expect(document.documentElement.dataset.input)
+        .toBe('pointer');
+      other.remove();
+    });
+
+    it('Enter on the Pattern key opens and Esc returns there', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      const trigger = screen.getByRole('button', {
+        name: /pattern/i,
+      });
+      trigger.focus();
+      await user.keyboard('{Enter}');
+      expect(option('Funk 1')).toHaveFocus();
+      await user.keyboard('{Escape}');
+      expect(trigger).toHaveFocus();
     });
 
     it('P opens on the first category for Custom', async () => {

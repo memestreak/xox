@@ -66,6 +66,13 @@ export default function PatternPicker({
   // Set when a key moves the cursor, so the effect below
   // moves focus after the list has re-rendered.
   const focusCursorRef = useRef(false);
+  // Opened from the keyboard: where focus was, and
+  // whether rings were hidden after a click, so closing
+  // can put both back.
+  const returnToRef = useRef<{
+    element: Element | null;
+    wasPointer: boolean;
+  } | null>(null);
   // The latest render's handlers, for key listeners that
   // are registered once.
   const latestRef = useRef<{
@@ -115,12 +122,18 @@ export default function PatternPicker({
     }
     setIsOpen(true);
     if (fromKeyboard) {
+      returnToRef.current = {
+        element: document.activeElement,
+        wasPointer:
+          document.documentElement.dataset.input === 'pointer',
+      };
       // Letter keys leave the "pointer" mark from
       // useInputModality in place, which hides focus
       // rings. The cursor is a focus ring, so show it.
       delete document.documentElement.dataset.input;
       focusCursorRef.current = true;
     } else {
+      returnToRef.current = null;
       requestAnimationFrame(() => {
         drawerRef.current?.focus();
       });
@@ -129,7 +142,28 @@ export default function PatternPicker({
 
   const handleClose = () => {
     setIsOpen(false);
-    triggerRef.current?.focus();
+    const returnTo = returnToRef.current;
+    returnToRef.current = null;
+    if (!returnTo) {
+      triggerRef.current?.focus();
+      return;
+    }
+    // Opened with P (or Enter on the Pattern key): go
+    // back to where focus was, and hide rings again if
+    // they were hidden then, so nothing is left ringed.
+    if (returnTo.wasPointer) {
+      document.documentElement.dataset.input = 'pointer';
+    }
+    const el = returnTo.element;
+    if (
+      el instanceof HTMLElement
+      && el !== document.body
+      && el.isConnected
+    ) {
+      el.focus();
+    } else {
+      (document.activeElement as HTMLElement | null)?.blur();
+    }
   };
 
   // Enter or Space on the key fires a click with
