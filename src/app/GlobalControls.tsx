@@ -17,7 +17,7 @@ interface GlobalControlsProps {
  * Global controls: pattern length with page lights
  * and Follow, swing, and reset. Renders three cells
  * of the controls strip; the parent places them
- * (Reset sits last on desktop).
+ * after Pattern change on desktop (Reset last).
  */
 function GlobalControlsInner({ page }: GlobalControlsProps) {
   const { state, actions, meta } = useSequencer();
@@ -51,7 +51,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
           page lights sit on the label line, centered
           over Follow, so the cell never changes width
           as pages come and go. */}
-      <PanelSection className="col-span-4 max-lg:order-1 rounded-tl-[11px] lg:rounded-bl-[11px]">
+      <PanelSection className="col-span-4 max-lg:order-1 max-lg:rounded-tl-[11px]">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[76px_auto] items-center gap-x-1.5 lg:gap-x-2 gap-y-2">
           <label htmlFor="global-steps" className="ss-label">
             Steps
