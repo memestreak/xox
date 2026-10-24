@@ -140,13 +140,15 @@ function MinimizedTrackRow({
           }}
           className={
             'lg:w-14 px-1 text-left font-display font-bold'
-            + ' uppercase tracking-[0.08em] text-[15px]'
+            + ' uppercase tracking-[0.08em]'
+            // Same size as a full row's name
+            + ' text-xl lg:text-[22px]'
             + ' leading-none rounded transition-colors'
             + ' focus-visible:outline-2'
             + ' focus-visible:outline-accent'
             + (isTriggered
               ? ' text-lcd'
-              : ' text-muted hover:text-ink')
+              : ' text-ink hover:bg-raised')
           }
         >
           {trackName}
