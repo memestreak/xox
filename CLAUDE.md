@@ -95,11 +95,16 @@ from the URL.
   minimizes. `StepGrid` passes the visible track order
   to `useDragPaint`/`useSelection` so drags skip
   minimized rows
-- `useBlurOnEscape.ts` — mounted once in `Sequencer`:
-  Esc after a mouse/touch click drops focus, so
-  Chromium doesn't ring the clicked control (or the
-  opener a menu/dialog returns focus to). Keyboard
-  users keep focus and the ring
+- `useInputModality.ts` — mounted once in `Sequencer`:
+  sets `data-input="pointer"` on `<html>` after a
+  click/tap and clears it on a navigation key (Tab,
+  Enter, arrows, Home/End, PageUp/Down). `globals.css`
+  hides focus rings while it's set, so Chromium doesn't
+  ring a clicked button (or the opener a menu/dialog
+  returns focus to) when Space, Esc or a letter
+  shortcut is pressed. Focus never moves. Use
+  `:focus-visible` for new focus styles; the rule
+  covers outlines and Tailwind rings
 
 Every hook that manages resettable state must expose a
 `reset()` method. The orchestrator's `clearAll` composes
