@@ -8,6 +8,7 @@ import Tooltip from './Tooltip';
 import { getPatternLength } from './types';
 import { FollowToggle, PageLights } from './PageIndicator';
 import type { PageNav } from './PageIndicator';
+import StepsSpinner, { useStepsVariant } from './mockSteps';
 
 interface GlobalControlsProps {
   page: PageNav;
@@ -22,6 +23,7 @@ interface GlobalControlsProps {
 function GlobalControlsInner({ page }: GlobalControlsProps) {
   const { state, actions, meta } = useSequencer();
   const patternLength = getPatternLength(meta.config.tracks);
+  const mock = useStepsVariant();
 
   const handlePatternLength = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -52,7 +54,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
           over Follow, so the cell never changes width
           as pages come and go. */}
       <PanelSection className="col-span-4 max-lg:order-1 max-lg:rounded-tl-[11px]">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[76px_auto] items-center gap-x-1.5 lg:gap-x-2 gap-y-2">
+        <div className={`grid grid-cols-[minmax(0,1fr)_auto] ${mock === 'B' ? 'lg:grid-cols-[104px_auto]' : 'lg:grid-cols-[76px_auto]'} items-center gap-x-1.5 lg:gap-x-2 gap-y-2`}>
           <label htmlFor="global-steps" className="ss-label">
             Steps
           </label>
@@ -63,6 +65,13 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
               setPage={page.setPage}
             />
           </div>
+          {mock ? (
+            <StepsSpinner
+              variant={mock}
+              value={patternLength}
+              onChange={actions.setPatternLength}
+            />
+          ) : (
           <Tooltip tooltipKey="steps" position="bottom">
             <select
               id="global-steps"
@@ -80,6 +89,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
               )}
             </select>
           </Tooltip>
+          )}
           <FollowToggle
             autoFollow={page.autoFollow}
             setAutoFollow={page.setAutoFollow}
