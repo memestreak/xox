@@ -121,7 +121,8 @@ const MOUSE_TAB: HelpTab = {
       title: 'Steps',
       rows: [
         { gesture: 'click', text: 'Turn a step on / off' },
-        { gesture: 'drag', text: 'Paint steps along a row' },
+        { gesture: 'drag sideways', text: 'Paint steps along a row' },
+        { gesture: 'swipe up / down', text: 'Scroll through the tracks' },
         {
           gesture: 'right-click', text: 'Step editor',
           note: '(probability, cycle, fill, gain, pan)',
@@ -246,7 +247,8 @@ const TOUCH_TAB: HelpTab = {
       title: 'Steps',
       rows: [
         { gesture: 'tap', text: 'Turn a step on / off' },
-        { gesture: 'drag', text: 'Paint steps along a row' },
+        { gesture: 'drag sideways', text: 'Paint steps along a row' },
+        { gesture: 'swipe up / down', text: 'Scroll through the tracks' },
         { gesture: 'long-press', text: 'Step editor' },
         {
           gesture: 'long-press, then drag',

@@ -258,3 +258,37 @@ describe('StepPopover gain lock', () => {
     );
   });
 });
+
+describe('StepPopover scroll close', () => {
+  it('closes when the page scrolls (phones)', () => {
+    const scrollEl = document.createElement('div');
+    const ref = { current: scrollEl };
+    const onClose = vi.fn();
+    render(
+      <StepPopover
+        {...base}
+        onClose={onClose}
+        anchorRect={{ top: 10, left: 10 }}
+        scrollContainerRef={ref}
+      />
+    );
+    fireEvent.scroll(window);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('closes when the track area scrolls (desktop)', () => {
+    const scrollEl = document.createElement('div');
+    const ref = { current: scrollEl };
+    const onClose = vi.fn();
+    render(
+      <StepPopover
+        {...base}
+        onClose={onClose}
+        anchorRect={{ top: 10, left: 10 }}
+        scrollContainerRef={ref}
+      />
+    );
+    fireEvent.scroll(scrollEl);
+    expect(onClose).toHaveBeenCalled();
+  });
+});

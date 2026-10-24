@@ -46,6 +46,11 @@ stable (read refs, not state) so memoized children that
 take them as props can skip renders. `StepGrid`
 drains a scheduled-step queue (`stepQueue.ts`) in a
 `requestAnimationFrame` loop for visual step sync.
+Below `lg` the whole page scrolls (`Sequencer.tsx`); from
+`lg` up the header is fixed and only the track area
+scrolls. The grid uses `touch-action: pan-y` so vertical
+swipes scroll on phones; don't set `none` on large
+touch areas, or phones can't scroll past them.
 Solo/mute priority: if any track is soloed, only soloed
 tracks play; otherwise non-muted tracks play.
 Accented steps multiply gain by `1 + accentLevel × 2`
