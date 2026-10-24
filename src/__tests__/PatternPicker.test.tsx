@@ -139,12 +139,14 @@ describe('PatternPicker', () => {
       const led = cued.querySelector('.ss-led');
       expect(led).toHaveClass('ss-led-cue');
       expect(led).toHaveClass('animate-temp-blink');
-      // The playing pattern keeps its orange LED.
+      // The playing pattern stays marked (the amber bar),
+      // with no LED of its own.
       const active = screen.getByRole('option', {
         name: 'Funk 1',
       });
+      expect(active).toHaveAttribute('aria-selected', 'true');
       expect(active.querySelector('.ss-led'))
-        .toHaveClass('ss-led-on');
+        .not.toHaveClass('ss-led-cue');
     });
   });
 

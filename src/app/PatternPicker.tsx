@@ -436,7 +436,8 @@ export default function PatternPicker({
         <div className="border-t border-line" />
 
         {/* Pattern grid (scrollable) */}
-        <div className="overflow-y-auto flex-1 min-h-0 p-3 hide-scrollbar">
+        {/* LCD display, like the dropdown lists */}
+        <div className="overflow-y-auto flex-1 min-h-0 p-3 hide-scrollbar bg-well rounded-b-[11px] shadow-[inset_0_1px_3px_rgb(0_0_0/0.6)]">
           {selectedCategory && patternsToShow.length > 0
             ? (
               <div
@@ -475,23 +476,26 @@ export default function PatternPicker({
                         onSelect(p);
                       }}
                       className={
-                        'text-left px-2 py-1.5 text-sm rounded-md'
+                        'text-left px-2 py-1.5 rounded-[3px]'
+                        + ' font-mono text-[12px] uppercase tracking-[0.02em]'
+                        + ' whitespace-nowrap'
                         + ' flex items-center gap-2 transition-colors'
                         + (isActive
-                          ? ' bg-raised text-ink font-semibold'
-                          : ' text-muted hover:bg-raised hover:text-ink')
+                          ? ' bg-lcd text-[#1a0f03] font-semibold'
+                            + ' shadow-[0_0_8px_rgb(245_160_58/0.35)]'
+                          : ' text-lcd/55 hover:bg-lcd/10 hover:text-lcd')
                       }
                     >
                       <span
                         aria-hidden="true"
                         data-cued={isCued || undefined}
                         className={
+                          // Cued rows blink red; the playing
+                          // row is the amber bar.
                           'ss-led'
                           + (isCued
                             ? ' ss-led-cue animate-temp-blink'
-                            : isActive
-                              ? ' ss-led-on'
-                              : ' bg-transparent')
+                            : ' bg-transparent')
                         }
                       />
                       {p.name}

@@ -138,8 +138,11 @@ all hook resets.
   with the chosen row as an inverted amber bar. Use it
   instead of a native `<select>`. Select-only combobox:
   focus stays on the key; ↓ ↑ Enter open (Space stays
-  play/stop), typing jumps, Esc closes. The Pattern
-  key reuses its `ss-lcd-select` look and `LcdCaret`
+  play/stop), typing jumps, Esc closes. An option's
+  `hint` shows beside its row on hover or arrow keys
+  (Pattern change modes; texts in `tooltips.json`).
+  The Pattern key and the chooser's pattern list reuse
+  the LCD look (`ss-lcd-select`, `LcdCaret`)
 - `StepButton.tsx` → `stepColors.ts`, `StepBadges.tsx`
 - `StepPopover.tsx` → `ProbabilityEditor.tsx`,
   `CycleEditor.tsx`, `FillConditionEditor.tsx`,
