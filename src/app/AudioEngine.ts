@@ -266,9 +266,14 @@ class AudioEngine {
     this.bpm = bpm;
     this.patternLength = patternLength;
     this.onStep = onStep;
-    this.nextStepTime = this.ctx!.currentTime;
+    // Read the clock once and hand the same value to the
+    // scheduler. If it read currentTime again, the clock
+    // could have ticked in between, making step 0 late,
+    // and late steps play no sound.
+    const now = this.ctx!.currentTime;
+    this.nextStepTime = now;
     this.currentStep = 0;
-    this.scheduler();
+    this.scheduler(now);
   }
 
   /**
@@ -308,9 +313,8 @@ class AudioEngine {
    * The core scheduling loop.
    * It looks ahead in time and pre-schedules events to the AudioContext timeline.
    */
-  private scheduler = () => {
+  private scheduler = (now = this.ctx!.currentTime) => {
     // While there are notes that will need to play before the next "lookahead" check...
-    const now = this.ctx!.currentTime;
     while (this.nextStepTime < now + this.scheduleAheadTime) {
       const late = this.nextStepTime < now;
       try {
@@ -323,7 +327,9 @@ class AudioEngine {
       }
       this.advanceStep();
     }
-    this.schedulerTimer = setTimeout(this.scheduler, this.lookahead);
+    this.schedulerTimer = setTimeout(
+      () => this.scheduler(), this.lookahead
+    );
   };
 
   /**

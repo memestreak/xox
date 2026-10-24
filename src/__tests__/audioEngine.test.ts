@@ -688,3 +688,28 @@ describe('AudioEngine master volume and meter', () => {
     expect(engine.getOutputPeaks()).toEqual([0.5, 0.75]);
   });
 });
+
+describe('AudioEngine first step on start', () => {
+  afterEach(() => {
+    audioEngine.stop();
+  });
+
+  it('step 0 is not late when the clock ticks during start()',
+    async () => {
+      // A real audio clock keeps running: each read of
+      // currentTime can return a later value.
+      let reads = 0;
+      const spy = vi.spyOn(
+        MockAudioContext.prototype, 'currentTime', 'get'
+      ).mockImplementation(() => 0.5 + 0.003 * reads++);
+      const log: { step: number; time: number; late: boolean }[] = [];
+      try {
+        await audioEngine.start(120, (step, time, late) => {
+          log.push({ step, time, late });
+        });
+      } finally {
+        spy.mockRestore();
+      }
+      expect(log[0]).toEqual({ step: 0, time: 0.5, late: false });
+    });
+});
