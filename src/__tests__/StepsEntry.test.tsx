@@ -206,6 +206,16 @@ describe('StepsEntry', () => {
     expect(probe.config.tracks.bd.steps).toBe('0'.repeat(32));
   });
 
+  it('double-click resets to 16 and leaves the field', () => {
+    const { input } = setup(40);
+    act(() => input.focus());
+    fireEvent.change(input, { target: { value: '5' } });
+    fireEvent.doubleClick(input);
+    expect(length()).toBe(16);
+    expect(input.value).toBe('16');
+    expect(document.activeElement).not.toBe(input);
+  });
+
   it('arrow keys are disabled at the ends of the range', () => {
     const a = setup(64);
     expect(a.up).toBeDisabled();

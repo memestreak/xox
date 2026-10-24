@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Tooltip from './Tooltip';
 import {
-  DRAG_THRESHOLD_PX, MAX_PATTERN_LENGTH,
+  DEFAULT_TRACK_LENGTH, DRAG_THRESHOLD_PX, MAX_PATTERN_LENGTH,
   STEPS_DRAG_PX_PER_STEP, STEPS_REPEAT_DELAY_MS,
   STEPS_REPEAT_INTERVAL_MS, STEPS_SHIFT_STEP,
 } from './constants';
@@ -45,7 +45,7 @@ interface FieldDrag {
  * Pattern length entry: an LCD readout with a split
  * ▲/▼ key. Drag the number up/down, press or hold an
  * arrow, use ↑/↓ while focused (Shift = one beat), or
- * click and type.
+ * click and type. Double-click resets to 16.
  *
  * Shortening cuts steps off, so each gesture (a drag,
  * an arrow hold, or a stay in the field) measures from
@@ -57,7 +57,14 @@ export default function StepsEntry({
 }: StepsEntryProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   // Text being typed; null shows `value`.
-  const [draft, setDraft] = useState<string | null>(null);
+  const [draft, setDraftState] = useState<string | null>(null);
+  // Same text for handlers that run before a re-render
+  // (a double-click blurs right after clearing it).
+  const draftRef = useRef<string | null>(null);
+  const setDraft = useCallback((text: string | null) => {
+    draftRef.current = text;
+    setDraftState(text);
+  }, []);
 
   // Latest props, for handlers and timers.
   const valueRef = useRef(value);
@@ -125,7 +132,7 @@ export default function StepsEntry({
       };
       tick(STEPS_REPEAT_DELAY_MS);
     },
-    [apply, beginGesture, stopRepeat]
+    [apply, beginGesture, setDraft, stopRepeat]
   );
 
   // ── The number field ────────────────────────────────
@@ -217,14 +224,26 @@ export default function StepsEntry({
         apply(n);
       }
     },
-    [apply]
+    [apply, setDraft]
   );
 
   const onBlur = useCallback(() => {
-    if (draft !== null && draft !== '') apply(Number(draft));
+    const text = draftRef.current;
+    if (text !== null && text !== '') apply(Number(text));
     setDraft(null);
     baseRef.current = null;
-  }, [apply, draft]);
+  }, [apply, setDraft]);
+
+  // The first click focuses the field for typing; the
+  // second resets and leaves it.
+  const onDoubleClick = useCallback(
+    (e: React.MouseEvent<HTMLInputElement>) => {
+      setDraft(null);
+      apply(DEFAULT_TRACK_LENGTH);
+      e.currentTarget.blur();
+    },
+    [apply, setDraft]
+  );
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -240,7 +259,7 @@ export default function StepsEntry({
       setDraft(null);
       apply(next);
     },
-    [apply]
+    [apply, setDraft]
   );
 
   const atMax = value >= MAX_PATTERN_LENGTH;
@@ -270,6 +289,7 @@ export default function StepsEntry({
             onBlur={onBlur}
             onKeyDown={onKeyDown}
             onFocus={onFocus}
+            onDoubleClick={onDoubleClick}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}

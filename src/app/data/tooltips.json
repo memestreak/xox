@@ -7,7 +7,7 @@
   "swing": "Drag to adjust swing timing",
   "master": "Volume; double-click to mute",
   "reset": "Reset all settings to defaults",
-  "steps": "Pattern length (1–64): drag, use the arrows, or click to type",
+  "steps": "Pattern length (1–64): drag, use the arrows, or click to type; double-click resets",
   "kit": "Choose sample kit",
   "pattern": "Browse preset patterns (P)",
   "settings": "Settings",

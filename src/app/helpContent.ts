@@ -232,6 +232,7 @@ const MOUSE_TAB: HelpTab = {
           note: '(Shift: 4)',
         },
         { gesture: 'click', text: 'Type a length' },
+        { gesture: 'double-click', text: 'Reset to 16' },
       ],
     },
     {
