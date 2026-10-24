@@ -59,8 +59,11 @@ function SequencerInner() {
     `Fill ${state.isFillLatched ? 'latched' : 'not latched'}.`
     + ` Temp ${state.isTempLatched ? 'latched' : 'not latched'}.`;
 
+  // Below lg the whole page scrolls, so phones can swipe
+  // the controls away. From lg up the header stays put and
+  // only the track area scrolls.
   return (
-    <div className="h-dvh overflow-hidden flex flex-col bg-ground text-ink font-sans bg-[radial-gradient(1200px_500px_at_50%_-10%,#1f1d1a_0%,transparent_60%)]">
+    <div className="min-h-dvh lg:h-dvh lg:overflow-hidden flex flex-col bg-ground text-ink font-sans bg-[radial-gradient(1200px_500px_at_50%_-10%,#1f1d1a_0%,transparent_60%)]">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-accent focus:text-[#1a0d05] focus:rounded"
@@ -81,7 +84,7 @@ function SequencerInner() {
       >
         {latchMessage}
       </div>
-      <div className="max-w-none lg:max-w-5xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-6 flex flex-col flex-1 min-h-0">
+      <div className="max-w-none lg:max-w-5xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-6 flex flex-col flex-1 lg:min-h-0">
         <PatternPicker
           categories={categories}
           selectedPatternId={selectedPatternId}
@@ -108,7 +111,7 @@ function SequencerInner() {
         />
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto mt-3 lg:mt-4 pb-3 lg:pb-4 track-scroll-region"
+          className="lg:flex-1 lg:overflow-y-auto mt-3 lg:mt-4 pb-3 lg:pb-4 track-scroll-region"
         >
           <StepGrid
             scrollContainerRef={scrollRef}

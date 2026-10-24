@@ -67,6 +67,20 @@ function renderGrid(pageOffset = 0) {
 }
 
 describe('StepGrid', () => {
+  it('lets vertical swipes scroll the page', () => {
+    renderGrid();
+    const container = document.querySelector<HTMLElement>(
+      '[data-track="bd"]'
+    )!.closest<HTMLElement>('.select-none')!;
+    expect(container.style.touchAction).toBe('pan-y');
+    // No long-press: the swipe is left to the browser.
+    const ev = new Event('touchmove', {
+      bubbles: true, cancelable: true,
+    });
+    container.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false);
+  });
+
   it('renders 11 track rows (excludes accent)', () => {
     renderGrid();
     // Each track row has a data-track attribute
