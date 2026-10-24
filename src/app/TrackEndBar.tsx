@@ -1,7 +1,8 @@
 "use client";
 
 import {
-  memo, useCallback, useState, type RefObject,
+  memo, useCallback, useLayoutEffect, useState,
+  type RefObject,
 } from 'react';
 import {
   LongPressEventType, useLongPress,
@@ -10,6 +11,39 @@ import {
   LONG_PRESS_MS, ENDBAR_LONG_PRESS_CANCEL_PX,
 } from './constants';
 import Tooltip from './Tooltip';
+import {
+  lengthFromGridPoint, lengthHandleSpot, measureCells,
+  type CellBox,
+} from './gridUtils';
+
+/** Widest the visible bar gets, px. */
+const BAR_MAX_PX = 6;
+/** Narrowest the visible bar gets, px. */
+const BAR_MIN_PX = 3;
+/** Space kept between the bar and each pad, px. */
+const BAR_CLEARANCE_PX = 1;
+
+/**
+ * Track the grid's cell boxes, re-measuring whenever
+ * the grid resizes (window, sidebar, font load, or the
+ * phone/desktop column switch).
+ */
+function useCellBoxes(
+  gridRef: RefObject<HTMLDivElement | null>,
+): CellBox[] {
+  const [cells, setCells] = useState<CellBox[]>([]);
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const update = () => setCells(measureCells(grid));
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(update);
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [gridRef]);
+  return cells;
+}
 
 interface TrackEndBarProps {
   trackName: string;
@@ -45,6 +79,7 @@ function TrackEndBarInner({
   showTooltip = true,
 }: TrackEndBarProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const cells = useCellBoxes(gridRef);
 
   const endBarLongPress = useLongPress(
     () => {
@@ -61,21 +96,37 @@ function TrackEndBarInner({
   const handleOnPage =
     trackLength > pageOffset
     && trackLength <= pageOffset + 16;
-  const handlePct = handleOnPage
-    ? ((trackLength - pageOffset) / 16) * 100
-    : 0;
+  const countOnPage = trackLength - pageOffset;
+  // Centered in the gap after the last used pad.
+  // Before the grid is measured (first paint, tests),
+  // fall back to a fraction of the grid's width.
+  const spot = handleOnPage
+    ? lengthHandleSpot(cells, countOnPage)
+    : null;
+  const barPx = spot
+    ? Math.min(
+      BAR_MAX_PX,
+      Math.max(BAR_MIN_PX, spot.gap - 2 * BAR_CLEARANCE_PX),
+    )
+    : BAR_MAX_PX;
+  const position: React.CSSProperties = spot
+    ? { left: spot.x, top: spot.top, height: spot.height }
+    : { left: `${(countOnPage / 16) * 100}%` };
 
   const lengthFromPointer = useCallback(
-    (clientX: number): number => {
+    (clientX: number, clientY: number): number => {
       const grid = gridRef.current;
       if (!grid) return pageOffset + 1;
       const rect = grid.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const stepWidth = rect.width / 16;
-      const raw = Math.round(x / stepWidth);
+      const live = measureCells(grid);
+      const onPage = lengthHandleSpot(live, 1)
+        ? lengthFromGridPoint(
+          live, clientX - rect.left, clientY - rect.top,
+        )
+        : Math.round((clientX - rect.left) / (rect.width / 16));
       return Math.max(
         1,
-        Math.min(patternLength, raw + pageOffset)
+        Math.min(patternLength, onPage + pageOffset)
       );
     },
     [patternLength, pageOffset, gridRef]
@@ -105,7 +156,7 @@ function TrackEndBarInner({
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!isDragging) return;
-      const len = lengthFromPointer(e.clientX);
+      const len = lengthFromPointer(e.clientX, e.clientY);
       if (len !== trackLength) {
         onSetTrackLength(len);
       }
@@ -138,8 +189,9 @@ function TrackEndBarInner({
         if (!isDragging) onToggleFreeRun();
       }}
       style={{
-        left: `${handlePct}%`,
+        ...position,
         touchAction: 'none',
+        ['--bar-w' as string]: `${barPx}px`,
       }}
       className={
         'absolute top-0 h-full w-4'
@@ -150,7 +202,7 @@ function TrackEndBarInner({
         + ' before:absolute before:inset-y-0'
         + ' before:left-1/2'
         + ' before:-translate-x-1/2'
-        + ' before:w-1.5 before:rounded-full'
+        + ' before:w-(--bar-w) before:rounded-full'
         + ' before:transition-colors'
         + (isDragging
           ? ' before:bg-ink'
@@ -175,7 +227,8 @@ function TrackEndBarInner({
         <span
           aria-label="free run"
           style={{
-            left: `${handlePct}%`,
+            left: position.left,
+            top: spot ? spot.top + spot.height / 2 : undefined,
             fontFamily: 'var(--font-barlow-condensed)',
           }}
           className={

@@ -121,3 +121,111 @@ export function* bresenham(
     if (e2 < dx) { err += dx; y0 += sy; }
   }
 }
+
+/** A step cell's box, relative to its grid's top-left. */
+export interface CellBox {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** Where a track's length handle is drawn. */
+export interface HandleSpot {
+  /** Center of the handle, in px from the grid's left. */
+  x: number;
+  top: number;
+  height: number;
+  /** Gap between neighboring cells in that row, px. */
+  gap: number;
+}
+
+/**
+ * Read the boxes of a step grid's cells (its direct
+ * children), relative to the grid's top-left corner.
+ */
+export function measureCells(grid: HTMLElement): CellBox[] {
+  const origin = grid.getBoundingClientRect();
+  return Array.from(grid.children, (child) => {
+    const r = child.getBoundingClientRect();
+    return {
+      left: r.left - origin.left,
+      right: r.right - origin.left,
+      top: r.top - origin.top,
+      bottom: r.bottom - origin.top,
+    };
+  });
+}
+
+function sameRow(a: CellBox, b: CellBox): boolean {
+  return Math.abs(a.top - b.top) < 1;
+}
+
+/**
+ * Where the length handle goes when the first `count`
+ * cells are in use: centered in the gap after cell
+ * `count`. After the last cell of a row there is no
+ * next cell, so it sits where that gap would be, just
+ * past the cell's right edge.
+ *
+ * Returns null if the cells have no size (not laid
+ * out yet, or in tests).
+ */
+export function lengthHandleSpot(
+  cells: CellBox[],
+  count: number,
+): HandleSpot | null {
+  const last = cells[count - 1];
+  if (!last || last.right <= last.left) return null;
+
+  // Every row uses the same column gap, so read it
+  // from the first two cells that share a row.
+  let gap = 0;
+  for (let i = 1; i < cells.length; i++) {
+    if (sameRow(cells[i - 1], cells[i])) {
+      gap = cells[i].left - cells[i - 1].right;
+      break;
+    }
+  }
+
+  const next = cells[count];
+  const x = next && sameRow(last, next)
+    ? (last.right + next.left) / 2
+    : last.right + gap / 2;
+  return {
+    x,
+    top: last.top,
+    height: last.bottom - last.top,
+    gap,
+  };
+}
+
+/**
+ * The cell count (1..cells.length) whose handle spot
+ * is nearest a point given relative to the grid. The
+ * row under the point wins first (rows wrap on
+ * phones), then the nearest spot in that row.
+ */
+export function lengthFromGridPoint(
+  cells: CellBox[],
+  x: number,
+  y: number,
+): number {
+  let best = 1;
+  let bestDy = Infinity;
+  let bestDx = Infinity;
+  for (let count = 1; count <= cells.length; count++) {
+    const spot = lengthHandleSpot(cells, count);
+    if (!spot) continue;
+    const dy = Math.max(
+      spot.top - y, 0, y - (spot.top + spot.height)
+    );
+    const dx = Math.abs(x - spot.x);
+    if (dy < bestDy || (dy === bestDy && dx < bestDx)) {
+      best = count;
+      bestDy = dy;
+      bestDx = dx;
+    }
+  }
+  return best;
+}

@@ -1,5 +1,6 @@
 import {
   bresenham, cellFromPoint, nearestCellFromPoint,
+  lengthFromGridPoint, lengthHandleSpot, type CellBox,
 } from '../app/gridUtils';
 
 describe('bresenham', () => {
@@ -222,5 +223,44 @@ describe('nearestCellFromPoint', () => {
     const container = document.createElement('div');
     const result = nearestCellFromPoint(20, 20, container, 30);
     expect(result).toBeNull();
+  });
+});
+
+describe('length handle geometry', () => {
+  // 4 cells, 10px wide, 4px gap, wrapping into two
+  // rows of 2 (like the phone grid).
+  const cells: CellBox[] = [
+    { left: 0, right: 10, top: 0, bottom: 20 },
+    { left: 14, right: 24, top: 0, bottom: 20 },
+    { left: 0, right: 10, top: 24, bottom: 44 },
+    { left: 14, right: 24, top: 24, bottom: 44 },
+  ];
+
+  it('centers the handle in the gap between pads', () => {
+    expect(lengthHandleSpot(cells, 1)).toEqual(
+      { x: 12, top: 0, height: 20, gap: 4 }
+    );
+  });
+
+  it('puts the handle past a row-end pad', () => {
+    expect(lengthHandleSpot(cells, 2)).toEqual(
+      { x: 26, top: 0, height: 20, gap: 4 }
+    );
+    expect(lengthHandleSpot(cells, 4)?.x).toBe(26);
+    expect(lengthHandleSpot(cells, 4)?.top).toBe(24);
+  });
+
+  it('returns null before layout', () => {
+    const empty = cells.map(() => (
+      { left: 0, right: 0, top: 0, bottom: 0 }
+    ));
+    expect(lengthHandleSpot(empty, 2)).toBeNull();
+  });
+
+  it('picks the nearest spot in the row under the point', () => {
+    expect(lengthFromGridPoint(cells, 0, 10)).toBe(1);
+    expect(lengthFromGridPoint(cells, 22, 10)).toBe(2);
+    expect(lengthFromGridPoint(cells, 22, 30)).toBe(4);
+    expect(lengthFromGridPoint(cells, 5, 40)).toBe(3);
   });
 });
