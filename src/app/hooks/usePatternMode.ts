@@ -22,6 +22,10 @@ export interface UsePatternModeReturn {
     HomeSnapshot | null
   >;
   pendingPatternRef: React.RefObject<Pattern | null>;
+  /** Pattern queued to start at the next bar end. */
+  pendingPatternId: string | null;
+  /** The scheduler just switched to the pending pattern. */
+  onPendingApplied: () => void;
   /** Latched: Temp re-arms after each temp pattern. */
   isTempLatched: boolean;
   setPatternMode: (mode: PatternMode) => void;
@@ -206,6 +210,11 @@ export function usePatternMode({
     }
   }, [isPlayingRef, setLatched, setTemp]);
 
+  const onPendingApplied = useCallback(() => {
+    setPendingPattern(null);
+    pendingPatternRef.current = null;
+  }, []);
+
   const onTempReverted = useCallback(() => {
     clearTemp();
     if (tempLatchedRef.current) setTemp('armed');
@@ -251,6 +260,8 @@ export function usePatternMode({
     tempStateRef,
     homeSnapshotRef,
     pendingPatternRef,
+    pendingPatternId: pendingPattern?.id ?? null,
+    onPendingApplied,
     isTempLatched,
     setPatternMode,
     setPattern: setPatternAction,

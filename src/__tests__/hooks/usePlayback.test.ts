@@ -51,6 +51,7 @@ function useHarness() {
     {} as Record<TrackId, number>
   );
   const [initCycleCounts] = useState(() => vi.fn());
+  const [onPendingApplied] = useState(() => vi.fn());
   const [onTempReverted] = useState(() => vi.fn());
   const [onPlaybackStart] = useState(() => vi.fn());
   const [onPlaybackStop] = useState(() => vi.fn());
@@ -66,6 +67,7 @@ function useHarness() {
     homeSnapshotRef,
     cycleCountRef,
     initCycleCounts,
+    onPendingApplied,
     onTempReverted,
     onPlaybackStart,
     onPlaybackStop,

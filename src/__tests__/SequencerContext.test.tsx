@@ -1125,10 +1125,10 @@ describe('pattern switch logic', () => {
     act(() => {
       result.current.actions.setPattern(pat2);
     });
-    // Second selection should have replaced first
-    // (no playlist). We can't directly inspect
-    // pendingPattern, but when sequential triggers,
-    // it should be 'second'.
+    // Second selection replaces the first
+    // (no playlist).
+    expect(result.current.state.pendingPatternId)
+      .toBe('second');
   });
 
   it('playing + temp armed + direct-start: takes'

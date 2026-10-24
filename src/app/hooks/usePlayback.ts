@@ -106,7 +106,8 @@ interface UsePlaybackArgs {
     Record<TrackId, number>
   >;
   initCycleCounts: () => void;
-  /** Temp hooks from usePatternMode. */
+  /** Pattern and Temp hooks from usePatternMode. */
+  onPendingApplied: () => void;
   onTempReverted: () => void;
   onPlaybackStart: () => void;
   onPlaybackStop: () => void;
@@ -129,6 +130,7 @@ export function usePlayback({
   homeSnapshotRef,
   cycleCountRef,
   initCycleCounts,
+  onPendingApplied,
   onTempReverted,
   onPlaybackStart,
   onPlaybackStop,
@@ -275,7 +277,7 @@ export function usePlayback({
         const { config: newCfg, patternId } =
           result.applyPending;
         configRef.current = newCfg;
-        pendingPatternRef.current = null;
+        onPendingApplied();
         setConfig(prev => ({
           ...prev,
           tracks: newCfg.tracks,
@@ -305,7 +307,8 @@ export function usePlayback({
     },
     [configRef, cycleCountRef, fillActiveRef,
       pendingPatternRef, tempStateRef, homeSnapshotRef,
-      setConfig, setSelectedPatternId, onTempReverted]
+      setConfig, setSelectedPatternId, onPendingApplied,
+      onTempReverted]
   );
 
   useEffect(() => {

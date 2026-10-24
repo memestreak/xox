@@ -78,6 +78,26 @@ describe('usePatternMode', () => {
     expect(result.current.selectedPatternId).toBe('start');
   });
 
+  it('exposes the cued pattern id until it is applied', () => {
+    const { result } = renderHook(() => useHarness(true));
+    expect(result.current.pm.pendingPatternId).toBeNull();
+    act(() => result.current.pm.setPatternMode('sequential'));
+    act(() => result.current.pm.setPattern(A));
+    expect(result.current.pm.pendingPatternId).toBe('A');
+    act(() => result.current.pm.onPendingApplied());
+    expect(result.current.pm.pendingPatternId).toBeNull();
+    expect(result.current.pm.pendingPatternRef.current)
+      .toBeNull();
+  });
+
+  it('stopping clears the cued pattern', () => {
+    const { result } = renderHook(() => useHarness(true));
+    act(() => result.current.pm.setPatternMode('sequential'));
+    act(() => result.current.pm.setPattern(A));
+    act(() => result.current.pm.onPlaybackStop());
+    expect(result.current.pm.pendingPatternId).toBeNull();
+  });
+
   it('direct-start applies and requests an engine reset', () => {
     const { result } = renderHook(() => useHarness(true));
     act(() => result.current.pm.setPatternMode('direct-start'));

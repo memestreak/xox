@@ -85,6 +85,7 @@ function SequencerInner() {
         <PatternPicker
           categories={categories}
           selectedPatternId={selectedPatternId}
+          pendingPatternId={state.pendingPatternId}
           onSelect={setPattern}
         >
           {({ trigger, drawer }) => (
