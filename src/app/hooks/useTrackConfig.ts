@@ -29,7 +29,10 @@ export interface UseTrackConfigReturn {
     base?: TrackConfig
   ) => void;
   toggleFreeRun: (trackId: TrackId) => void;
-  setPatternLength: (length: number) => void;
+  setPatternLength: (
+    length: number,
+    base?: Record<TrackId, TrackConfig>
+  ) => void;
   setTrackLength: (
     trackId: TrackId, length: number
   ) => void;
@@ -286,21 +289,32 @@ export function useTrackConfig({
     [setConfig, setSelectedPatternId]
   );
 
+  /**
+   * Set the pattern length. Shrinking cuts steps off.
+   * With `base` (the tracks when a gesture began), the
+   * steps are measured from `base` instead of the
+   * current tracks, so a drag that goes down and back
+   * up within one gesture loses nothing.
+   */
   const setPatternLength = useCallback(
-    (length: number) => {
+    (
+      length: number,
+      base?: Record<TrackId, TrackConfig>
+    ) => {
       const clamped = Math.max(
         1,
         Math.min(MAX_PATTERN_LENGTH, length)
       );
       setConfig(prev => {
-        const currentMax =
-          getPatternLength(prev.tracks);
+        const from = base ?? prev.tracks;
+        const currentMax = getPatternLength(from);
         const newTracks = {
           ...prev.tracks,
         } as Record<TrackId, TrackConfig>;
         for (const id of TRACK_IDS) {
           const track = prev.tracks[id];
-          const curLen = track.steps.length;
+          const fromSteps = from[id].steps;
+          const curLen = fromSteps.length;
           let newLen: number;
           if (clamped > currentMax) {
             newLen = clamped;
@@ -309,7 +323,7 @@ export function useTrackConfig({
               ? clamped
               : curLen;
           }
-          let newSteps = track.steps;
+          let newSteps = fromSteps;
           if (newSteps.length < newLen) {
             newSteps = newSteps.padEnd(newLen, '0');
           } else if (newSteps.length > newLen) {

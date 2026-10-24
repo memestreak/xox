@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import patternsData from '../app/data/patterns.json';
 import {
+  isResizeOf,
   getCategorizedPatterns,
   keyOnAdjacentLine,
   moveChooserCursor,
   patternListRowCount,
 } from '../app/patternUtils';
-import type { Pattern } from '../app/types';
+import type { Pattern, TrackConfig, TrackId } from '../app/types';
+import { TRACK_IDS } from '../app/types';
 
 const patterns = patternsData.patterns as Pattern[];
 
@@ -242,5 +244,25 @@ describe('category keys on wrapped lines', () => {
       .toEqual(cat(0));
     expect(moveChooserCursor(cat(0), 'ArrowUp', layout))
       .toBeNull();
+  });
+});
+
+describe('isResizeOf', () => {
+  function tracks(bd: string, rest = '1010'): Record<TrackId, TrackConfig> {
+    const t = {} as Record<TrackId, TrackConfig>;
+    for (const id of TRACK_IDS) t[id] = { steps: id === 'bd' ? bd : rest };
+    return t;
+  }
+  const base = tracks('1101');
+
+  it('accepts the same, cut short, or padded with empty steps', () => {
+    expect(isResizeOf(base, base)).toBe(true);
+    expect(isResizeOf(tracks('11', '10'), base)).toBe(true);
+    expect(isResizeOf(tracks('110100', '101000'), base)).toBe(true);
+  });
+
+  it('rejects an edited step or a filled pad', () => {
+    expect(isResizeOf(tracks('1100'), base)).toBe(false);
+    expect(isResizeOf(tracks('110101'), base)).toBe(false);
   });
 });

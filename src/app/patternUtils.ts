@@ -1,4 +1,5 @@
-import type { Pattern } from './types';
+import type { Pattern, TrackConfig, TrackId } from './types';
+import { TRACK_IDS } from './types';
 import { PATTERN_LIST_COLUMNS } from './constants';
 
 /**
@@ -214,4 +215,23 @@ export function moveChooserCursor(
     default:
       return null;
   }
+}
+
+/**
+ * True when every track's steps are `base`'s steps cut
+ * short or padded with empty steps: what changing only
+ * the pattern length from `base` can produce. False
+ * means something else edited the steps since.
+ */
+export function isResizeOf(
+  tracks: Record<TrackId, TrackConfig>,
+  base: Record<TrackId, TrackConfig>,
+): boolean {
+  return TRACK_IDS.every(id => {
+    const a = tracks[id].steps;
+    const b = base[id].steps;
+    const n = Math.min(a.length, b.length);
+    return a.slice(0, n) === b.slice(0, n)
+      && !a.slice(n).includes('1');
+  });
 }
