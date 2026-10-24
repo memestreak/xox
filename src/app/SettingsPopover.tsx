@@ -12,13 +12,6 @@ import { FEEDBACK_TIMEOUT_MS } from './constants';
 import Tooltip from './Tooltip';
 import SettingsModal from './SettingsModal';
 import { useHelp } from './HelpContext';
-import { MENU_HINT } from './menuStyles';
-
-const GEAR_ITEM =
-  'w-full text-left px-2.5 py-2 rounded-[5px] text-sm text-ink'
-  + ' hover:bg-[#2f2c27] flex items-center gap-2.5'
-  + ' focus-visible:outline-none focus-visible:bg-[#2f2c27]'
-  + ' disabled:text-faint disabled:hover:bg-transparent';
 
 /**
  * Gear icon button with a dropdown popover for settings.
@@ -28,9 +21,7 @@ const GEAR_ITEM =
  * updates the address bar.
  */
 export default function SettingsPopover() {
-  const { state, actions, meta } = useSequencer();
-  const { minimizableCount, minimizedTracks } = state;
-  const { minimizeEmptyTracks, restoreAllTracks } = actions;
+  const { meta } = useSequencer();
   const help = useHelp();
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -142,45 +133,6 @@ export default function SettingsPopover() {
               <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
             </svg>
             {feedback || 'Copy share link'}
-          </button>
-          <div className="h-px bg-line mx-1.5 my-1" />
-          <button
-            role="menuitem"
-            disabled={minimizableCount === 0}
-            aria-keyshortcuts="H"
-            onClick={() => {
-              minimizeEmptyTracks();
-              setIsOpen(false);
-              buttonRef.current?.focus();
-            }}
-            className={GEAR_ITEM}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-muted shrink-0">
-              <path d="M4 5h16M4 19h16M8 9l4 3 4-3M8 15l4-3 4 3" />
-            </svg>
-            Minimize empty tracks
-            <span aria-hidden="true" className={MENU_HINT + ' ml-auto'}>
-              H
-            </span>
-          </button>
-          <button
-            role="menuitem"
-            disabled={minimizedTracks.size === 0}
-            aria-keyshortcuts="Shift+H"
-            onClick={() => {
-              restoreAllTracks();
-              setIsOpen(false);
-              buttonRef.current?.focus();
-            }}
-            className={GEAR_ITEM}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-muted shrink-0">
-              <path d="M4 12h16M8 8l4-4 4 4M8 16l4 4 4-4" />
-            </svg>
-            Restore all tracks
-            <span aria-hidden="true" className={MENU_HINT + ' ml-auto'}>
-              ⇧H
-            </span>
           </button>
           <div className="h-px bg-line mx-1.5 my-1" />
           <button

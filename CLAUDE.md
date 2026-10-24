@@ -124,9 +124,10 @@ all hook resets.
 - `TrackRow.tsx` → `TrackNameButton.tsx`,
   `TrackMixer.tsx`, `TrackEndBar.tsx`; an
   `isMinimized` row renders caret + name + step line
-- `StepGrid.tsx` → `GridContextMenu.tsx` (right-click
-  on a blank spot: minimize / restore all tracks; the
-  gear menu has the same items)
+- `StepGrid.tsx` → `GridContextMenu.tsx` (grid menu:
+  minimize empty / restore all tracks, Reset pattern.
+  Opens from the ⋯ key over the track names, the only
+  way in on phones, or a right-click on a blank spot)
 - `LatchKey.tsx` — split key for Fill and Temp: the body
   does the key's action, the right section toggles the
   latch (its LED means latched only)

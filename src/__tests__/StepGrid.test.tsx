@@ -262,6 +262,52 @@ describe('StepGrid', () => {
       })).not.toBeInTheDocument();
     });
 
+    it('the ⋯ key opens and closes the grid menu', () => {
+      renderGrid();
+      const key = screen.getByRole('button', {
+        name: 'Grid options',
+      });
+      expect(key).toHaveAttribute('aria-haspopup', 'menu');
+      expect(key).toHaveAttribute('aria-expanded', 'false');
+      fireEvent.click(key);
+      expect(screen.getByRole('menu', {
+        name: 'Grid options',
+      })).toBeInTheDocument();
+      expect(key).toHaveAttribute('aria-expanded', 'true');
+      // A press on the key is not an outside press, so
+      // its click closes the menu rather than reopening it.
+      act(() => {
+        key.dispatchEvent(new MouseEvent('pointerdown', {
+          bubbles: true, button: 0,
+        }));
+      });
+      fireEvent.click(key);
+      expect(screen.queryByRole('menu', {
+        name: 'Grid options',
+      })).not.toBeInTheDocument();
+    });
+
+    it('Reset pattern clears every step', () => {
+      renderGrid();
+      expect(screen.getByRole('button', { name: 'BD step 1' }))
+        .toHaveAttribute('aria-pressed', 'true');
+      fireEvent.click(screen.getByRole('button', {
+        name: 'Grid options',
+      }));
+      fireEvent.click(screen.getByRole('menuitem', {
+        name: 'Reset pattern',
+      }));
+      expect(screen.queryByRole('menu', {
+        name: 'Grid options',
+      })).not.toBeInTheDocument();
+      const on = screen.getAllByRole('button', {
+        name: /step \d+/i,
+      }).filter(
+        b => b.getAttribute('aria-pressed') === 'true'
+      );
+      expect(on).toEqual([]);
+    });
+
     it('Restore all tracks brings every row back', () => {
       renderGrid();
       minimize();

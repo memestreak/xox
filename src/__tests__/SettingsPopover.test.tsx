@@ -211,46 +211,16 @@ describe('SettingsPopover', () => {
     expect(screen.getByLabelText('Help content')).toHaveFocus();
   });
 
-  it('shows minimize and restore items with their states',
-    async () => {
-      const user = userEvent.setup();
-      renderPopover();
-      await user.click(
-        screen.getByRole('button', { name: /settings/i })
-      );
-      // Default pattern: 8 empty tracks, none minimized
-      const minimize = screen.getByRole('menuitem', {
-        name: /minimize empty tracks/i,
-      });
-      expect(minimize).toBeEnabled();
-      expect(minimize).toHaveTextContent(/^Minimize empty tracksH$/);
-      expect(minimize).toHaveAttribute('aria-keyshortcuts', 'H');
-      const restoreItem = screen.getByRole('menuitem', {
-        name: /restore all tracks/i,
-      });
-      expect(restoreItem).toHaveTextContent(/^Restore all tracks⇧H$/);
-      expect(restoreItem).toBeDisabled();
-
-      await user.click(minimize);
-      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-
-      await user.click(
-        screen.getByRole('button', { name: /settings/i })
-      );
-      expect(screen.getByRole('menuitem', {
-        name: /minimize empty tracks/i,
-      })).toBeDisabled();
-      const restore = screen.getByRole('menuitem', {
-        name: /restore all tracks/i,
-      });
-      expect(restore).toBeEnabled();
-      await user.click(restore);
-
-      await user.click(
-        screen.getByRole('button', { name: /settings/i })
-      );
-      expect(screen.getByRole('menuitem', {
-        name: /restore all tracks/i,
-      })).toBeDisabled();
-    });
+  it('has no minimize, restore or reset items', async () => {
+    // They live in the grid menu (the ⋯ key over the
+    // track names).
+    const user = userEvent.setup();
+    renderPopover();
+    await user.click(
+      screen.getByRole('button', { name: /settings/i })
+    );
+    expect(screen.queryByRole('menuitem', {
+      name: /minimize|restore|reset/i,
+    })).not.toBeInTheDocument();
+  });
 });

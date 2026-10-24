@@ -172,8 +172,8 @@ const MOUSE_TAB: HelpTab = {
       rows: [
         {
           gesture: 'right-click',
-          text: 'Minimize empty tracks / Restore all tracks',
-          note: '(also in the gear menu)',
+          text: 'Grid menu: minimize, restore, reset',
+          note: '(also the ⋯ key over the track names)',
         },
       ],
     },
@@ -263,8 +263,8 @@ const TOUCH_TAB: HelpTab = {
         { gesture: 'drag end bar', text: 'Set the track length' },
         { gesture: 'hold end bar', text: 'Free-run on / off' },
         {
-          gesture: 'gear menu',
-          text: 'Minimize empty tracks / Restore all tracks',
+          gesture: 'tap ⋯ over the tracks',
+          text: 'Minimize, restore or reset tracks',
         },
         {
           gesture: 'tap caret or line',
