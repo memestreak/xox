@@ -169,8 +169,10 @@ Supporting files:
   real focus (roving tabindex) over the category keys
   and the pattern list, and Enter picks (same as a
   click, so Sequential cues it). Cursor math lives in
-  `patternUtils.moveChooserCursor` (wraps, except ↑ from
-  the list's top row goes to the categories)
+  `patternUtils.moveChooserCursor`: ← → wrap; on the
+  category keys ↑ ↓ move between their wrapped lines
+  (measured from the DOM); in the list ↑ from the top
+  row goes to the categories
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `data/patterns.json` — preset patterns, one binary step
   string per track (`"1010101010101010"`)
