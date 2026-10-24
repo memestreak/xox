@@ -34,6 +34,7 @@ function setup(overrides?: {
   const mockSetStep = vi.fn();
   const mockClearTrig = vi.fn();
   const mockClearLock = vi.fn();
+  const mockOpenBulkPopover = vi.fn();
   const popoverOpenRef = {
     current: overrides?.popoverOpen ?? false,
   } as RefObject<boolean>;
@@ -49,7 +50,7 @@ function setup(overrides?: {
       clearParameterLock: mockClearLock,
       toggleStep: vi.fn(),
       setTrigCondition: vi.fn(),
-      openBulkPopover: vi.fn(),
+      openBulkPopover: mockOpenBulkPopover,
     })
   );
 
@@ -58,6 +59,7 @@ function setup(overrides?: {
     mockSetStep,
     mockClearTrig,
     mockClearLock,
+    mockOpenBulkPopover,
     popoverOpenRef,
   };
 }
@@ -265,6 +267,45 @@ describe('useSelection', () => {
         );
       });
       expect(result.current.selected.size).toBe(1);
+    });
+
+    it('Escape leaves the selection while the pattern chooser is open', () => {
+      const { result } = setup();
+      act(() => result.current.ctrlClickCell('bd', 3));
+      const drawer = document.createElement('div');
+      drawer.setAttribute('data-pattern-chooser-open', '');
+      document.body.appendChild(drawer);
+      act(() => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape' })
+        );
+      });
+      expect(result.current.selected.size).toBe(1);
+      drawer.remove();
+      act(() => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape' })
+        );
+      });
+      expect(result.current.selected.size).toBe(0);
+    });
+
+    it('E opens the editor on probability; P does not', () => {
+      const { result, mockOpenBulkPopover } = setup();
+      act(() => result.current.ctrlClickCell('bd', 3));
+      act(() => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { code: 'KeyP' })
+        );
+      });
+      expect(mockOpenBulkPopover).not.toHaveBeenCalled();
+      act(() => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { code: 'KeyE' })
+        );
+      });
+      expect(mockOpenBulkPopover)
+        .toHaveBeenCalledWith('probability');
     });
 
     it('Delete triggers deleteSelected', () => {

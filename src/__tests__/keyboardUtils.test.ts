@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   isFormFieldTarget,
   isModalDialogOpen,
+  isPatternChooserOpen,
+  isPopupOpen,
   shouldIgnoreShortcut,
 } from '../app/keyboardUtils';
 
@@ -64,5 +66,23 @@ describe('keyboardUtils', () => {
     expect(
       shouldIgnoreShortcut(keydownFrom(document.body))
     ).toBe(false);
+  });
+
+  it('sees an open menu or step editor as a popup', () => {
+    expect(isPopupOpen()).toBe(false);
+    document.body.innerHTML = '<div role="menu"></div>';
+    expect(isPopupOpen()).toBe(true);
+    document.body.innerHTML =
+      '<div role="dialog" aria-modal="true"></div>';
+    expect(isPopupOpen()).toBe(true);
+    document.body.innerHTML = '<div role="dialog"></div>';
+    expect(isPopupOpen()).toBe(false);
+  });
+
+  it('sees the open pattern chooser by its attribute', () => {
+    expect(isPatternChooserOpen()).toBe(false);
+    document.body.innerHTML =
+      '<div data-pattern-chooser-open></div>';
+    expect(isPatternChooserOpen()).toBe(true);
   });
 });

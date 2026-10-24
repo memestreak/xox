@@ -33,3 +33,30 @@ export function shouldIgnoreShortcut(
 ): boolean {
   return isFormFieldTarget(e.target) || isModalDialogOpen();
 }
+
+/**
+ * True while a menu (track, grid, gear) or the step
+ * editor is open. These close on Esc themselves, so a
+ * page-level Esc or shortcut should wait for them.
+ */
+export function isPopupOpen(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.querySelector(
+    '[role="menu"], [role="dialog"][aria-modal="true"]'
+  ) !== null;
+}
+
+/** Marks the pattern chooser's drawer while it is open. */
+export const PATTERN_CHOOSER_OPEN_ATTR =
+  'data-pattern-chooser-open';
+
+/**
+ * True while the pattern chooser is open. Esc closes it
+ * before it clears the step selection.
+ */
+export function isPatternChooserOpen(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.querySelector(
+    `[${PATTERN_CHOOSER_OPEN_ATTR}]`
+  ) !== null;
+}

@@ -160,7 +160,19 @@ Supporting files:
   **update it whenever a shortcut or gesture changes**
 - `keyboardUtils.ts` — `shouldIgnoreShortcut` for global
   key handlers: skips form fields and any open modal
-  `<dialog>` (Help, Settings)
+  `<dialog>` (Help, Settings). `isPopupOpen` (a menu or
+  the step editor) and `isPatternChooserOpen` set the
+  Esc order: dialog, then popup, then the pattern
+  chooser, then the step selection
+- `PatternPicker.tsx` — pattern chooser drawer. P opens
+  and closes it; inside, arrows move a cursor that is
+  real focus (roving tabindex) over the category keys
+  and the pattern list, and Enter picks (same as a
+  click, so Sequential cues it). Cursor math lives in
+  `patternUtils.moveChooserCursor`: ← → wrap; on the
+  category keys ↑ ↓ move between their wrapped lines
+  (measured from the DOM); in the list ↑ from the top
+  row goes to the categories
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `data/patterns.json` — preset patterns, one binary step
   string per track (`"1010101010101010"`)

@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  afterEach, describe, expect, it, vi,
+} from 'vitest';
 import PatternPicker from '../app/PatternPicker';
 import type { Pattern } from '../app/types';
 import { TRACK_IDS } from '../app/types';
@@ -356,6 +358,223 @@ describe('PatternPicker', () => {
       expect(scrollContainer).toHaveClass(
         'hide-scrollbar',
       );
+    });
+  });
+
+  describe('keyboard', () => {
+    afterEach(() => {
+      document.querySelectorAll('dialog, [role="menu"]')
+        .forEach(el => el.remove());
+      delete document.documentElement.dataset.input;
+    });
+
+    const option = (name: string) =>
+      screen.getByRole('option', { name });
+    const category = (name: string) =>
+      screen.getByRole('button', { name });
+
+    it('P opens on the current pattern', async () => {
+      const user = userEvent.setup();
+      renderPicker('funk-2');
+      await user.keyboard('p');
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
+      );
+      expect(option('Funk 2')).toHaveFocus();
+    });
+
+    it('P again closes and leaves the Pattern key alone', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      await user.keyboard('p');
+      await user.keyboard('p');
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'true',
+      );
+      expect(
+        screen.getByRole('button', { name: /pattern/i }),
+      ).not.toHaveFocus();
+      expect(document.body).toHaveFocus();
+    });
+
+    it('closing a P-open restores focus and hidden rings', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      const other = document.createElement('button');
+      document.body.appendChild(other);
+      other.focus();
+      document.documentElement.dataset.input = 'pointer';
+      await user.keyboard('p');
+      expect(document.documentElement.dataset.input)
+        .toBeUndefined();
+      await user.keyboard('{Escape}');
+      expect(other).toHaveFocus();
+      expect(document.documentElement.dataset.input)
+        .toBe('pointer');
+      other.remove();
+    });
+
+    it('Enter on the Pattern key opens and Esc returns there', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      const trigger = screen.getByRole('button', {
+        name: /pattern/i,
+      });
+      trigger.focus();
+      await user.keyboard('{Enter}');
+      expect(option('Funk 1')).toHaveFocus();
+      await user.keyboard('{Escape}');
+      expect(trigger).toHaveFocus();
+    });
+
+    it('P opens on the first category for Custom', async () => {
+      const user = userEvent.setup();
+      renderPicker('custom');
+      await user.keyboard('p');
+      expect(category('Funk')).toHaveFocus();
+    });
+
+    it('P opens on the cued pattern', async () => {
+      const user = userEvent.setup();
+      renderPicker('funk-1', vi.fn(), 'rock-1');
+      await user.keyboard('p');
+      expect(option('Rock 1, cued')).toHaveFocus();
+    });
+
+    it('ignores P with a modifier', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      await user.keyboard('{Meta>}p{/Meta}');
+      await user.keyboard('{Control>}p{/Control}');
+      await user.keyboard('{Shift>}p{/Shift}');
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'true',
+      );
+    });
+
+    it('ignores P while a dialog or menu is open', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      const dialog = document.createElement('dialog');
+      dialog.setAttribute('open', '');
+      document.body.appendChild(dialog);
+      await user.keyboard('p');
+      dialog.remove();
+      const menu = document.createElement('div');
+      menu.setAttribute('role', 'menu');
+      document.body.appendChild(menu);
+      await user.keyboard('p');
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'true',
+      );
+    });
+
+    it('P shows the focus ring after a click', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      document.documentElement.dataset.input = 'pointer';
+      await user.keyboard('p');
+      expect(document.documentElement.dataset.input)
+        .toBeUndefined();
+    });
+
+    it('arrows move through patterns and categories', async () => {
+      const onSelect = vi.fn();
+      const user = userEvent.setup();
+      renderPicker('funk-1', onSelect);
+      await user.keyboard('p');
+      await user.keyboard('{ArrowDown}');
+      expect(option('Funk 2')).toHaveFocus();
+      // Wraps to the first pattern
+      await user.keyboard('{ArrowDown}');
+      expect(option('Funk 1')).toHaveFocus();
+      // Up from the top row goes to the category
+      await user.keyboard('{ArrowUp}');
+      expect(category('Funk')).toHaveFocus();
+      // The list follows the cursor; nothing loads
+      await user.keyboard('{ArrowRight}');
+      expect(category('Rock')).toHaveFocus();
+      expect(option('Rock 1')).toBeInTheDocument();
+      await user.keyboard('{ArrowDown}');
+      expect(option('Rock 1')).toHaveFocus();
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('Enter picks the pattern and stays open', async () => {
+      const onSelect = vi.fn();
+      const user = userEvent.setup();
+      renderPicker('funk-1', onSelect);
+      await user.keyboard('p');
+      await user.keyboard('{ArrowDown}');
+      await user.keyboard('{Enter}');
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      expect(onSelect).toHaveBeenCalledWith(funkPatterns[1]);
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
+      );
+    });
+
+    it('Enter on a category moves into its list', async () => {
+      const onSelect = vi.fn();
+      const user = userEvent.setup();
+      renderPicker('custom', onSelect);
+      await user.keyboard('p');
+      await user.keyboard('{ArrowRight}');
+      await user.keyboard('{Enter}');
+      expect(option('Rock 1')).toHaveFocus();
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('Space never picks a pattern', async () => {
+      const onSelect = vi.fn();
+      const user = userEvent.setup();
+      renderPicker('funk-1', onSelect);
+      await user.keyboard('p');
+      await user.keyboard(' ');
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('first arrow after a mouse open shows the cursor', async () => {
+      const user = userEvent.setup();
+      renderPicker('funk-2');
+      await user.click(
+        screen.getByRole('button', { name: /pattern/i }),
+      );
+      await waitFor(() =>
+        expect(
+          getDrawer().querySelector('[tabindex="-1"]'),
+        ).toHaveFocus(),
+      );
+      await user.keyboard('{ArrowDown}');
+      expect(option('Funk 2')).toHaveFocus();
+    });
+
+    it('Esc waits for a dialog on top', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      await user.keyboard('p');
+      const dialog = document.createElement('dialog');
+      dialog.setAttribute('open', '');
+      document.body.appendChild(dialog);
+      await user.keyboard('{Escape}');
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
+      );
+      dialog.remove();
+      await user.keyboard('{Escape}');
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'true',
+      );
+    });
+
+    it('marks the drawer while open', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      expect(getDrawer())
+        .not.toHaveAttribute('data-pattern-chooser-open');
+      await user.keyboard('p');
+      expect(getDrawer())
+        .toHaveAttribute('data-pattern-chooser-open');
     });
   });
 });
