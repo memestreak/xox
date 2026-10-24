@@ -165,4 +165,111 @@ describe('usePatternMode', () => {
     expect(result.current.pm.pendingPatternRef.current)
       .toBeNull();
   });
+
+  describe('temp latch', () => {
+    it('latching while playing arms temp', () => {
+      const { result } = renderHook(() => useHarness(true));
+      act(() => result.current.pm.toggleTempLatch());
+      expect(result.current.pm.isTempLatched).toBe(true);
+      expect(result.current.pm.tempState).toBe('armed');
+    });
+
+    it('latching while stopped rests at off, then arms on play',
+      () => {
+        const { result } = renderHook(() => useHarness(false));
+        act(() => result.current.pm.toggleTempLatch());
+        expect(result.current.pm.isTempLatched).toBe(true);
+        expect(result.current.pm.tempState).toBe('off');
+        result.current.isPlayingRef.current = true;
+        act(() => result.current.pm.onPlaybackStart());
+        expect(result.current.pm.tempState).toBe('armed');
+      });
+
+    it('re-arms after a revert while latched', () => {
+      const { result } = renderHook(() => useHarness(true));
+      act(() => result.current.pm.toggleTempLatch());
+      act(() => result.current.pm.setPattern(A));
+      expect(result.current.pm.tempState).toBe('active');
+      act(() => result.current.pm.onTempReverted());
+      expect(result.current.pm.tempState).toBe('armed');
+      expect(result.current.pm.homeSnapshotRef.current)
+        .toBeNull();
+    });
+
+    it('turns off after a revert when not latched', () => {
+      const { result } = renderHook(() => useHarness(true));
+      act(() => result.current.pm.toggleTemp());
+      act(() => result.current.pm.setPattern(A));
+      act(() => result.current.pm.onTempReverted());
+      expect(result.current.pm.tempState).toBe('off');
+    });
+
+    it('unlatching while active lets the pattern finish', () => {
+      const { result } = renderHook(() => useHarness(true));
+      act(() => result.current.pm.toggleTempLatch());
+      act(() => result.current.pm.setPattern(A));
+      act(() => result.current.pm.toggleTempLatch());
+      expect(result.current.pm.isTempLatched).toBe(false);
+      expect(result.current.pm.tempState).toBe('active');
+      expect(result.current.pm.homeSnapshotRef.current)
+        .not.toBeNull();
+      act(() => result.current.pm.onTempReverted());
+      expect(result.current.pm.tempState).toBe('off');
+    });
+
+    it('unlatching while armed turns temp off', () => {
+      const { result } = renderHook(() => useHarness(true));
+      act(() => result.current.pm.toggleTempLatch());
+      act(() => result.current.pm.toggleTempLatch());
+      expect(result.current.pm.tempState).toBe('off');
+    });
+
+    it('body tap while latched unlatches and keeps the pattern',
+      () => {
+        const { result } = renderHook(() => useHarness(true));
+        act(() => result.current.pm.toggleTempLatch());
+        act(() => result.current.pm.setPattern(A));
+        act(() => result.current.pm.toggleTemp());
+        expect(result.current.pm.isTempLatched).toBe(false);
+        expect(result.current.pm.tempState).toBe('off');
+        // No revert: A stays as the new home.
+        expect(result.current.selectedPatternId).toBe('A');
+        expect(result.current.pm.homeSnapshotRef.current)
+          .toBeNull();
+      });
+
+    it('stop keeps the latch and rests temp at off', () => {
+      const { result } = renderHook(() => useHarness(true));
+      act(() => result.current.pm.toggleTempLatch());
+      act(() => result.current.pm.onPlaybackStop());
+      expect(result.current.pm.isTempLatched).toBe(true);
+      expect(result.current.pm.tempState).toBe('off');
+    });
+
+    it('reset clears the latch', () => {
+      const { result } = renderHook(() => useHarness(true));
+      act(() => result.current.pm.toggleTempLatch());
+      act(() => result.current.pm.reset());
+      expect(result.current.pm.isTempLatched).toBe(false);
+      expect(result.current.pm.tempState).toBe('off');
+    });
+
+    it('Shift+T latches; T then unlatches', () => {
+      const { result } = renderHook(() => useHarness(true));
+      act(() => {
+        document.dispatchEvent(new KeyboardEvent('keydown', {
+          code: 'KeyT', shiftKey: true,
+        }));
+      });
+      expect(result.current.pm.isTempLatched).toBe(true);
+      act(() => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { code: 'KeyT' })
+        );
+      });
+      // T while latched unlatches and turns temp off.
+      expect(result.current.pm.isTempLatched).toBe(false);
+      expect(result.current.pm.tempState).toBe('off');
+    });
+  });
 });

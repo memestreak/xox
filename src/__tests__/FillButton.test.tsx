@@ -11,6 +11,7 @@ vi.mock('../app/SequencerContext', () => ({
   useSequencer: () => ({
     state: {
       isFillActive: false,
+      isFillLatched: false,
       fillMode: 'off',
     },
     actions: {
@@ -35,7 +36,7 @@ describe('FillButton', () => {
 
   it('has aria-pressed attribute', () => {
     render(<FillButton />);
-    const btn = screen.getByRole('button');
+    const btn = screen.getByRole('button', { name: 'Fill' });
     expect(
       btn.getAttribute('aria-pressed')
     ).toBeDefined();
@@ -44,7 +45,7 @@ describe('FillButton', () => {
   it('pointer down activates momentary fill',
     () => {
       render(<FillButton />);
-      const btn = screen.getByRole('button');
+      const btn = screen.getByRole('button', { name: 'Fill' });
       fireEvent.pointerDown(btn);
       expect(
         mockSetFillHeld
@@ -55,7 +56,7 @@ describe('FillButton', () => {
   it('pointer up deactivates momentary fill',
     () => {
       render(<FillButton />);
-      const btn = screen.getByRole('button');
+      const btn = screen.getByRole('button', { name: 'Fill' });
       fireEvent.pointerDown(btn);
       fireEvent.pointerUp(btn);
       expect(
@@ -66,7 +67,7 @@ describe('FillButton', () => {
 
   it('pointerCancel deactivates fill', () => {
     render(<FillButton />);
-    const btn = screen.getByRole('button');
+    const btn = screen.getByRole('button', { name: 'Fill' });
     fireEvent.pointerDown(btn);
     fireEvent.pointerCancel(btn);
     expect(
@@ -76,7 +77,7 @@ describe('FillButton', () => {
 
   it('Cmd+click toggles latch', () => {
     render(<FillButton />);
-    const btn = screen.getByRole('button');
+    const btn = screen.getByRole('button', { name: 'Fill' });
     fireEvent.click(btn, { metaKey: true });
     expect(
       mockToggleFillLatch
@@ -85,7 +86,7 @@ describe('FillButton', () => {
 
   it('Ctrl+click toggles latch', () => {
     render(<FillButton />);
-    const btn = screen.getByRole('button');
+    const btn = screen.getByRole('button', { name: 'Fill' });
     fireEvent.click(btn, { ctrlKey: true });
     expect(
       mockToggleFillLatch
@@ -94,10 +95,28 @@ describe('FillButton', () => {
 
   it('plain click does not toggle latch', () => {
     render(<FillButton />);
-    const btn = screen.getByRole('button');
+    const btn = screen.getByRole('button', { name: 'Fill' });
     fireEvent.click(btn);
     expect(
       mockToggleFillLatch
     ).not.toHaveBeenCalled();
+  });
+
+  it('latch section toggles the latch', () => {
+    render(<FillButton />);
+    const latch = screen.getByRole('button', {
+      name: 'Latch fill',
+    });
+    expect(latch).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(latch);
+    expect(mockToggleFillLatch).toHaveBeenCalledTimes(1);
+    expect(mockSetFillHeld).not.toHaveBeenCalled();
+  });
+
+  it('groups the body and latch under "Fill"', () => {
+    render(<FillButton />);
+    expect(
+      screen.getByRole('group', { name: 'Fill' })
+    ).toBeInTheDocument();
   });
 });

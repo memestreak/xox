@@ -230,7 +230,9 @@ export default function TempoController({ bpm, setBpm }: TempoControllerProps) {
           className="w-[5ch] p-0 touch-none cursor-ns-resize focus:cursor-text bg-transparent text-right font-mono font-bold text-lg lg:text-2xl text-lcd [text-shadow:0_0_10px_rgb(245_160_58/0.45)] tabular-nums focus-visible:outline-none focus-visible:underline decoration-accent underline-offset-4 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
       </Tooltip>
-      <span className="ss-label text-[10px] mx-1 lg:mx-2" aria-hidden="true">
+      {/* Hidden on phones to make room for the split
+          Fill key; the field's label still says BPM. */}
+      <span className="ss-label text-[10px] mx-1 lg:mx-2 max-sm:hidden" aria-hidden="true">
         BPM
       </span>
       <Tooltip tooltipKey="tap" position="bottom">

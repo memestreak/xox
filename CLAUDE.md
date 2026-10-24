@@ -78,6 +78,8 @@ from the URL.
 **Hooks (`src/app/hooks/`)** — All custom hooks live here:
 - `useFillMode.ts` — fill latch/momentary state, F-key
 - `usePatternMode.ts` — pattern mode state machine, temp
+  and its latch (latched Temp re-arms after each temp
+  pattern; T / Shift+T)
 - `useTrackConfig.ts` — all track/mixer config actions;
   a step turned on while Fill is active gets the Fill
   condition (reads `fillActiveRef`)
@@ -110,6 +112,9 @@ all hook resets.
 - `StepGrid.tsx` → `GridContextMenu.tsx` (right-click
   on a blank spot: minimize / restore all tracks; the
   gear menu has the same items)
+- `LatchKey.tsx` — split key for Fill and Temp: the body
+  does the key's action, the right section toggles the
+  latch (its LED means latched only)
 - `menuStyles.ts` — menu item class strings shared by
   the track name menu and the grid menu
 - `StepButton.tsx` → `stepColors.ts`, `StepBadges.tsx`

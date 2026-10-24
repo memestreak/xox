@@ -51,7 +51,9 @@ function useHarness() {
     {} as Record<TrackId, number>
   );
   const [initCycleCounts] = useState(() => vi.fn());
-  const [patternModeReset] = useState(() => vi.fn());
+  const [onTempReverted] = useState(() => vi.fn());
+  const [onPlaybackStart] = useState(() => vi.fn());
+  const [onPlaybackStop] = useState(() => vi.fn());
   const pb = usePlayback({
     config,
     configRef,
@@ -64,12 +66,15 @@ function useHarness() {
     homeSnapshotRef,
     cycleCountRef,
     initCycleCounts,
-    patternModeReset,
+    onTempReverted,
+    onPlaybackStart,
+    onPlaybackStop,
   });
   return {
     pb, config, selectedPatternId, isPlayingRef,
     tempStateRef, homeSnapshotRef,
-    initCycleCounts, patternModeReset, setConfig,
+    initCycleCounts, onTempReverted, onPlaybackStart,
+    onPlaybackStop, setConfig,
   };
 }
 
@@ -142,12 +147,13 @@ describe('usePlayback', () => {
       expect.any(Number)
     );
     expect(r.current.initCycleCounts).toHaveBeenCalled();
+    expect(r.current.onPlaybackStart).toHaveBeenCalled();
 
     act(() => r.current.pb.togglePlay());
     expect(r.current.pb.isPlaying).toBe(false);
     expect(r.current.isPlayingRef.current).toBe(false);
     expect(engine.stop).toHaveBeenCalled();
-    expect(r.current.patternModeReset).toHaveBeenCalled();
+    expect(r.current.onPlaybackStop).toHaveBeenCalled();
     expect(r.current.pb.stepRef.current).toBe(-1);
   });
 

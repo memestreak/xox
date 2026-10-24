@@ -2,15 +2,18 @@
 
 import { useCallback } from 'react';
 import { useSequencer } from './SequencerContext';
-import Tooltip from './Tooltip';
+import LatchKey from './LatchKey';
+import type { LatchKeyBody } from './LatchKey';
 
 /**
- * Fill button: momentary by default (hold to
- * activate), Cmd/Ctrl+click to toggle latch.
+ * Fill key: hold the body for a momentary fill; the
+ * latch section (or Cmd/Ctrl+click on the body) toggles
+ * the latch. Releasing the body also clears the latch,
+ * as releasing F does.
  */
 export default function FillButton() {
   const { state, actions } = useSequencer();
-  const { isFillActive, fillMode } = state;
+  const { fillMode, isFillLatched } = state;
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -37,35 +40,24 @@ export default function FillButton() {
     [actions]
   );
 
-  // Held: amber key. Latched: lit orange key.
-  let look: string;
-  if (fillMode === 'momentary') {
-    look = 'bg-none bg-mute border-mute text-[#1a1208]'
-      + ' shadow-[0_0_18px_rgb(242_178_58/0.45)]';
-  } else if (fillMode === 'latched') {
-    look = 'bg-none bg-accent border-accent-hi text-[#1a0d05]'
-      + ' shadow-[0_0_18px_rgb(240_102_42/0.4)]';
-  } else {
-    look = 'text-ink';
-  }
+  let body: LatchKeyBody;
+  if (fillMode === 'momentary') body = 'held';
+  else if (fillMode === 'latched') body = 'active';
+  else body = 'off';
 
   return (
-    <Tooltip tooltipKey="fill" position="bottom">
-      <button
-        aria-pressed={isFillActive}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onClick={handleClick}
-        style={{ touchAction: 'manipulation' }}
-        className={
-          'ss-key ss-cap h-10 lg:h-11 px-3 lg:px-[18px]'
-          + ' rounded-lg text-sm lg:text-[17px] '
-          + look
-        }
-      >
-        FILL
-      </button>
-    </Tooltip>
+    <LatchKey
+      label="FILL"
+      name="Fill"
+      size="header"
+      body={body}
+      latched={isFillLatched}
+      bodyTooltipKey="fill"
+      latchTooltipKey="fillLatch"
+      onBodyPointerDown={handlePointerDown}
+      onBodyPointerUp={handlePointerUp}
+      onBodyClick={handleClick}
+      onLatch={actions.toggleFillLatch}
+    />
   );
 }

@@ -106,7 +106,10 @@ interface UsePlaybackArgs {
     Record<TrackId, number>
   >;
   initCycleCounts: () => void;
-  patternModeReset: () => void;
+  /** Temp hooks from usePatternMode. */
+  onTempReverted: () => void;
+  onPlaybackStart: () => void;
+  onPlaybackStop: () => void;
 }
 
 /**
@@ -126,7 +129,9 @@ export function usePlayback({
   homeSnapshotRef,
   cycleCountRef,
   initCycleCounts,
-  patternModeReset,
+  onTempReverted,
+  onPlaybackStart,
+  onPlaybackStop,
 }: UsePlaybackArgs): UsePlaybackReturn {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -295,12 +300,12 @@ export function usePlayback({
           tracks: newCfg.tracks,
         }));
         setSelectedPatternId(snapPatId);
-        patternModeReset();
+        onTempReverted();
       }
     },
     [configRef, cycleCountRef, fillActiveRef,
       pendingPatternRef, tempStateRef, homeSnapshotRef,
-      setConfig, setSelectedPatternId, patternModeReset]
+      setConfig, setSelectedPatternId, onTempReverted]
   );
 
   useEffect(() => {
@@ -328,7 +333,7 @@ export function usePlayback({
           snap.selectedPatternId
         );
       }
-      patternModeReset();
+      onPlaybackStop();
 
       audioEngine.stop();
       midiEngine.stop();
@@ -351,11 +356,12 @@ export function usePlayback({
       );
       isPlayingRef.current = true;
       setIsPlaying(true);
+      onPlaybackStart();
     }
   }, [configRef, handleStep, initCycleCounts,
     tempStateRef,
     homeSnapshotRef, setConfig, setSelectedPatternId,
-    patternModeReset, isPlayingRef]);
+    onPlaybackStart, onPlaybackStop, isPlayingRef]);
 
   // Spacebar shortcut (listed in helpContent.ts)
   useEffect(() => {

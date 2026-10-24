@@ -254,7 +254,10 @@ describe('TransportControls', () => {
       screen.getByRole('button', { name: /tap tempo/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /fill/i })
+      screen.getByRole('button', { name: 'Fill' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Latch fill' })
     ).toBeInTheDocument();
   });
 

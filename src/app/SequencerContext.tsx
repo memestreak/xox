@@ -56,9 +56,12 @@ interface SequencerState {
   loadError: string | null;
   swing: number;
   isFillActive: boolean;
+  /** Latch is on, whether or not Fill is also held. */
+  isFillLatched: boolean;
   fillMode: 'off' | 'latched' | 'momentary';
   patternMode: PatternMode;
   tempState: TempState;
+  isTempLatched: boolean;
   selectedPatternId: string;
   /** Problem with a share link opened from the URL. */
   importNotice: string | null;
@@ -125,6 +128,7 @@ interface SequencerActions {
   ) => void;
   setPatternMode: (mode: PatternMode) => void;
   toggleTemp: () => void;
+  toggleTempLatch: () => void;
   playPreview: (trackId: TrackId) => void;
   dismissError: () => void;
   dismissImportNotice: () => void;
@@ -350,7 +354,9 @@ export function SequencerProvider({
     homeSnapshotRef: pm.homeSnapshotRef,
     cycleCountRef: trackConfig.cycleCountRef,
     initCycleCounts: trackConfig.initCycleCounts,
-    patternModeReset: pm.reset,
+    onTempReverted: pm.onTempReverted,
+    onPlaybackStart: pm.onPlaybackStart,
+    onPlaybackStop: pm.onPlaybackStop,
   });
 
   const minimize = useMinimizedTracks({
@@ -393,8 +399,8 @@ export function SequencerProvider({
     trackStates, stepRef, totalStepsRef,
     triggeredTracksRef, stepQueueRef,
   } = playback;
-  const { isFillActive, fillMode } = fill;
-  const { patternMode, tempState } = pm;
+  const { isFillActive, isFillLatched, fillMode } = fill;
+  const { patternMode, tempState, isTempLatched } = pm;
   const { minimizedTracks, minimizableCount } = minimize;
 
   const state = useMemo<SequencerState>(() => ({
@@ -406,9 +412,11 @@ export function SequencerProvider({
     loadError,
     swing: config.swing,
     isFillActive,
+    isFillLatched,
     fillMode,
     patternMode,
     tempState,
+    isTempLatched,
     selectedPatternId,
     importNotice,
     minimizedTracks,
@@ -416,7 +424,8 @@ export function SequencerProvider({
   }), [
     isPlaying, config.bpm, currentKit, trackStates,
     isLoaded, loadError, config.swing, isFillActive,
-    fillMode, patternMode, tempState, selectedPatternId,
+    isFillLatched, fillMode, patternMode, tempState,
+    isTempLatched, selectedPatternId,
     importNotice, minimizedTracks, minimizableCount,
   ]);
 
@@ -424,7 +433,7 @@ export function SequencerProvider({
     togglePlay, setBpm, setKit, playPreview, dismissError,
   } = playback;
   const {
-    setPattern, setPatternMode, toggleTemp,
+    setPattern, setPatternMode, toggleTemp, toggleTempLatch,
   } = pm;
   const { toggleFillLatch, setFillHeld } = fill;
   const {
@@ -464,6 +473,7 @@ export function SequencerProvider({
     clearParameterLock,
     setPatternMode,
     toggleTemp,
+    toggleTempLatch,
     playPreview,
     dismissError,
     dismissImportNotice,
@@ -478,7 +488,7 @@ export function SequencerProvider({
     toggleFillLatch, setFillHeld, setTrigCondition,
     clearTrigCondition, setParameterLock,
     clearParameterLock, setPatternMode, toggleTemp,
-    playPreview, dismissError, dismissImportNotice,
+    toggleTempLatch, playPreview, dismissError, dismissImportNotice,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
   ]);
 

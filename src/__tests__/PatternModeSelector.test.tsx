@@ -78,4 +78,18 @@ describe('PatternModeSelector Temp button', () => {
           'Make next selected pattern temporary'
         );
     });
+
+  it('latch works while stopped and lights its LED',
+    () => {
+      renderSelector();
+      const latch = screen.getByRole('button', {
+        name: 'Latch temp',
+      });
+      expect(latch).toBeEnabled();
+      expect(latch).toHaveAttribute('aria-pressed', 'false');
+      fireEvent.click(latch);
+      expect(latch).toHaveAttribute('aria-pressed', 'true');
+      expect(latch.querySelector('.ss-led-on'))
+        .not.toBeNull();
+    });
 });

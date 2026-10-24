@@ -4,6 +4,7 @@ import { useSequencer } from './SequencerContext';
 import type { PatternMode } from './types';
 import Tooltip from './Tooltip';
 import PanelSection from './PanelSection';
+import LatchKey from './LatchKey';
 
 const MODE_OPTIONS: {
   value: PatternMode;
@@ -16,22 +17,9 @@ const MODE_OPTIONS: {
 
 export default function PatternModeSelector() {
   const { state, actions } = useSequencer();
-  const { patternMode, tempState, isPlaying } = state;
-
-  // Temp: blinking LED while armed, lit while active.
-  let tempLook: string;
-  let ledLook: string;
-  if (tempState === 'armed') {
-    tempLook = 'border-accent text-accent-hi';
-    ledLook = 'ss-led-on animate-temp-blink';
-  } else if (tempState === 'active') {
-    tempLook = 'border-accent text-ink'
-      + ' shadow-[0_0_12px_rgb(240_102_42/0.35)]';
-    ledLook = 'ss-led-on';
-  } else {
-    tempLook = 'text-muted';
-    ledLook = '';
-  }
+  const {
+    patternMode, tempState, isTempLatched, isPlaying,
+  } = state;
 
   return (
     <PanelSection
@@ -58,31 +46,19 @@ export default function PatternModeSelector() {
             ))}
           </select>
         </Tooltip>
-        {/* The span carries the tooltip so it isn't
-            dimmed with the disabled button. */}
-        <Tooltip
-          tooltipKey={isPlaying ? 'temp' : 'tempStopped'}
-          position="bottom"
-        >
-          <span className="inline-flex">
-            <button
-              onClick={() => actions.toggleTemp()}
-              disabled={!isPlaying}
-              aria-pressed={tempState !== 'off'}
-              aria-label="Temp mode"
-              className={
-                'ss-key ss-cap h-9 px-2.5 text-xs'
-                + ' inline-flex items-center gap-1.5'
-                + ' disabled:opacity-40'
-                + ' disabled:cursor-not-allowed '
-                + tempLook
-              }
-            >
-              <span className={'ss-led ' + ledLook} />
-              Temp
-            </button>
-          </span>
-        </Tooltip>
+        <LatchKey
+          label="TEMP"
+          name="Temp"
+          bodyAriaLabel="Temp mode"
+          size="strip"
+          body={tempState}
+          latched={isTempLatched}
+          bodyDisabled={!isPlaying}
+          bodyTooltipKey={isPlaying ? 'temp' : 'tempStopped'}
+          latchTooltipKey="tempLatch"
+          onBodyClick={actions.toggleTemp}
+          onLatch={actions.toggleTempLatch}
+        />
       </div>
     </PanelSection>
   );

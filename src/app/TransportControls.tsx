@@ -47,7 +47,7 @@ function TransportControlsInner({
       {/* Row 1: logo, then play, tempo, fill, volume, settings */}
       <div className="flex justify-between items-center gap-2">
         <div className="flex items-baseline gap-3 min-w-0">
-          <h1 className="font-logo font-black text-2xl lg:text-[32px] leading-none tracking-[0.02em] text-accent">
+          <h1 className="font-logo font-black text-2xl max-[380px]:text-xl lg:text-[32px] leading-none tracking-[0.02em] text-accent">
             X0X
           </h1>
           <span className="ss-label hidden lg:inline text-faint">

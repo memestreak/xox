@@ -52,6 +52,12 @@ function SequencerInner() {
   const liveMessage = state.isPlaying
     ? `Playing at ${state.bpm} BPM`
     : 'Stopped';
+  // Read out latch changes, including ones made with a
+  // shortcut (the latch buttons' aria-pressed only
+  // speaks when they have focus).
+  const latchMessage =
+    `Fill ${state.isFillLatched ? 'latched' : 'not latched'}.`
+    + ` Temp ${state.isTempLatched ? 'latched' : 'not latched'}.`;
 
   return (
     <div className="h-dvh overflow-hidden flex flex-col bg-ground text-ink font-sans bg-[radial-gradient(1200px_500px_at_50%_-10%,#1f1d1a_0%,transparent_60%)]">
@@ -67,6 +73,13 @@ function SequencerInner() {
         className="sr-only"
       >
         {liveMessage}
+      </div>
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {latchMessage}
       </div>
       <div className="max-w-none lg:max-w-5xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-6 flex flex-col flex-1 min-h-0">
         <PatternPicker
