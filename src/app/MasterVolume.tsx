@@ -97,7 +97,7 @@ function MasterVolumeInner({
         {...gestureProps}
         className="hidden lg:flex items-center gap-3 h-11 w-[260px] px-3 rounded-lg ss-panel select-none"
       >
-        <label htmlFor={id} className="ss-label text-[10px]">
+        <label htmlFor={id} className="ss-label">
           Volume
         </label>
         {control}
