@@ -80,10 +80,36 @@ interface UseTrackConfigArgs {
 }
 
 /**
+ * Returns `conds` without a Fill condition on step
+ * `stepIndex`, keeping its probability and cycle. A
+ * step left with no conditions is dropped, and an empty
+ * map becomes undefined.
+ */
+function withoutFill(
+  conds: Record<number, StepConditions> | undefined,
+  stepIndex: number
+): Record<number, StepConditions> | undefined {
+  if (conds?.[stepIndex]?.fill === undefined) {
+    return conds;
+  }
+  const rest = { ...conds[stepIndex] };
+  delete rest.fill;
+  const next = { ...conds };
+  if (Object.keys(rest).length > 0) {
+    next[stepIndex] = rest;
+  } else {
+    delete next[stepIndex];
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
+}
+
+/**
  * Returns `track` with step `stepIndex` set to `bit`.
  * Turning a step on while Fill is active also gives it
  * the Fill condition (plays only during fills), keeping
- * any probability or cycle it already has.
+ * any probability or cycle it already has. Turning a
+ * step off clears its Fill condition, so it comes back
+ * as a plain step.
  */
 function withStepBit(
   track: TrackConfig,
@@ -95,7 +121,16 @@ function withStepBit(
     track.steps.substring(0, stepIndex) +
     bit +
     track.steps.substring(stepIndex + 1);
-  if (bit === '0' || !fillActive) {
+  if (bit === '0') {
+    return {
+      ...track,
+      steps,
+      trigConditions: withoutFill(
+        track.trigConditions, stepIndex
+      ),
+    };
+  }
+  if (!fillActive) {
     return { ...track, steps };
   }
   return {
@@ -182,8 +217,10 @@ export function useTrackConfig({
    * Replaces a track's steps. `base` is the track as it
    * was when a gesture began (shift+drag preset
    * cycling): its conditions are restored on every
-   * call, and steps that are on now but were off in
-   * `base` get the Fill condition while Fill is active.
+   * call, steps that are on now but were off in
+   * `base` get the Fill condition while Fill is active,
+   * and steps that were on in `base` but are off now
+   * lose their Fill condition.
    * Without `base`, the track's current state is the
    * base and its conditions are only ever added to.
    */
@@ -197,21 +234,21 @@ export function useTrackConfig({
       setConfig(prev => {
         const track = prev.tracks[trackId];
         const from = base ?? track;
-        const conds: Record<number, StepConditions> = {
-          ...from.trigConditions,
-        };
-        if (fillActive) {
-          for (let i = 0; i < newSteps.length; i++) {
-            if (newSteps[i] === '1' && from.steps[i] !== '1') {
-              conds[i] = { ...conds[i], fill: 'fill' };
-            }
+        let trigConditions = from.trigConditions;
+        for (let i = 0; i < newSteps.length; i++) {
+          const wasOn = from.steps[i] === '1';
+          const isOn = newSteps[i] === '1';
+          if (wasOn && !isOn) {
+            trigConditions = withoutFill(trigConditions, i);
+          } else if (fillActive && isOn && !wasOn) {
+            trigConditions = {
+              ...trigConditions,
+              [i]: { ...trigConditions?.[i], fill: 'fill' },
+            };
           }
         }
-        const trigConditions =
-          Object.keys(conds).length > 0 ? conds : undefined;
-        const condsUnchanged = fillActive
-          ? false
-          : from.trigConditions === track.trigConditions;
+        const condsUnchanged =
+          trigConditions === track.trigConditions;
         if (newSteps === track.steps && condsUnchanged) {
           return prev;
         }
