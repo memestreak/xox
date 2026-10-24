@@ -11,6 +11,7 @@ import {
   MASTER_VOLUME_SMOOTHING_S,
   METER_FFT_SIZE,
   SCHEDULE_AHEAD_S,
+  START_DELAY_S,
 } from './constants';
 
 // Minimal silent WAV (8-bit mono, 7 samples at 44100 Hz).
@@ -266,7 +267,10 @@ class AudioEngine {
     this.bpm = bpm;
     this.patternLength = patternLength;
     this.onStep = onStep;
-    this.nextStepTime = this.ctx!.currentTime;
+    // Not currentTime itself: the clock can tick before
+    // scheduler() reads it, which would mark step 0 late
+    // and silence it (see START_DELAY_S).
+    this.nextStepTime = this.ctx!.currentTime + START_DELAY_S;
     this.currentStep = 0;
     this.scheduler();
   }

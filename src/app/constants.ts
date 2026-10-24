@@ -10,6 +10,15 @@
 export const LOOKAHEAD_MS = 25.0;
 /** How far ahead to schedule audio events (seconds). */
 export const SCHEDULE_AHEAD_S = 0.1;
+/**
+ * Delay before the first step after pressing play
+ * (seconds). Step 0 must start in the future: the audio
+ * clock keeps running while start() works, so a step
+ * timed at "now" could already be in the past by the
+ * time the scheduler checks it, and would be dropped
+ * as late.
+ */
+export const START_DELAY_S = 0.03;
 
 // ── Gesture thresholds ──────────────────────────────
 /** Duration before a press becomes a long-press (ms). */

@@ -2,6 +2,10 @@ import {
   describe, expect, it, vi, beforeEach, afterEach,
 } from 'vitest';
 import type { TrackId } from '../app/types';
+import { START_DELAY_S } from '../app/constants';
+
+// Step 0 starts this long after start() (see constants).
+const D = START_DELAY_S;
 
 // Nodes the mock AudioContext created, for inspection.
 const mockGains: {
@@ -129,19 +133,19 @@ describe('AudioEngine timing', () => {
     await audioEngine.start(120, onStep);
 
     // At 120 BPM: 16th note = 60/120 * 0.25 = 0.125s
-    // Step 0 at time 0, nextStepTime becomes 0.125
+    // Step 0 at time D, nextStepTime becomes D+0.125
     // which is >= 0+0.1, so only step 0 scheduled.
     expect(onStep).toHaveBeenCalled();
     expect(stepLog[0].step).toBe(0);
-    expect(stepLog[0].time).toBe(0);
+    expect(stepLog[0].time).toBe(D);
 
     // Advance mock time so scheduler picks up next step
-    mockCurrentTime = 0.026;
+    mockCurrentTime = D + 0.026;
     vi.advanceTimersByTime(25);
 
     const step1 = stepLog.find(s => s.step === 1);
     expect(step1).toBeDefined();
-    expect(step1!.time).toBeCloseTo(0.125, 6);
+    expect(step1!.time).toBeCloseTo(D + 0.125, 6);
   });
 
   it('60 BPM: 16th note interval is 0.25s', async () => {
@@ -156,13 +160,13 @@ describe('AudioEngine timing', () => {
     // At 60 BPM: 16th = 60/60 * 0.25 = 0.25s
     expect(stepLog[0].step).toBe(0);
 
-    // nextStepTime=0.25, need currentTime+0.1 > 0.25
-    mockCurrentTime = 0.151;
+    // nextStepTime=D+0.25, need currentTime+0.1 > that
+    mockCurrentTime = D + 0.151;
     vi.advanceTimersByTime(25);
 
     const step1 = stepLog.find(s => s.step === 1);
     expect(step1).toBeDefined();
-    expect(step1!.time).toBeCloseTo(0.25, 6);
+    expect(step1!.time).toBeCloseTo(D + 0.25, 6);
   });
 
   it('step wraps from 15 to 0', async () => {
@@ -195,33 +199,33 @@ describe('AudioEngine timing', () => {
     );
 
     await audioEngine.start(120, onStep);
-    // Step 0 at t=0, next at 0.125
+    // Step 0 at t=D, next at D+0.125
 
-    mockCurrentTime = 0.026;
+    mockCurrentTime = D + 0.026;
     vi.advanceTimersByTime(25);
     // Step 1 scheduled at 0.125
 
     // Change BPM to 240 (16th = 60/240 * 0.25 = 0.0625s)
     audioEngine.setBpm(240);
 
-    // nextStepTime is still 0.25 (from step 1 at old BPM).
-    // Need currentTime+0.1 > 0.25 to trigger step 2.
-    mockCurrentTime = 0.151;
+    // nextStepTime is still D+0.25 (from step 1 at old
+    // BPM). Need currentTime+0.1 > that to trigger step 2.
+    mockCurrentTime = D + 0.151;
     vi.advanceTimersByTime(25);
 
-    // Step 2 fires at 0.25 (old interval carried over).
-    // But step 3 uses new BPM: 0.25 + 0.0625 = 0.3125.
+    // Step 2 fires at D+0.25 (old interval carried over).
+    // But step 3 uses new BPM: D + 0.25 + 0.0625.
     const step2 = stepLog.find(s => s.step === 2);
     expect(step2).toBeDefined();
-    expect(step2!.time).toBeCloseTo(0.25, 4);
+    expect(step2!.time).toBeCloseTo(D + 0.25, 4);
 
     // Verify new BPM takes effect on subsequent step
-    mockCurrentTime = 0.25;
+    mockCurrentTime = D + 0.25;
     vi.advanceTimersByTime(25);
 
     const step3 = stepLog.find(s => s.step === 3);
     expect(step3).toBeDefined();
-    expect(step3!.time).toBeCloseTo(0.3125, 4);
+    expect(step3!.time).toBeCloseTo(D + 0.3125, 4);
   });
 });
 
@@ -687,4 +691,29 @@ describe('AudioEngine master volume and meter', () => {
     );
     expect(engine.getOutputPeaks()).toEqual([0.5, 0.75]);
   });
+});
+
+describe('AudioEngine first step on start', () => {
+  afterEach(() => {
+    audioEngine.stop();
+  });
+
+  it('step 0 is not late when the clock ticks during start()',
+    async () => {
+      // A real audio clock keeps running: each read of
+      // currentTime can return a later value.
+      let reads = 0;
+      const spy = vi.spyOn(
+        MockAudioContext.prototype, 'currentTime', 'get'
+      ).mockImplementation(() => 0.5 + 0.003 * reads++);
+      const log: { step: number; late: boolean }[] = [];
+      try {
+        await audioEngine.start(120, (step, _t, late) => {
+          log.push({ step, late });
+        });
+      } finally {
+        spy.mockRestore();
+      }
+      expect(log[0]).toEqual({ step: 0, late: false });
+    });
 });
