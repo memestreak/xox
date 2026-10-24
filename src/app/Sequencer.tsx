@@ -17,7 +17,7 @@ import { getPatternLength } from './types';
 import PatternPicker from './PatternPicker';
 import patternsData from './data/patterns.json';
 import { getCategorizedPatterns } from './patternUtils';
-import { useBlurOnEscape } from './hooks/useBlurOnEscape';
+import { useInputModality } from './hooks/useInputModality';
 import type { Pattern } from './types';
 
 const categories = getCategorizedPatterns(
@@ -150,8 +150,9 @@ function SequencerInner() {
 }
 
 export default function Sequencer() {
-  // No lingering focus ring after a click, then Esc.
-  useBlurOnEscape();
+  // No focus ring left on a clicked button when a key
+  // like Space or Esc is pressed afterwards.
+  useInputModality();
 
   return (
     <ErrorBoundary>

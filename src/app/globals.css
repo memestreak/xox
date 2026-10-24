@@ -251,6 +251,32 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 }
 
 /*
+ * After a click or tap, hide focus rings until a
+ * navigation key is pressed (hooks/useInputModality.ts).
+ * Unlayered, so it wins over Tailwind's focus-visible:
+ * utilities. Text fields keep their ring: the user is
+ * typing there.
+ */
+:root[data-input="pointer"] :focus-visible:not(
+  textarea,
+  [contenteditable],
+  input:not([type="range"], [type="checkbox"])
+) {
+  outline: none;
+  --tw-ring-shadow: 0 0 #0000;
+}
+
+:root[data-input="pointer"]
+  input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: none;
+}
+
+:root[data-input="pointer"]
+  input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: none;
+}
+
+/*
  * Master fader: a hardware-style cap on a thin well,
  * filled in accent up to the value. The page sets
  * --fill (e.g. "80%") inline. ss-fader-touch is the
