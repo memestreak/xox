@@ -13,6 +13,7 @@ import type {
   NoteLength, TrackId,
 } from './types';
 import { midiEngine } from './MidiEngine';
+import LcdSelect from './LcdSelect';
 
 const NOTE_LENGTH_OPTIONS: {
   label: string;
@@ -37,6 +38,10 @@ function noteLengthKey(nl: NoteLength): string {
     ? `fixed-${nl.ms}`
     : `percent-${nl.value}`;
 }
+
+const NOTE_LENGTH_SELECT_OPTIONS = NOTE_LENGTH_OPTIONS.map(
+  o => ({ value: noteLengthKey(o.value), label: o.label })
+);
 
 type Tab = 'options' | 'midi';
 
@@ -202,33 +207,36 @@ function MidiTab() {
       </label>
 
       {/* Device picker */}
-      <label className="block mb-4">
-        <span className="ss-label block mb-1">
+      <div className="mb-4">
+        <span
+          id="midi-device-label"
+          className="ss-label block mb-1"
+        >
           Output Device
         </span>
-        <select
+        <LcdSelect
+          aria-labelledby="midi-device-label"
           value={config.deviceId ?? ''}
+          options={[
+            {
+              value: '',
+              label: outputs.length === 0
+                ? 'No devices'
+                : 'Select device…',
+            },
+            ...outputs.map(o => ({
+              value: o.id,
+              label: o.name || o.id,
+            })),
+          ]}
           disabled={disabled || outputs.length === 0}
-          onChange={(e) => {
-            midiEngine.setOutput(e.target.value);
-            updateConfig({
-              deviceId: e.target.value,
-            });
+          onChange={(deviceId) => {
+            midiEngine.setOutput(deviceId);
+            updateConfig({ deviceId });
           }}
-          className="ss-key ss-select w-full h-9 pl-3 text-sm disabled:opacity-50"
-        >
-          <option value="">
-            {outputs.length === 0
-              ? 'No devices'
-              : 'Select device…'}
-          </option>
-          {outputs.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.name || o.id}
-            </option>
-          ))}
-        </select>
-      </label>
+          className="w-full h-9"
+        />
+      </div>
 
       {/* Channel */}
       <label className="block mb-4">
@@ -255,18 +263,21 @@ function MidiTab() {
       </label>
 
       {/* Note length */}
-      <label className="block mb-6">
-        <span className="ss-label block mb-1">
+      <div className="mb-6">
+        <span
+          id="midi-note-length-label"
+          className="ss-label block mb-1"
+        >
           Note Length
         </span>
-        <select
+        <LcdSelect
+          aria-labelledby="midi-note-length-label"
           value={noteLengthKey(config.noteLength)}
+          options={NOTE_LENGTH_SELECT_OPTIONS}
           disabled={disabled}
-          onChange={(e) => {
+          onChange={(key) => {
             const opt = NOTE_LENGTH_OPTIONS.find(
-              (o) =>
-                noteLengthKey(o.value) ===
-                e.target.value
+              (o) => noteLengthKey(o.value) === key
             );
             if (opt) {
               updateConfig({
@@ -274,18 +285,9 @@ function MidiTab() {
               });
             }
           }}
-          className="ss-key ss-select w-full h-9 pl-3 text-sm disabled:opacity-50"
-        >
-          {NOTE_LENGTH_OPTIONS.map((opt) => (
-            <option
-              key={noteLengthKey(opt.value)}
-              value={noteLengthKey(opt.value)}
-            >
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          className="w-full h-9"
+        />
+      </div>
 
       {/* Track note mapping */}
       <div>

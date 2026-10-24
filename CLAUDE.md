@@ -133,6 +133,16 @@ all hook resets.
   latch (its LED means latched only)
 - `menuStyles.ts` — menu item class strings shared by
   the track name menu and the grid menu
+- `LcdSelect.tsx` — every dropdown (Kit, Pattern
+  change, Cycle, MIDI settings): amber LCD key, list
+  with the chosen row as an inverted amber bar. Use it
+  instead of a native `<select>`. Select-only combobox:
+  focus stays on the key; ↓ ↑ Enter open (Space stays
+  play/stop), typing jumps, Esc closes. An option's
+  `hint` shows beside its row on hover or arrow keys
+  (Pattern change modes; texts in `tooltips.json`).
+  The Pattern key and the chooser's pattern list reuse
+  the LCD look (`ss-lcd-select`, `LcdCaret`)
 - `StepButton.tsx` → `stepColors.ts`, `StepBadges.tsx`
 - `StepPopover.tsx` → `ProbabilityEditor.tsx`,
   `CycleEditor.tsx`, `FillConditionEditor.tsx`,
@@ -293,8 +303,8 @@ introduces race conditions.
   Barlow Condensed for labels/captions, `font-sans` =
   Barlow, `font-mono` = JetBrains Mono, `font-logo` =
   Orbitron). Shared classes: `ss-key` (raised button),
-  `ss-select` (styled native select; Chromium also
-  styles the open list), `ss-label`, `ss-cap`,
+  `ss-lcd-select`/`ss-lcd-list` (LCD dropdown, see
+  `LcdSelect.tsx`), `ss-label`, `ss-cap`,
   `ss-panel`, `ss-menu`, `ss-led`. Use these instead
   of raw `neutral-*`/`orange-*` colors
 - Step keys are colored by group of four (808 style):

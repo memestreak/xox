@@ -25,6 +25,7 @@ import {
   shouldIgnoreShortcut,
 } from './keyboardUtils';
 import Tooltip from './Tooltip';
+import { LcdCaret } from './LcdSelect';
 
 interface PatternPickerProps {
   categories: PatternCategory[];
@@ -353,11 +354,8 @@ export default function PatternPicker({
             ? `Pattern, ${pendingName} cued for the next bar`
             : 'Pattern'
         }
-        className={
-          'ss-key h-9 w-full pl-3 pr-2.5 text-sm font-medium'
-          + ' flex items-center justify-between gap-2'
-          + (isOpen ? ' border-accent' : ' border-edge')
-        }
+        data-open={isOpen || undefined}
+        className="ss-lcd-select h-9 w-full"
       >
         <span className="block truncate">{displayName}</span>
         {pendingPatternId && (
@@ -367,24 +365,7 @@ export default function PatternPicker({
             className="ss-led ss-led-cue animate-temp-blink ml-auto"
           />
         )}
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          aria-hidden="true"
-          className={
-            'shrink-0 text-muted transition-transform'
-            + (isOpen ? ' rotate-180' : '')
-          }
-        >
-          <path
-            d="M3 4.5l3 3 3-3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
+        <LcdCaret open={isOpen} />
       </button>
     </Tooltip>
   );
@@ -455,7 +436,8 @@ export default function PatternPicker({
         <div className="border-t border-line" />
 
         {/* Pattern grid (scrollable) */}
-        <div className="overflow-y-auto flex-1 min-h-0 p-3 hide-scrollbar">
+        {/* LCD display, like the dropdown lists */}
+        <div className="overflow-y-auto flex-1 min-h-0 p-3 hide-scrollbar bg-well rounded-b-[11px] shadow-[inset_0_1px_3px_rgb(0_0_0/0.6)]">
           {selectedCategory && patternsToShow.length > 0
             ? (
               <div
@@ -494,23 +476,26 @@ export default function PatternPicker({
                         onSelect(p);
                       }}
                       className={
-                        'text-left px-2 py-1.5 text-sm rounded-md'
+                        'text-left px-2 py-1.5 rounded-[3px]'
+                        + ' font-mono text-[12px] uppercase tracking-[0.02em]'
+                        + ' whitespace-nowrap'
                         + ' flex items-center gap-2 transition-colors'
                         + (isActive
-                          ? ' bg-raised text-ink font-semibold'
-                          : ' text-muted hover:bg-raised hover:text-ink')
+                          ? ' bg-lcd text-[#1a0f03] font-semibold'
+                            + ' shadow-[0_0_8px_rgb(245_160_58/0.35)]'
+                          : ' text-lcd hover:bg-lcd/10')
                       }
                     >
                       <span
                         aria-hidden="true"
                         data-cued={isCued || undefined}
                         className={
+                          // Cued rows blink red; the playing
+                          // row is the amber bar.
                           'ss-led'
                           + (isCued
                             ? ' ss-led-cue animate-temp-blink'
-                            : isActive
-                              ? ' ss-led-on'
-                              : ' bg-transparent')
+                            : ' bg-transparent')
                         }
                       />
                       {p.name}

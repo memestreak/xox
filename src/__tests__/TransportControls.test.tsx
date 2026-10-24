@@ -1,5 +1,5 @@
 import {
-  render, screen, fireEvent, waitFor,
+  render, screen, fireEvent, waitFor, within,
 } from '@testing-library/react';
 import {
   describe, expect, it, vi, beforeEach,
@@ -123,9 +123,10 @@ describe('TransportControls', () => {
 
   it('kit selector renders with options', () => {
     renderTransport();
-    const select = screen.getByLabelText('Kit');
-    expect(select).toBeInTheDocument();
-    expect(select.tagName).toBe('SELECT');
+    const select = screen.getByRole('combobox', {
+      name: 'Kit',
+    });
+    expect(select).toHaveTextContent('808');
   });
 
   it('BPM input is present', () => {
@@ -150,14 +151,15 @@ describe('TransportControls', () => {
 
   it('changing kit selector triggers setKit', () => {
     renderTransport();
-    const select = screen.getByLabelText('Kit');
-    fireEvent.change(select, {
-      target: { value: 'electro' },
+    const select = screen.getByRole('combobox', {
+      name: 'Kit',
     });
-    // Kit should now show electro selected
-    expect(
-      (select as HTMLSelectElement).value
-    ).toBe('electro');
+    fireEvent.click(select);
+    fireEvent.click(
+      screen.getByRole('option', { name: 'Electro' })
+    );
+    // The key now shows the new kit
+    expect(select).toHaveTextContent('Electro');
   });
 
   it('play button enables once the kit loads', async () => {
@@ -214,10 +216,13 @@ describe('TransportControls', () => {
 
   it('kit selector lists every kit', () => {
     renderTransport();
-    const options = screen.getAllByRole('option')
-      .filter(o => o.closest('#kit-select'));
-    expect(options.map(o => o.getAttribute('value')))
-      .toEqual(kitsData.kits.map(k => k.id));
+    fireEvent.click(
+      screen.getByRole('combobox', { name: 'Kit' })
+    );
+    const list = screen.getByRole('listbox');
+    const options = within(list).getAllByRole('option');
+    expect(options.map(o => o.textContent))
+      .toEqual(kitsData.kits.map(k => k.name));
   });
 
   it('changing kit preloads the new kit folder', async () => {
@@ -225,9 +230,12 @@ describe('TransportControls', () => {
     const electro = kitsData.kits.find(
       k => k.id === 'electro'
     )!;
-    fireEvent.change(screen.getByLabelText('Kit'), {
-      target: { value: 'electro' },
-    });
+    fireEvent.click(
+      screen.getByRole('combobox', { name: 'Kit' })
+    );
+    fireEvent.click(
+      screen.getByRole('option', { name: electro.name })
+    );
     await waitFor(() =>
       expect(audioEngine.preloadKit)
         .toHaveBeenLastCalledWith(electro.folder)

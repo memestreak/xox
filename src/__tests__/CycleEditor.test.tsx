@@ -6,16 +6,19 @@ import CycleEditor from '../app/CycleEditor';
 import { CYCLE_OPTIONS } from '../app/trigConditions';
 
 describe('CycleEditor', () => {
-  it('renders a labelled select with the current value', () => {
+  it('renders a labelled dropdown with the current value', () => {
     render(<CycleEditor value="2:4" onChange={vi.fn()} />);
     const select = screen.getByRole('combobox', {
       name: 'Cycle',
     });
-    expect(select).toHaveValue('2:4');
+    expect(select).toHaveTextContent('2:4');
   });
 
   it('lists every cycle option', () => {
     render(<CycleEditor value="1:1" onChange={vi.fn()} />);
+    fireEvent.click(
+      screen.getByRole('combobox', { name: 'Cycle' })
+    );
     const options = screen.getAllByRole('option');
     expect(options.map(o => o.textContent))
       .toEqual(CYCLE_OPTIONS.map(o => o.label));
@@ -24,9 +27,11 @@ describe('CycleEditor', () => {
   it('calls onChange with the chosen label', () => {
     const onChange = vi.fn();
     render(<CycleEditor value="1:1" onChange={onChange} />);
-    fireEvent.change(
-      screen.getByRole('combobox', { name: 'Cycle' }),
-      { target: { value: '3:8' } }
+    fireEvent.click(
+      screen.getByRole('combobox', { name: 'Cycle' })
+    );
+    fireEvent.click(
+      screen.getByRole('option', { name: '3:8' })
     );
     expect(onChange).toHaveBeenCalledWith('3:8');
   });

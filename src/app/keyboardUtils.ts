@@ -35,14 +35,15 @@ export function shouldIgnoreShortcut(
 }
 
 /**
- * True while a menu (track, grid, gear) or the step
- * editor is open. These close on Esc themselves, so a
+ * True while a menu (track, grid, gear), an open
+ * dropdown list (LcdSelect) or the step editor is open. These close on Esc themselves, so a
  * page-level Esc or shortcut should wait for them.
  */
 export function isPopupOpen(): boolean {
   if (typeof document === 'undefined') return false;
   return document.querySelector(
-    '[role="menu"], [role="dialog"][aria-modal="true"]'
+    '[role="menu"], [role="dialog"][aria-modal="true"],'
+    + ' [data-select-open]'
   ) !== null;
 }
 

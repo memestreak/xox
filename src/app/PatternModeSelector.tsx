@@ -5,14 +5,26 @@ import type { PatternMode } from './types';
 import Tooltip from './Tooltip';
 import PanelSection from './PanelSection';
 import LatchKey from './LatchKey';
+import LcdSelect from './LcdSelect';
+import tooltips from './data/tooltips.json';
+import type { LcdSelectOption } from './LcdSelect';
 
-const MODE_OPTIONS: {
-  value: PatternMode;
-  label: string;
-}[] = [
-  { value: 'sequential', label: 'Sequential' },
-  { value: 'direct-start', label: 'Direct start' },
-  { value: 'direct-jump', label: 'Direct jump' },
+const MODE_OPTIONS: LcdSelectOption<PatternMode>[] = [
+  {
+    value: 'sequential',
+    label: 'Sequential',
+    hint: tooltips.modeSequential,
+  },
+  {
+    value: 'direct-start',
+    label: 'Direct start',
+    hint: tooltips.modeDirectStart,
+  },
+  {
+    value: 'direct-jump',
+    label: 'Direct jump',
+    hint: tooltips.modeDirectJump,
+  },
 ];
 
 export default function PatternModeSelector() {
@@ -28,24 +40,20 @@ export default function PatternModeSelector() {
       className="col-span-4 max-lg:order-4"
     >
       <div className="flex gap-1.5 items-stretch">
-        <Tooltip tooltipKey="mode" position="bottom">
-          <select
-            id="mode-select"
-            value={patternMode}
-            onChange={(e) => {
-              actions.setPatternMode(
-                e.target.value as PatternMode
-              );
-            }}
-            className="ss-key ss-select h-9 w-full lg:w-[140px] pl-3 text-sm"
-          >
-            {MODE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </Tooltip>
+        {/* min-w-0: on narrow phones the key gives way
+            (its text truncates) instead of pushing Temp
+            out of the panel. */}
+        <div className="min-w-0 flex-1 lg:flex-none">
+          <Tooltip tooltipKey="mode" position="bottom">
+            <LcdSelect
+              id="mode-select"
+              value={patternMode}
+              options={MODE_OPTIONS}
+              onChange={actions.setPatternMode}
+              className="h-9 w-full lg:w-[140px]"
+            />
+          </Tooltip>
+        </div>
         <LatchKey
           label="TEMP"
           name="Temp"
