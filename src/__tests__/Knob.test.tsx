@@ -88,6 +88,22 @@ describe('Knob', () => {
     expect(screen.getByText('5.0 dB')).toBeDefined();
   });
 
+  it('omits the hover value when showHoverValue is false', () => {
+    render(
+      <Knob
+        value={0.5}
+        onChange={vi.fn()}
+        formatValue={(v) => `${(v * 10).toFixed(1)} dB`}
+        showHoverValue={false}
+      />
+    );
+    expect(screen.queryByText('5.0 dB')).toBeNull();
+    // The value stays available to screen readers.
+    expect(
+      screen.getByRole('slider').getAttribute('aria-valuetext')
+    ).toBe('5.0 dB');
+  });
+
   it('double-click resets to defaultValue', () => {
     const onChange = vi.fn();
     render(

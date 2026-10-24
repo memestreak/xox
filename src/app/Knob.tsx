@@ -11,6 +11,11 @@ interface KnobProps {
   defaultValue?: number;
   formatValue?: (v: number) => string;
   ariaPrefix?: string;
+  /**
+   * Show the value in a popup while hovering. Turn it
+   * off when the value is already shown next to the knob.
+   */
+  showHoverValue?: boolean;
   /** Extra description ids (e.g. from a wrapping Tooltip). */
   'aria-describedby'?: string;
 }
@@ -63,6 +68,7 @@ function KnobInner({
   defaultValue,
   formatValue = (v: number) => `${Math.round(v * 100)}%`,
   ariaPrefix = 'Volume',
+  showHoverValue = true,
   'aria-describedby': extraDescribedBy,
 }: KnobProps) {
   const descriptionId = useId();
@@ -194,7 +200,7 @@ function KnobInner({
             ? `${descriptionId} ${extraDescribedBy}`
             : descriptionId
         }
-        className="cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-full"
+        className="cursor-ns-resize outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-full"
         style={{ touchAction: 'manipulation' }}
         onClick={resetToDefault}
         onPointerDown={onPointerDown}
@@ -258,9 +264,11 @@ function KnobInner({
         {KEYBOARD_HINT}
         {defaultValue !== undefined && ` ${RESET_HINT}`}
       </span>
-      <div className="absolute bottom-full mb-1 hidden group-hover:block px-1.5 py-0.5 text-[10px] font-bold font-mono bg-raised text-ink border border-edge rounded whitespace-nowrap z-40">
-        {formatValue(value)}
-      </div>
+      {showHoverValue && (
+        <div className="absolute bottom-full mb-1 hidden group-hover:block px-1.5 py-0.5 text-[10px] font-bold font-mono bg-raised text-ink border border-edge rounded whitespace-nowrap z-40">
+          {formatValue(value)}
+        </div>
+      )}
     </div>
   );
 }
