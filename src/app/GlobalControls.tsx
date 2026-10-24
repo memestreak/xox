@@ -63,7 +63,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
               setPage={page.setPage}
             />
           </div>
-          <Tooltip tooltipKey="steps">
+          <Tooltip tooltipKey="steps" position="bottom">
             <select
               id="global-steps"
               value={patternLength}
@@ -89,7 +89,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
 
       <PanelSection label="Swing" className="col-span-2 max-lg:order-1 max-lg:rounded-tr-[11px]">
         <div className="flex items-center gap-2.5 h-9">
-          <Tooltip tooltipKey="swing">
+          <Tooltip tooltipKey="swing" position="bottom">
             <Knob
               value={state.swing / 100}
               onChange={handleSwing}
@@ -105,7 +105,11 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
       </PanelSection>
 
       <PanelSection className="col-span-2 justify-end max-lg:order-3 lg:order-last lg:rounded-r-[11px]">
-        <Tooltip tooltipKey="reset" align="right">
+        <Tooltip
+          tooltipKey="reset"
+          position="bottom"
+          align="right"
+        >
           <button
             onClick={handleReset}
             className="ss-key ss-cap h-9 px-3 text-xs text-muted hover:text-step1"
