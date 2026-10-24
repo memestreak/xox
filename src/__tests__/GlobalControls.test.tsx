@@ -6,7 +6,6 @@ import type { PageNav } from '../app/PageIndicator';
 // Mock SequencerContext
 const mockSetPatternLength = vi.fn();
 const mockSetSwing = vi.fn();
-const mockClearAll = vi.fn();
 
 const MOCK_IDS = [
   'ac','bd','sd','ch','oh','cy','ht','mt','lt','rs','cp','cb',
@@ -28,7 +27,6 @@ vi.mock('../app/SequencerContext', () => ({
     actions: {
       setPatternLength: mockSetPatternLength,
       setSwing: mockSetSwing,
-      clearAll: mockClearAll,
     },
     meta: {
       config: {
@@ -66,10 +64,10 @@ describe('GlobalControls', () => {
     expect(knob).toBeDefined();
   });
 
-  it('renders clear button', () => {
+  it('has no Reset key (it is in the grid menu)', () => {
     renderControls();
-    const btn = screen.getByRole('button', { name: /reset/i });
-    expect(btn).toBeDefined();
+    expect(screen.queryByRole('button', { name: /reset/i }))
+      .not.toBeInTheDocument();
   });
 
   it('typing a length calls setPatternLength', () => {
@@ -80,17 +78,6 @@ describe('GlobalControls', () => {
     expect(mockSetPatternLength).toHaveBeenCalledWith(
       8, expect.anything()
     );
-  });
-
-  it('clear button resets without asking', () => {
-    const confirm = vi.spyOn(window, 'confirm');
-    renderControls();
-    const btn = screen.getByRole('button', { name: /reset/i });
-    fireEvent.click(btn);
-    expect(confirm).not.toHaveBeenCalled();
-    expect(mockClearAll).toHaveBeenCalled();
-    expect(mockSetPatternLength).toHaveBeenCalledWith(16);
-    confirm.mockRestore();
   });
 
   it('swing knob calls setSwing', () => {

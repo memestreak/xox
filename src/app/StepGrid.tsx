@@ -10,6 +10,7 @@ import AccentRow from './AccentRow';
 import StepPopover from './StepPopover';
 import ErrorBoundary from './ErrorBoundary';
 import GridContextMenu from './GridContextMenu';
+import Tooltip from './Tooltip';
 import { useDragPaint } from './hooks/useDragPaint';
 import { useSelection } from './hooks/useSelection';
 import type { TrackId, TrackPattern } from './types';
@@ -29,6 +30,9 @@ const TRACK_PATTERNS: TrackPattern[] =
  * browser's); anywhere else in the panel opens the grid
  * menu.
  */
+/** Space between the ⋯ key and the menu it opens. */
+const GRID_MENU_KEY_GAP_PX = 4;
+
 const OWN_CONTEXT_MENU =
   'button, input, select, [role="slider"], [data-step]';
 
@@ -63,6 +67,7 @@ export default function StepGrid({
     clearTrigCondition, clearParameterLock,
     setTrigCondition,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
+    clearAll,
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
@@ -92,6 +97,21 @@ export default function StepGrid({
   } | null>(null);
   const closeGridMenu = useCallback(
     () => setGridMenu(null), []
+  );
+  const menuKeyRef = useRef<HTMLButtonElement>(null);
+
+  // The ⋯ key over the track names opens the same menu
+  // below itself (the only way in on phones), and
+  // closes it when it is already open.
+  const toggleGridMenuFromKey = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setGridMenu(open => open !== null ? null : {
+        x: rect.left,
+        y: rect.bottom + GRID_MENU_KEY_GAP_PX,
+      });
+    },
+    []
   );
 
   const handleContextMenu = useCallback(
@@ -345,31 +365,52 @@ export default function StepGrid({
   }, [stepRef, stepQueueRef, flashTriggered, setPage]);
 
   return (
-    // Right-click on a blank spot opens the grid menu.
-    // Keyboard users get the same items from H / Shift+H
-    // and the gear menu.
+    // Right-click on a blank spot opens the grid menu,
+    // as does the ⋯ key over the track names.
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       className="ss-panel rounded-xl lg:rounded-2xl p-1 lg:p-2"
       onContextMenu={handleContextMenu}
     >
-      {/* Column header: labels + step numbers */}
-      <div
-        aria-hidden="true"
-        className="hidden lg:flex gap-4 items-end px-4 pt-2"
-      >
-        <div className="w-56 flex items-center gap-2">
+      {/* Column header: the grid menu key over the track
+          names, then (desktop only) Vol / Pan labels and
+          step numbers. */}
+      <div className="flex gap-4 items-end px-2 pt-1.5 -mb-1 lg:mb-0 lg:px-4 lg:pt-2">
+        <div className="lg:w-56 flex items-center gap-2">
           {/* Spacer over the name and M/S keys, so Vol and
               Pan stay above their knobs. */}
-          <span className="w-30" />
-          <span className="ss-label w-7 ml-2 text-center">
+          <span className="lg:w-30 flex items-center">
+            <Tooltip tooltipKey="gridMenu" position="bottom">
+              <button
+                ref={menuKeyRef}
+                type="button"
+                aria-label="Grid options"
+                aria-haspopup="menu"
+                aria-expanded={gridMenu !== null}
+                onClick={toggleGridMenuFromKey}
+                className="ss-key h-7 px-2 rounded-md text-muted hover:text-ink text-base leading-none tracking-[0.1em]"
+              >
+                <span aria-hidden="true">⋯</span>
+              </button>
+            </Tooltip>
+          </span>
+          <span
+            aria-hidden="true"
+            className="hidden lg:inline ss-label w-7 ml-2 text-center"
+          >
             Vol
           </span>
-          <span className="ss-label w-7 text-center">
+          <span
+            aria-hidden="true"
+            className="hidden lg:inline ss-label w-7 text-center"
+          >
             Pan
           </span>
         </div>
-        <div className="flex-1 grid grid-cols-16 gap-1.5">
+        <div
+          aria-hidden="true"
+          className="hidden lg:grid flex-1 grid-cols-16 gap-1.5"
+        >
           {Array.from({ length: 16 }, (_, i) => (
             <span
               key={i}
@@ -492,7 +533,9 @@ export default function StepGrid({
           canRestore={minimizedTracks.size > 0}
           onMinimize={minimizeEmptyTracks}
           onRestoreAll={restoreAllTracks}
+          onReset={clearAll}
           onClose={closeGridMenu}
+          anchorRef={menuKeyRef}
         />
       ) : null}
     </div>
