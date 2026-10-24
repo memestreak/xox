@@ -217,6 +217,25 @@ body {
   font-weight: 600;
   box-shadow: 0 0 8px rgb(245 160 58 / 0.35);
 }
+/* Help beside a dropdown row (LcdSelect hint). Same
+   look as the app's other tooltips. */
+.ss-lcd-hint {
+  position: fixed;
+  z-index: 61;
+  max-width: 220px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-edge);
+  border-radius: 4px;
+  background: var(--color-raised);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.5);
+  color: var(--color-ink);
+  font-family: var(--font-barlow), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
 /* Keyboard highlight on the chosen row: a dark inner
    ring so it still reads as highlighted. */
 .ss-lcd-list [role="option"][aria-selected="true"][data-active] {

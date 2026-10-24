@@ -1,9 +1,10 @@
 import {
-  fireEvent, render, screen,
+  act, fireEvent, render, screen,
 } from '@testing-library/react';
 import {
-  describe, expect, it, vi,
+  afterEach, describe, expect, it, vi,
 } from 'vitest';
+import { DROPDOWN_HINT_DELAY_MS } from '../app/constants';
 import LcdSelect from '../app/LcdSelect';
 
 const OPTIONS = [
@@ -146,5 +147,73 @@ describe('LcdSelect', () => {
     const key = screen.getByRole('combobox', { name: 'Mode' });
     fireEvent.keyDown(key, { key: 'ArrowDown' });
     expect(screen.queryByRole('listbox')).toBeNull();
+  });
+});
+
+describe('LcdSelect row help', () => {
+  const HINTED = OPTIONS.map(o => ({
+    ...o, hint: `Help for ${o.label}`,
+  }));
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function setupHinted() {
+    vi.useFakeTimers();
+    render(
+      <LcdSelect
+        aria-label="Mode"
+        value="sequential"
+        options={HINTED}
+        onChange={vi.fn()}
+      />
+    );
+    return screen.getByRole('combobox', { name: 'Mode' });
+  }
+
+  const hint = () => screen.queryByTestId('lcd-select-hint');
+
+  it('does not show help just because the list opened', () => {
+    const key = setupHinted();
+    fireEvent.click(key);
+    act(() => vi.advanceTimersByTime(DROPDOWN_HINT_DELAY_MS * 2));
+    expect(hint()).toBeNull();
+  });
+
+  it('shows a hovered row\'s help after a rest', () => {
+    const key = setupHinted();
+    fireEvent.click(key);
+    fireEvent.pointerMove(
+      screen.getByRole('option', { name: /Direct start/ }),
+      { pointerType: 'mouse' },
+    );
+    expect(hint()).toBeNull();
+    act(() => vi.advanceTimersByTime(DROPDOWN_HINT_DELAY_MS));
+    expect(hint()).toHaveTextContent('Help for Direct start');
+    // Moving on shows the next row's help at once.
+    fireEvent.pointerMove(
+      screen.getByRole('option', { name: /Direct jump/ }),
+      { pointerType: 'mouse' },
+    );
+    expect(hint()).toHaveTextContent('Help for Direct jump');
+    fireEvent.pointerLeave(screen.getByRole('listbox'));
+    expect(hint()).toBeNull();
+  });
+
+  it('shows help for a row reached with the arrows', () => {
+    const key = setupHinted();
+    fireEvent.keyDown(key, { key: 'ArrowDown' });
+    fireEvent.keyDown(key, { key: 'ArrowDown' });
+    act(() => vi.advanceTimersByTime(DROPDOWN_HINT_DELAY_MS));
+    expect(hint()).toHaveTextContent('Help for Direct start');
+  });
+
+  it('describes each row with its help for screen readers', () => {
+    const key = setupHinted();
+    fireEvent.click(key);
+    expect(
+      screen.getByRole('option', { name: /Direct jump/ })
+    ).toHaveAccessibleDescription('Help for Direct jump');
   });
 });

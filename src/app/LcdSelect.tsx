@@ -5,10 +5,22 @@ import {
   useRef, useState,
 } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useTooltips } from './TooltipContext';
+import {
+  DROPDOWN_HINT_DELAY_MS,
+  DROPDOWN_HINT_GAP_PX,
+  DROPDOWN_LIST_GAP_PX as LIST_GAP_PX,
+  DROPDOWN_LIST_MAX_HEIGHT_PX as LIST_MAX_HEIGHT_PX,
+  DROPDOWN_TYPEAHEAD_RESET_MS as TYPEAHEAD_RESET_MS,
+  DROPDOWN_VIEWPORT_MARGIN_PX as VIEWPORT_MARGIN_PX,
+} from './constants';
 
 export interface LcdSelectOption<T extends string> {
   value: T;
   label: string;
+  /** Help shown beside the row when it is hovered or
+   *  arrowed to (hidden when tooltips are off). */
+  hint?: string;
 }
 
 interface LcdSelectProps<T extends string> {
@@ -25,15 +37,6 @@ interface LcdSelectProps<T extends string> {
   /** Size and width classes for the closed key. */
   className?: string;
 }
-
-/** Gap between the key and the list, in px. */
-const LIST_GAP_PX = 4;
-/** Tallest the list grows before it scrolls, in px. */
-const LIST_MAX_HEIGHT_PX = 280;
-/** Keeps the list this far from the window edges. */
-const VIEWPORT_MARGIN_PX = 8;
-/** Type-ahead forgets earlier letters after this long. */
-const TYPEAHEAD_RESET_MS = 600;
 
 interface ListPosition {
   left: number;
@@ -74,6 +77,18 @@ export default function LcdSelect<T extends string>({
     null
   );
   const typeahead = useRef({ text: '', time: 0 });
+  const { tooltipsEnabled } = useTooltips();
+  // Row help: shown for the highlighted row once the
+  // pointer or the arrow keys moved the highlight (not
+  // just because the list opened), after a short rest.
+  const hintRef = useRef<HTMLDivElement>(null);
+  const [hintArmed, setHintArmed] = useState(false);
+  // True once the rest delay has passed; cleared when
+  // the pointer leaves the list or the list opens/closes.
+  const [hintRested, setHintRested] = useState(false);
+  const [hintPos, setHintPos] = useState<{
+    left: number; top: number;
+  } | null>(null);
 
   const selectedIndex = Math.max(
     0, options.findIndex(o => o.value === value)
@@ -83,12 +98,16 @@ export default function LcdSelect<T extends string>({
   const open = useCallback(() => {
     if (disabled || options.length === 0) return;
     setActiveIndex(selectedIndex);
+    setHintArmed(false);
+    setHintRested(false);
     setIsOpen(true);
   }, [disabled, options.length, selectedIndex]);
 
   const close = useCallback(() => {
     setIsOpen(false);
     setPos(null);
+    setHintArmed(false);
+    setHintRested(false);
   }, []);
 
   const pick = useCallback((index: number) => {
@@ -135,6 +154,54 @@ export default function LcdSelect<T extends string>({
       maxHeight,
     });
   }, [isOpen]);
+
+  // Show the highlighted row's help after a rest; once
+  // one is showing, moving to another row shows its help
+  // straight away.
+  const activeHint = options[activeIndex]?.hint;
+  const wantHint = isOpen && pos !== null && hintArmed
+    && tooltipsEnabled && !!activeHint;
+  const hintIndex = wantHint && hintRested
+    ? activeIndex
+    : null;
+  useEffect(() => {
+    if (!wantHint || hintRested) return;
+    const t = setTimeout(
+      () => setHintRested(true),
+      DROPDOWN_HINT_DELAY_MS,
+    );
+    return () => clearTimeout(t);
+  }, [wantHint, hintRested]);
+
+  // Place the help to the right of the list, beside its
+  // row; to the left when the right has no room; under
+  // the list when neither side does (phones).
+  useLayoutEffect(() => {
+    if (hintIndex === null) return;
+    const list = listRef.current;
+    const row = list?.children[hintIndex];
+    const hint = hintRef.current;
+    if (!list || !hint || !(row instanceof HTMLElement)) {
+      return;
+    }
+    const l = list.getBoundingClientRect();
+    const r = row.getBoundingClientRect();
+    const w = hint.offsetWidth;
+    const h = hint.offsetHeight;
+    const maxRight = window.innerWidth - VIEWPORT_MARGIN_PX;
+    let left = l.right + DROPDOWN_HINT_GAP_PX;
+    let top = r.top + (r.height - h) / 2;
+    if (left + w > maxRight) {
+      left = l.left - DROPDOWN_HINT_GAP_PX - w;
+      if (left < VIEWPORT_MARGIN_PX) {
+        left = Math.max(
+          VIEWPORT_MARGIN_PX, Math.min(l.left, maxRight - w)
+        );
+        top = l.bottom + DROPDOWN_HINT_GAP_PX;
+      }
+    }
+    setHintPos({ left, top });
+  }, [hintIndex]);
 
   // Keep the highlighted row in view.
   useEffect(() => {
@@ -216,17 +283,21 @@ export default function LcdSelect<T extends string>({
     switch (e.key) {
       case 'ArrowDown':
         setActiveIndex(i => Math.min(last, i + 1));
+        setHintArmed(true);
         break;
       case 'ArrowUp':
         setActiveIndex(i => Math.max(0, i - 1));
+        setHintArmed(true);
         break;
       case 'Home':
       case 'PageUp':
         setActiveIndex(0);
+        setHintArmed(true);
         break;
       case 'End':
       case 'PageDown':
         setActiveIndex(last);
+        setHintArmed(true);
         break;
       case 'Enter':
       case ' ':
@@ -293,6 +364,10 @@ export default function LcdSelect<T extends string>({
           aria-labelledby={ariaLabelledBy}
           data-select-open=""
           className="ss-lcd-list"
+          onPointerLeave={() => {
+            setHintArmed(false);
+            setHintRested(false);
+          }}
           style={pos
             ? {
               left: pos.left,
@@ -313,15 +388,42 @@ export default function LcdSelect<T extends string>({
               role="option"
               tabIndex={-1}
               aria-selected={i === selectedIndex}
+              aria-describedby={
+                opt.hint ? `${optionIdPrefix}-${i}-hint` : undefined
+              }
               data-active={i === activeIndex || undefined}
-              onPointerMove={() => setActiveIndex(i)}
+              onPointerMove={(e) => {
+                setActiveIndex(i);
+                // A touch has no hover: no help for taps.
+                if (e.pointerType === 'mouse') {
+                  setHintArmed(true);
+                }
+              }}
               // Keep focus on the key.
               onMouseDown={e => e.preventDefault()}
               onClick={() => pick(i)}
             >
               {opt.label}
+              {opt.hint && (
+                <span id={`${optionIdPrefix}-${i}-hint`} hidden>
+                  {opt.hint}
+                </span>
+              )}
             </div>
           ))}
+        </div>
+      )}
+      {isOpen && hintIndex !== null && (
+        <div
+          ref={hintRef}
+          aria-hidden="true"
+          data-testid="lcd-select-hint"
+          className="ss-lcd-hint"
+          style={hintPos
+            ? { left: hintPos.left, top: hintPos.top }
+            : { left: 0, top: 0, visibility: 'hidden' }}
+        >
+          {options[hintIndex]?.hint}
         </div>
       )}
     </>

@@ -6,12 +6,25 @@ import Tooltip from './Tooltip';
 import PanelSection from './PanelSection';
 import LatchKey from './LatchKey';
 import LcdSelect from './LcdSelect';
+import tooltips from './data/tooltips.json';
 import type { LcdSelectOption } from './LcdSelect';
 
 const MODE_OPTIONS: LcdSelectOption<PatternMode>[] = [
-  { value: 'sequential', label: 'Sequential' },
-  { value: 'direct-start', label: 'Direct start' },
-  { value: 'direct-jump', label: 'Direct jump' },
+  {
+    value: 'sequential',
+    label: 'Sequential',
+    hint: tooltips.modeSequential,
+  },
+  {
+    value: 'direct-start',
+    label: 'Direct start',
+    hint: tooltips.modeDirectStart,
+  },
+  {
+    value: 'direct-jump',
+    label: 'Direct jump',
+    hint: tooltips.modeDirectJump,
+  },
 ];
 
 export default function PatternModeSelector() {

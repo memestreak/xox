@@ -98,3 +98,17 @@ export const STEPS_REPEAT_INTERVAL_MS = 80;
 export const SWING_MAX = 100;
 /** Columns the pattern chooser's list aims for. */
 export const PATTERN_LIST_COLUMNS = 4;
+
+// ── LCD dropdown (LcdSelect) ────────────────────────
+/** Gap between a dropdown key and its list, in px. */
+export const DROPDOWN_LIST_GAP_PX = 4;
+/** Tallest a dropdown list grows before it scrolls. */
+export const DROPDOWN_LIST_MAX_HEIGHT_PX = 280;
+/** Keeps a dropdown list this far from the window edges. */
+export const DROPDOWN_VIEWPORT_MARGIN_PX = 8;
+/** Dropdown type-ahead forgets earlier letters after this. */
+export const DROPDOWN_TYPEAHEAD_RESET_MS = 600;
+/** Rest on a dropdown row this long to see its help. */
+export const DROPDOWN_HINT_DELAY_MS = 500;
+/** Gap between a dropdown list and a row's help, in px. */
+export const DROPDOWN_HINT_GAP_PX = 6;
