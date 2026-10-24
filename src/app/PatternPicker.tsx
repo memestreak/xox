@@ -483,7 +483,7 @@ export default function PatternPicker({
                         + (isActive
                           ? ' bg-lcd text-[#1a0f03] font-semibold'
                             + ' shadow-[0_0_8px_rgb(245_160_58/0.35)]'
-                          : ' text-lcd/55 hover:bg-lcd/10 hover:text-lcd')
+                          : ' text-lcd hover:bg-lcd/10')
                       }
                     >
                       <span
