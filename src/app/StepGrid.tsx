@@ -359,16 +359,13 @@ export default function StepGrid({
         className="hidden lg:flex gap-4 items-end px-4 pt-2"
       >
         <div className="w-56 flex items-center gap-2">
-          <span className="ss-label text-[10px] w-14 px-1">
-            Track
-          </span>
-          <span className="ss-label text-[10px] w-14">
-            M · S
-          </span>
-          <span className="ss-label text-[10px] w-7 ml-2 text-center">
+          {/* Spacer over the name and M/S keys, so Vol and
+              Pan stay above their knobs. */}
+          <span className="w-30" />
+          <span className="ss-label w-7 ml-2 text-center">
             Vol
           </span>
-          <span className="ss-label text-[10px] w-7 text-center">
+          <span className="ss-label w-7 text-center">
             Pan
           </span>
         </div>
