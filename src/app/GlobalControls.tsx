@@ -96,6 +96,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
               size={34}
               ariaPrefix="Swing"
               defaultValue={0}
+              showHoverValue={false}
             />
           </Tooltip>
           <span className="font-mono text-sm text-ink w-9 tabular-nums">
