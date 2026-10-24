@@ -70,12 +70,60 @@ export type ChooserCursor =
   | { zone: 'category'; index: number }
   | { zone: 'pattern'; index: number };
 
+/** Where a category key sits on screen (px). */
+export interface KeyBox {
+  top: number;
+  left: number;
+  width: number;
+}
+
 export interface ChooserLayout {
   categoryCount: number;
+  /**
+   * Category key positions, in category order. The keys
+   * wrap onto several lines, and ↑ / ↓ move between
+   * those lines. Without them, ↓ goes straight to the
+   * list.
+   */
+  categoryBoxes?: KeyBox[];
   /** Patterns in the category that is showing. */
   patternCount: number;
   /** Index of the category that is showing, or -1. */
   shownCategoryIndex: number;
+}
+
+/**
+ * The key on the next line of wrapped keys, above
+ * (`direction` -1) or below (+1), whose center is
+ * nearest horizontally. Null on the first / last line.
+ */
+export function keyOnAdjacentLine(
+  boxes: KeyBox[],
+  index: number,
+  direction: 1 | -1,
+): number | null {
+  const from = boxes[index];
+  if (!from) return null;
+  // Keys on one line share a top; allow for sub-pixel
+  // differences.
+  const lineTops = [...new Set(boxes.map(b => Math.round(b.top)))]
+    .sort((a, b) => a - b);
+  const line = lineTops.indexOf(Math.round(from.top));
+  const target = lineTops[line + direction];
+  if (target === undefined) return null;
+  const center = (b: KeyBox) => b.left + b.width / 2;
+  let best: number | null = null;
+  boxes.forEach((b, i) => {
+    if (Math.round(b.top) !== target) return;
+    if (
+      best === null
+      || Math.abs(center(b) - center(from))
+        < Math.abs(center(boxes[best]) - center(from))
+    ) {
+      best = i;
+    }
+  });
+  return best;
 }
 
 /** Step `index` by `delta` in 0..count-1, wrapping. */
@@ -85,9 +133,11 @@ function wrap(index: number, delta: number, count: number) {
 
 /**
  * Move the chooser cursor for one key press. Returns
- * null when the key doesn't move it. Moves wrap around,
- * except ↑ on the list's top row, which goes up to the
- * category keys.
+ * null when the key doesn't move it. On the category
+ * keys, ← → move in order and wrap, and ↑ ↓ move between
+ * their lines (↓ from the last line enters the list).
+ * In the list, moves wrap around, except ↑ on the top
+ * row, which goes up to the category keys.
  */
 export function moveChooserCursor(
   cursor: ChooserCursor,
@@ -95,7 +145,8 @@ export function moveChooserCursor(
   layout: ChooserLayout,
 ): ChooserCursor | null {
   const {
-    categoryCount, patternCount, shownCategoryIndex,
+    categoryCount, categoryBoxes, patternCount,
+    shownCategoryIndex,
   } = layout;
 
   if (cursor.zone === 'category') {
@@ -110,10 +161,23 @@ export function moveChooserCursor(
         return at(0);
       case 'End':
         return at(categoryCount - 1);
-      case 'ArrowDown':
+      case 'ArrowUp': {
+        const above = categoryBoxes
+          ? keyOnAdjacentLine(categoryBoxes, cursor.index, -1)
+          : null;
+        return above === null ? null : at(above);
+      }
+      case 'ArrowDown': {
+        // The next line of keys; from the last line,
+        // into the pattern list.
+        const below = categoryBoxes
+          ? keyOnAdjacentLine(categoryBoxes, cursor.index, 1)
+          : null;
+        if (below !== null) return at(below);
         return patternCount > 0
           ? { zone: 'pattern', index: 0 }
           : null;
+      }
       default:
         return null;
     }

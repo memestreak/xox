@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import patternsData from '../app/data/patterns.json';
 import {
   getCategorizedPatterns,
+  keyOnAdjacentLine,
   moveChooserCursor,
   patternListRowCount,
 } from '../app/patternUtils';
@@ -196,5 +197,50 @@ describe('moveChooserCursor', () => {
       expect(moveChooserCursor(pat(3), 'End', layout))
         .toEqual(pat(6));
     });
+  });
+});
+
+describe('category keys on wrapped lines', () => {
+  // Line 1: keys 0 1 2 (centers 50, 150, 250)
+  // Line 2: keys 3 4   (centers 40, 170)
+  const boxes = [
+    { top: 0, left: 0, width: 100 },
+    { top: 0, left: 100, width: 100 },
+    { top: 0, left: 200, width: 100 },
+    { top: 40.4, left: 0, width: 80 },
+    { top: 40, left: 120, width: 100 },
+  ];
+  const layout = {
+    categoryCount: 5,
+    categoryBoxes: boxes,
+    patternCount: 3,
+    shownCategoryIndex: 0,
+  };
+  const cat = (index: number) =>
+    ({ zone: 'category' as const, index });
+
+  it('finds the nearest key on the line below or above', () => {
+    expect(keyOnAdjacentLine(boxes, 0, 1)).toBe(3);
+    expect(keyOnAdjacentLine(boxes, 2, 1)).toBe(4);
+    expect(keyOnAdjacentLine(boxes, 4, -1)).toBe(1);
+  });
+
+  it('has no line above the first or below the last', () => {
+    expect(keyOnAdjacentLine(boxes, 1, -1)).toBeNull();
+    expect(keyOnAdjacentLine(boxes, 3, 1)).toBeNull();
+  });
+
+  it('moves down a line, then into the list', () => {
+    expect(moveChooserCursor(cat(2), 'ArrowDown', layout))
+      .toEqual(cat(4));
+    expect(moveChooserCursor(cat(4), 'ArrowDown', layout))
+      .toEqual({ zone: 'pattern', index: 0 });
+  });
+
+  it('moves up a line and stops on the first', () => {
+    expect(moveChooserCursor(cat(3), 'ArrowUp', layout))
+      .toEqual(cat(0));
+    expect(moveChooserCursor(cat(0), 'ArrowUp', layout))
+      .toBeNull();
   });
 });

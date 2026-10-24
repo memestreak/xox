@@ -209,6 +209,21 @@ export default function PatternPicker({
     focusCursorRef.current = true;
   };
 
+  // Where the category keys sit now, for ↑ / ↓ between
+  // their wrapped lines.
+  const categoryKeyBoxes = () =>
+    categories.map((_, i) => {
+      const el = drawerRef.current?.querySelector(
+        `[data-cursor="category-${i}"]`,
+      );
+      const r = el?.getBoundingClientRect();
+      return {
+        top: r?.top ?? 0,
+        left: r?.left ?? 0,
+        width: r?.width ?? 0,
+      };
+    });
+
   const handleDrawerKeyDown = (e: KeyboardEvent) => {
     // Space stays play/stop: don't scroll the list or
     // press the focused button.
@@ -244,6 +259,9 @@ export default function PatternPicker({
 
     const next = moveChooserCursor(cursor, e.key, {
       categoryCount: categories.length,
+      categoryBoxes: cursor.zone === 'category'
+        ? categoryKeyBoxes()
+        : undefined,
       patternCount: patternsToShow.length,
       shownCategoryIndex,
     });
