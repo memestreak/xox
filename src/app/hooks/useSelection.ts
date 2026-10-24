@@ -6,6 +6,7 @@ import {
 import type { RefObject } from 'react';
 import {
   isFormFieldTarget, isModalDialogOpen,
+  isPatternChooserOpen,
 } from '../keyboardUtils';
 import {
   cellKey, parseCellKey,
@@ -283,6 +284,8 @@ export function useSelection({
       if (e.key === 'Escape') {
         // Layered dismissal: popover closes first
         if (popoverOpenRef.current) return;
+        // The pattern chooser closes first too.
+        if (isPatternChooserOpen()) return;
         if (selectedRef.current.size === 0) return;
         clearSelection();
         return;
@@ -350,9 +353,10 @@ export function useSelection({
         return;
       }
 
-      // P: open bulk popover on probability
+      // E: open bulk popover on probability (P opens
+      // the pattern chooser)
       if (
-        e.code === 'KeyP'
+        e.code === 'KeyE'
         && !e.ctrlKey && !e.metaKey
         && !e.shiftKey && !e.repeat
       ) {

@@ -2,8 +2,8 @@
  * Text for the Help dialog: shortcuts and gestures only
  * (longer usage docs belong in the repository). Keep it
  * in sync with the shortcut handlers (usePlayback, useFillMode,
- * usePatternMode, useSelection, useMinimizedTracks) and
- * pointer gestures.
+ * usePatternMode, useSelection, useMinimizedTracks,
+ * PatternPicker) and pointer gestures.
  */
 
 /**
@@ -61,10 +61,28 @@ const KEYS_TAB: HelpTab = {
         },
         { keys: ['H'], text: 'Minimize empty tracks' },
         { keys: ['shift', '+', 'H'], text: 'Restore all tracks' },
+        { keys: ['P'], text: 'Open / close the pattern chooser' },
         { keys: ['?'], text: 'Open or close this help' },
         {
           keys: ['Esc'],
-          text: 'Close a popup, then clear the selection',
+          text: 'Close a popup or the pattern chooser, then clear the selection',
+        },
+      ],
+    },
+    {
+      title: 'Pattern chooser',
+      rows: [
+        {
+          keys: ['←', '→', '↑', '↓'],
+          text: 'Move through categories and patterns',
+        },
+        {
+          keys: ['Enter'], text: 'Pick the pattern',
+          note: '(cued for the next bar in Sequential mode while playing)',
+        },
+        {
+          keys: ['Home', '/', 'End'],
+          text: 'First / last category or pattern',
         },
       ],
     },
@@ -77,7 +95,7 @@ const KEYS_TAB: HelpTab = {
           text: 'Cycle fill: none → fill → not fill',
         },
         { keys: ['shift', '+', 'F'], text: 'Set to not fill' },
-        { keys: ['P'], text: 'Edit probability' },
+        { keys: ['E'], text: 'Edit probability' },
         { keys: ['C'], text: 'Edit cycle (e.g. 1:2)' },
         { keys: ['R'], text: 'Reset conditions and locks' },
       ],

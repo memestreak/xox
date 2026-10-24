@@ -31,6 +31,7 @@ exports[`constants snapshot 1`] = `
   "METER_FLOOR_DB": -48,
   "METER_SEGMENTS": 24,
   "NEAREST_CELL_MAX_DISTANCE_PX": 30,
+  "PATTERN_LIST_COLUMNS": 4,
   "SCHEDULE_AHEAD_S": 0.1,
   "SWING_MAX": 100,
   "TRIGGER_FLASH_MS": 150,

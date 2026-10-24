@@ -85,3 +85,5 @@ export const BPM_DRAG_STEP = 1;
 export const BPM_DRAG_FINE_STEP = 0.1;
 /** Maximum swing amount. */
 export const SWING_MAX = 100;
+/** Columns the pattern chooser's list aims for. */
+export const PATTERN_LIST_COLUMNS = 4;

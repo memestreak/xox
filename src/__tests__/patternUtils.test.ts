@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import patternsData from '../app/data/patterns.json';
 import {
   getCategorizedPatterns,
+  moveChooserCursor,
+  patternListRowCount,
 } from '../app/patternUtils';
 import type { Pattern } from '../app/types';
 
@@ -82,5 +84,117 @@ describe('getCategorizedPatterns', () => {
       (sum, g) => sum + g.patterns.length, 0
     );
     expect(total).toBe(142);
+  });
+});
+
+describe('patternListRowCount', () => {
+  it.each([
+    [0, 0], [1, 1], [4, 1], [5, 2], [8, 2], [9, 3],
+  ])('%i patterns -> %i rows', (count, rows) => {
+    expect(patternListRowCount(count)).toBe(rows);
+  });
+});
+
+describe('moveChooserCursor', () => {
+  // 3 categories, showing #1, whose list has 7 patterns
+  // in 2 rows:  0 2 4 6
+  //             1 3 5
+  const layout = {
+    categoryCount: 3,
+    patternCount: 7,
+    shownCategoryIndex: 1,
+  };
+  const cat = (index: number) =>
+    ({ zone: 'category' as const, index });
+  const pat = (index: number) =>
+    ({ zone: 'pattern' as const, index });
+
+  describe('on the category keys', () => {
+    it('moves right and left, wrapping', () => {
+      expect(moveChooserCursor(cat(0), 'ArrowRight', layout))
+        .toEqual(cat(1));
+      expect(moveChooserCursor(cat(2), 'ArrowRight', layout))
+        .toEqual(cat(0));
+      expect(moveChooserCursor(cat(0), 'ArrowLeft', layout))
+        .toEqual(cat(2));
+    });
+
+    it('jumps with Home and End', () => {
+      expect(moveChooserCursor(cat(1), 'Home', layout))
+        .toEqual(cat(0));
+      expect(moveChooserCursor(cat(1), 'End', layout))
+        .toEqual(cat(2));
+    });
+
+    it('goes down into the list', () => {
+      expect(moveChooserCursor(cat(1), 'ArrowDown', layout))
+        .toEqual(pat(0));
+    });
+
+    it('does not go down into an empty list', () => {
+      expect(moveChooserCursor(
+        cat(1), 'ArrowDown', { ...layout, patternCount: 0 },
+      )).toBeNull();
+    });
+
+    it('ignores up and other keys', () => {
+      expect(moveChooserCursor(cat(1), 'ArrowUp', layout))
+        .toBeNull();
+      expect(moveChooserCursor(cat(1), 'a', layout))
+        .toBeNull();
+    });
+  });
+
+  describe('in the pattern list', () => {
+    it('steps down in list order and wraps at the end', () => {
+      expect(moveChooserCursor(pat(0), 'ArrowDown', layout))
+        .toEqual(pat(1));
+      // Bottom of a column -> top of the next
+      expect(moveChooserCursor(pat(1), 'ArrowDown', layout))
+        .toEqual(pat(2));
+      expect(moveChooserCursor(pat(6), 'ArrowDown', layout))
+        .toEqual(pat(0));
+    });
+
+    it('steps up within a column', () => {
+      expect(moveChooserCursor(pat(3), 'ArrowUp', layout))
+        .toEqual(pat(2));
+    });
+
+    it('goes up from the top row to the shown category', () => {
+      expect(moveChooserCursor(pat(0), 'ArrowUp', layout))
+        .toEqual(cat(1));
+      expect(moveChooserCursor(pat(4), 'ArrowUp', layout))
+        .toEqual(cat(1));
+    });
+
+    it('moves a column right and left on the same row', () => {
+      expect(moveChooserCursor(pat(1), 'ArrowRight', layout))
+        .toEqual(pat(3));
+      expect(moveChooserCursor(pat(3), 'ArrowLeft', layout))
+        .toEqual(pat(1));
+    });
+
+    it('wraps columns on the same row', () => {
+      expect(moveChooserCursor(pat(6), 'ArrowRight', layout))
+        .toEqual(pat(0));
+      expect(moveChooserCursor(pat(0), 'ArrowLeft', layout))
+        .toEqual(pat(6));
+    });
+
+    it('lands on the last pattern of a shorter column', () => {
+      // Row 2 of column 4 doesn't exist: land on 6.
+      expect(moveChooserCursor(pat(5), 'ArrowRight', layout))
+        .toEqual(pat(6));
+      expect(moveChooserCursor(pat(1), 'ArrowLeft', layout))
+        .toEqual(pat(6));
+    });
+
+    it('jumps with Home and End', () => {
+      expect(moveChooserCursor(pat(3), 'Home', layout))
+        .toEqual(pat(0));
+      expect(moveChooserCursor(pat(3), 'End', layout))
+        .toEqual(pat(6));
+    });
   });
 });
