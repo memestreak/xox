@@ -33,7 +33,6 @@ exports[`constants snapshot 1`] = `
   "NEAREST_CELL_MAX_DISTANCE_PX": 30,
   "PATTERN_LIST_COLUMNS": 4,
   "SCHEDULE_AHEAD_S": 0.1,
-  "START_DELAY_S": 0.03,
   "SWING_MAX": 100,
   "TRIGGER_FLASH_MS": 150,
 }

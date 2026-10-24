@@ -28,10 +28,9 @@ the Web Audio API. Implements a look-ahead scheduler (25ms timer,
 100ms lookahead window) for sample-accurate playback. Preloads
 and caches kit samples as AudioBuffers. Core loop:
 `scheduler()` → `advanceStep()` → `playSound()`.
-Step 0 is timed `START_DELAY_S` after `start()`, never
-at `currentTime`: steps already in the past are dropped
-as late, and the clock can tick before the scheduler
-looks.
+`start()` reads `currentTime` once and passes it to the
+first `scheduler()` call: steps in the past are dropped
+as late, so a second read could silence step 0.
 
 **computeStep (`src/app/computeStep.ts`)** — Pure function
 for step computation. Takes `ComputeStepDeps` (track states,
