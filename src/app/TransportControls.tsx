@@ -131,15 +131,16 @@ function TransportControlsInner({
       {/* Row 2: one panel strip, hairline dividers. No
           overflow-hidden here: it would clip the tooltips.
           The corner cells round themselves instead.
-          Below lg the rows are Steps + Swing, Pattern +
-          Reset, Kit + Pattern change, then Volume (set
-          by max-lg:order-* on the cells). */}
+          Desktop runs Kit, Pattern, Pattern change,
+          Steps, Swing, Reset. Below lg the rows are
+          Steps + Swing, Pattern + Reset, Kit + Pattern
+          change, then Volume (set by max-lg:order-* on
+          the cells). */}
       <div className="grid grid-cols-6 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
-        <GlobalControls page={page} />
         <PanelSection
           label="Kit"
           labelFor="kit-select"
-          className="col-span-2 max-lg:order-4"
+          className="col-span-2 max-lg:order-4 lg:rounded-l-[11px]"
         >
           <Tooltip tooltipKey="kit">
             <select
@@ -168,6 +169,7 @@ function TransportControlsInner({
           {patternTrigger}
         </PanelSection>
         <PatternModeSelector />
+        <GlobalControls page={page} />
         <MasterVolume
           variant="strip"
           position={master.position}
