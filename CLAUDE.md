@@ -90,7 +90,9 @@ from the URL.
   pattern; T / Shift+T)
 - `useTrackConfig.ts` — all track/mixer config actions;
   a step turned on while Fill is active gets the Fill
-  condition (reads `fillActiveRef`)
+  condition (reads `fillActiveRef`); turning a step
+  off clears its Fill condition (probability and
+  cycle stay)
 - `usePlayback.ts` — audio engine, handleStep, spacebar
 - `useSelection.ts` — multi-step selection (Ctrl/Shift)
 - `useDragPaint.ts` — pointer drag gestures on the grid

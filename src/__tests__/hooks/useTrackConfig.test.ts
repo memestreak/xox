@@ -349,3 +349,63 @@ describe('useTrackConfig: preset cycling during Fill', () => {
       .toEqual(base.trigConditions);
   });
 });
+
+describe('useTrackConfig: turning a step off clears Fill', () => {
+  it('a Fill step turned off comes back plain', () => {
+    const { r, fillActiveRef } = setupFill();
+    fillActiveRef.current = true;
+    act(() => r.current.tc.toggleStep('bd', 2));
+    fillActiveRef.current = false;
+    act(() => r.current.tc.toggleStep('bd', 2));
+    expect(r.current.config.tracks.bd.trigConditions)
+      .toBeUndefined();
+    act(() => r.current.tc.toggleStep('bd', 2));
+    const bd = r.current.config.tracks.bd;
+    expect(bd.steps[2]).toBe('1');
+    expect(bd.trigConditions).toBeUndefined();
+  });
+
+  it('clears not-fill too, keeps probability and cycle', () => {
+    const { r } = setupFill();
+    act(() => r.current.tc.toggleStep('ch', 1));
+    act(() => r.current.tc.setTrigCondition('ch', 1, {
+      probability: 50, cycle: { a: 1, b: 2 }, fill: '!fill',
+    }));
+    act(() => r.current.tc.toggleStep('ch', 1));
+    expect(r.current.config.tracks.ch.trigConditions?.[1])
+      .toEqual({ probability: 50, cycle: { a: 1, b: 2 } });
+  });
+
+  it('setStep (drag erase, delete) clears it', () => {
+    const { r, fillActiveRef } = setupFill();
+    fillActiveRef.current = true;
+    act(() => r.current.tc.setStep('sd', 5, '1'));
+    act(() => r.current.tc.setStep('sd', 5, '0'));
+    expect(r.current.config.tracks.sd.trigConditions)
+      .toBeUndefined();
+  });
+
+  it('does not touch Fill on other steps', () => {
+    const { r, fillActiveRef } = setupFill();
+    fillActiveRef.current = true;
+    act(() => r.current.tc.toggleStep('bd', 0));
+    act(() => r.current.tc.toggleStep('bd', 4));
+    act(() => r.current.tc.toggleStep('bd', 4));
+    expect(r.current.config.tracks.bd.trigConditions)
+      .toEqual({ 0: { fill: 'fill' } });
+  });
+
+  it('setTrackSteps clears it on steps turned off', () => {
+    const { r, fillActiveRef } = setupFill();
+    fillActiveRef.current = true;
+    act(() => r.current.tc.setTrackSteps(
+      'bd', '1000100000000000'
+    ));
+    fillActiveRef.current = false;
+    act(() => r.current.tc.setTrackSteps(
+      'bd', '1000000000000000'
+    ));
+    expect(r.current.config.tracks.bd.trigConditions)
+      .toEqual({ 0: { fill: 'fill' } });
+  });
+});
