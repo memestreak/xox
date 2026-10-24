@@ -2,6 +2,7 @@
 
 import { TrackId } from './types';
 import {
+  GAIN_EXPONENT,
   LIMITER_ATTACK_S,
   LIMITER_RELEASE_S,
   LIMITER_THRESHOLD_DB,
@@ -44,7 +45,9 @@ class AudioEngine {
   // Master volume sits after the limiter, so turning it
   // down doesn't change how hard the mix is limited.
   private outputGain: GainNode | null = null;
-  private outputVolume = MASTER_VOLUME_DEFAULT;
+  // Linear gain; the default fader position through
+  // the cubic fader curve (see useMasterVolume).
+  private outputVolume = MASTER_VOLUME_DEFAULT ** GAIN_EXPONENT;
   // One analyser per output channel (left, right).
   private meters: AnalyserNode[] = [];
   private meterData: Float32Array<ArrayBuffer> | null = null;

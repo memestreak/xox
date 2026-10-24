@@ -104,7 +104,8 @@ function beginGesture() {
 
 /**
  * Mute, or when already muted, return to the last
- * audible level (0 dB if there was none this session).
+ * audible level (the default if there was none this
+ * session).
  */
 function toggleMute() {
   const start = gestureStart ?? {

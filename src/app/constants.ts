@@ -47,8 +47,13 @@ export const LIMITER_ATTACK_S = 0.003;
 export const LIMITER_RELEASE_S = 0.1;
 
 // ── Master volume and level meter ───────────────────
-/** Default master fader position (0-1); 1 is 0 dB. */
-export const MASTER_VOLUME_DEFAULT = 1;
+/**
+ * Default master fader position (0-1) for a device
+ * with no saved level. The fader is cubic (1 is 0 dB),
+ * so 0.8 is about −5.8 dB: headroom below the limiter,
+ * and room to turn up rather than down on first play.
+ */
+export const MASTER_VOLUME_DEFAULT = 0.8;
 /** Time constant for master volume changes (seconds). */
 export const MASTER_VOLUME_SMOOTHING_S = 0.01;
 /** Samples per level-meter reading (per channel). */
