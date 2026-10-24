@@ -234,6 +234,8 @@ describe('computeStep integration', () => {
 
       expect(result.current.state.selectedPatternId)
         .not.toBe('pending');
+      expect(result.current.state.pendingPatternId)
+        .toBe('pending');
 
       await act(async () => {
         onStep(15, 1.0);
@@ -243,6 +245,9 @@ describe('computeStep integration', () => {
         expect(result.current.state.selectedPatternId)
           .toBe('pending');
       });
+      // The cue light goes out once the pattern starts.
+      expect(result.current.state.pendingPatternId)
+        .toBeNull();
     }
   );
 

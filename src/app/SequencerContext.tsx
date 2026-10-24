@@ -63,6 +63,11 @@ interface SequencerState {
   tempState: TempState;
   isTempLatched: boolean;
   selectedPatternId: string;
+  /**
+   * Pattern picked in Sequential mode while playing,
+   * waiting for the bar end. Null when nothing is cued.
+   */
+  pendingPatternId: string | null;
   /** Problem with a share link opened from the URL. */
   importNotice: string | null;
   /**
@@ -354,6 +359,7 @@ export function SequencerProvider({
     homeSnapshotRef: pm.homeSnapshotRef,
     cycleCountRef: trackConfig.cycleCountRef,
     initCycleCounts: trackConfig.initCycleCounts,
+    onPendingApplied: pm.onPendingApplied,
     onTempReverted: pm.onTempReverted,
     onPlaybackStart: pm.onPlaybackStart,
     onPlaybackStop: pm.onPlaybackStop,
@@ -400,7 +406,9 @@ export function SequencerProvider({
     triggeredTracksRef, stepQueueRef,
   } = playback;
   const { isFillActive, isFillLatched, fillMode } = fill;
-  const { patternMode, tempState, isTempLatched } = pm;
+  const {
+    patternMode, tempState, isTempLatched, pendingPatternId,
+  } = pm;
   const { minimizedTracks, minimizableCount } = minimize;
 
   const state = useMemo<SequencerState>(() => ({
@@ -418,6 +426,7 @@ export function SequencerProvider({
     tempState,
     isTempLatched,
     selectedPatternId,
+    pendingPatternId,
     importNotice,
     minimizedTracks,
     minimizableCount,
@@ -425,7 +434,7 @@ export function SequencerProvider({
     isPlaying, config.bpm, currentKit, trackStates,
     isLoaded, loadError, config.swing, isFillActive,
     isFillLatched, fillMode, patternMode, tempState,
-    isTempLatched, selectedPatternId,
+    isTempLatched, selectedPatternId, pendingPatternId,
     importNotice, minimizedTracks, minimizableCount,
   ]);
 

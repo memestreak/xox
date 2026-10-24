@@ -13,6 +13,8 @@ import Tooltip from './Tooltip';
 interface PatternPickerProps {
   categories: PatternCategory[];
   selectedPatternId: string;
+  /** Pattern cued for the next bar (Sequential mode). */
+  pendingPatternId?: string | null;
   onSelect: (pattern: Pattern) => void;
   children: (props: {
     trigger: ReactNode;
@@ -28,6 +30,7 @@ interface PatternPickerProps {
 export default function PatternPicker({
   categories,
   selectedPatternId,
+  pendingPatternId = null,
   onSelect,
   children,
 }: PatternPickerProps) {
@@ -47,6 +50,12 @@ export default function PatternPicker({
   const displayName = isCustom
     ? 'Custom'
     : (matchedPattern?.name ?? selectedPatternId);
+  const pendingPattern = pendingPatternId
+    ? categories
+      .flatMap(g => g.patterns)
+      .find(p => p.id === pendingPatternId)
+    : undefined;
+  const pendingName = pendingPattern?.name ?? pendingPatternId;
 
   const handleOpen = () => {
     if (isCustom) {
@@ -102,7 +111,11 @@ export default function PatternPicker({
         type="button"
         onClick={() => isOpen ? handleClose() : handleOpen()}
         aria-expanded={isOpen}
-        aria-label="Pattern"
+        aria-label={
+          pendingPatternId
+            ? `Pattern, ${pendingName} cued for the next bar`
+            : 'Pattern'
+        }
         className={
           'ss-key h-9 w-full pl-3 pr-2.5 text-sm font-medium'
           + ' flex items-center justify-between gap-2'
@@ -110,6 +123,13 @@ export default function PatternPicker({
         }
       >
         <span className="block truncate">{displayName}</span>
+        {pendingPatternId && (
+          <span
+            aria-hidden="true"
+            data-testid="pattern-cue-led"
+            className="ss-led ss-led-cue animate-temp-blink ml-auto"
+          />
+        )}
         <svg
           width="12"
           height="12"
@@ -206,12 +226,16 @@ export default function PatternPicker({
                 {patternsToShow.map(p => {
                   const isActive =
                     p.id === selectedPatternId;
+                  const isCued = p.id === pendingPatternId;
                   return (
                     <button
                       key={p.id}
                       type="button"
                       role="option"
                       aria-selected={isActive}
+                      aria-label={
+                        isCued ? `${p.name}, cued` : undefined
+                      }
                       onClick={() => onSelect(p)}
                       className={
                         'text-left px-2 py-1.5 text-sm rounded-md'
@@ -223,9 +247,14 @@ export default function PatternPicker({
                     >
                       <span
                         aria-hidden="true"
+                        data-cued={isCued || undefined}
                         className={
                           'ss-led'
-                          + (isActive ? ' ss-led-on' : ' bg-transparent')
+                          + (isCued
+                            ? ' ss-led-cue animate-temp-blink'
+                            : isActive
+                              ? ' ss-led-on'
+                              : ' bg-transparent')
                         }
                       />
                       {p.name}

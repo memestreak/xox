@@ -20,6 +20,8 @@
   --color-accent-hi: #ff8a52;
   --color-lcd: #f5a03a;
   --color-mute: #f2b23a;
+  /* Red LED: a pattern cued for the next bar. */
+  --color-cue: #ff3b30;
 
   /* Step keys: one color per group of four steps. */
   --color-step1: #e4502c;
@@ -117,6 +119,10 @@ body {
   .ss-led-on {
     background: var(--color-accent);
     box-shadow: 0 0 6px var(--color-accent);
+  }
+  .ss-led-cue {
+    background: var(--color-cue);
+    box-shadow: 0 0 6px var(--color-cue);
   }
 }
 

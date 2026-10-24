@@ -46,11 +46,13 @@ const categories: PatternCategory[] = [
 function renderPicker(
   selectedPatternId: string = funkPatterns[0].id,
   onSelect = vi.fn(),
+  pendingPatternId: string | null = null,
 ) {
   return render(
     <PatternPicker
       categories={categories}
       selectedPatternId={selectedPatternId}
+      pendingPatternId={pendingPatternId}
       onSelect={onSelect}
     >
       {({ trigger, drawer }) => (
@@ -101,6 +103,46 @@ describe('PatternPicker', () => {
       expect(
         screen.getByRole('button', { name: /pattern/i }),
       ).toHaveAttribute('aria-expanded', 'true');
+    });
+  });
+
+  describe('cued pattern light', () => {
+    it('shows no cue light when nothing is cued', () => {
+      renderPicker('funk-1');
+      expect(screen.queryByTestId('pattern-cue-led'))
+        .not.toBeInTheDocument();
+    });
+
+    it('blinks a light on the trigger and names the'
+      + ' cued pattern', () => {
+      renderPicker('funk-1', vi.fn(), 'funk-2');
+      expect(screen.getByTestId('pattern-cue-led'))
+        .toBeInTheDocument();
+      expect(
+        screen.getByRole('button', {
+          name: 'Pattern, Funk 2 cued for the next bar',
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it('blinks a red LED on the cued row', async () => {
+      const user = userEvent.setup();
+      renderPicker('funk-1', vi.fn(), 'funk-2');
+      await user.click(
+        screen.getByRole('button', { name: /pattern/i }),
+      );
+      const cued = screen.getByRole('option', {
+        name: 'Funk 2, cued',
+      });
+      const led = cued.querySelector('.ss-led');
+      expect(led).toHaveClass('ss-led-cue');
+      expect(led).toHaveClass('animate-temp-blink');
+      // The playing pattern keeps its orange LED.
+      const active = screen.getByRole('option', {
+        name: 'Funk 1',
+      });
+      expect(active.querySelector('.ss-led'))
+        .toHaveClass('ss-led-on');
     });
   });
 
