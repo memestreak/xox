@@ -291,13 +291,19 @@ export default function StepPopover({
     if (!anchorRect || !scrollContainerRef?.current) {
       return;
     }
+    // Close when the grid scrolls: the track area on
+    // desktop, the whole page on phones.
     const el = scrollContainerRef.current;
     el.addEventListener('scroll', onClose, {
       once: true,
     });
-    return () => el.removeEventListener(
-      'scroll', onClose
-    );
+    window.addEventListener('scroll', onClose, {
+      once: true,
+    });
+    return () => {
+      el.removeEventListener('scroll', onClose);
+      window.removeEventListener('scroll', onClose);
+    };
   }, [anchorRect, onClose, scrollContainerRef]);
 
   // ─── Flip above if overflowing ────────────────

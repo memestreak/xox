@@ -166,6 +166,27 @@ export default function StepGrid({
   // boundary for clearing the selection.
   const dragContainerRef = useRef<HTMLDivElement>(null);
 
+  // The grid lets vertical swipes scroll the page
+  // (touch-action: pan-y), so phones can reach every
+  // track. Sideways drags still paint along a row. Once
+  // a long-press has fired, hold the page still so the
+  // finger can keep working the step instead.
+  useEffect(() => {
+    const el = dragContainerRef.current;
+    if (!el) return;
+    const onTouchMove = (e: TouchEvent) => {
+      if (longPressActiveRef.current && e.cancelable) {
+        e.preventDefault();
+      }
+    };
+    el.addEventListener('touchmove', onTouchMove, {
+      passive: false,
+    });
+    return () => el.removeEventListener(
+      'touchmove', onTouchMove
+    );
+  }, []);
+
   const {
     selected,
     selectedByTrack,
@@ -367,7 +388,7 @@ export default function StepGrid({
       </div>
       <div
         ref={dragContainerRef}
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: 'pan-y' }}
         {...dragPaint}
         className="space-y-2.5 lg:space-y-2 select-none p-2 lg:px-4 lg:pt-2 lg:pb-4"
       >
