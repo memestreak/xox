@@ -142,7 +142,7 @@ function TransportControlsInner({
           labelFor="kit-select"
           className="col-span-2 max-lg:order-4 lg:rounded-l-[11px]"
         >
-          <Tooltip tooltipKey="kit">
+          <Tooltip tooltipKey="kit" position="bottom">
             <select
               id="kit-select"
               value={currentKit.id}

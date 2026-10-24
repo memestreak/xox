@@ -60,10 +60,7 @@ function MasterVolumeInner({
   const control = (
     <div className="flex items-center gap-2.5 min-w-0 flex-1">
       <div className="flex-1 min-w-0 flex flex-col gap-1">
-        <Tooltip
-          tooltipKey="master"
-          position={variant === 'header' ? 'bottom' : 'top'}
-        >
+        <Tooltip tooltipKey="master" position="top">
           <input
             id={id}
             type="range"
