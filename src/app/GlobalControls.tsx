@@ -8,7 +8,7 @@ import Tooltip from './Tooltip';
 import { getPatternLength } from './types';
 import { FollowToggle, PageLights } from './PageIndicator';
 import type { PageNav } from './PageIndicator';
-import StepsSpinner, { useStepsVariant } from './mockSteps';
+import StepsEntry from './StepsEntry';
 
 interface GlobalControlsProps {
   page: PageNav;
@@ -23,16 +23,6 @@ interface GlobalControlsProps {
 function GlobalControlsInner({ page }: GlobalControlsProps) {
   const { state, actions, meta } = useSequencer();
   const patternLength = getPatternLength(meta.config.tracks);
-  const mock = useStepsVariant();
-
-  const handlePatternLength = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      actions.setPatternLength(
-        parseInt(e.target.value, 10)
-      );
-    },
-    [actions]
-  );
 
   const handleSwing = useCallback(
     (v: number) => {
@@ -54,7 +44,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
           over Follow, so the cell never changes width
           as pages come and go. */}
       <PanelSection className="col-span-4 max-lg:order-1 max-lg:rounded-tl-[11px]">
-        <div className={`grid grid-cols-[minmax(0,1fr)_auto] ${mock === 'B' ? 'lg:grid-cols-[104px_auto]' : 'lg:grid-cols-[76px_auto]'} items-center gap-x-1.5 lg:gap-x-2 gap-y-2`}>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[76px_auto] items-center gap-x-1.5 lg:gap-x-2 gap-y-2">
           <label htmlFor="global-steps" className="ss-label">
             Steps
           </label>
@@ -65,31 +55,11 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
               setPage={page.setPage}
             />
           </div>
-          {mock ? (
-            <StepsSpinner
-              variant={mock}
-              value={patternLength}
-              onChange={actions.setPatternLength}
-            />
-          ) : (
-          <Tooltip tooltipKey="steps" position="bottom">
-            <select
-              id="global-steps"
-              value={patternLength}
-              onChange={handlePatternLength}
-              className="ss-key ss-select h-9 w-full pl-3 font-mono text-sm"
-            >
-              {Array.from(
-                { length: 64 },
-                (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}
-                  </option>
-                )
-              )}
-            </select>
-          </Tooltip>
-          )}
+          <StepsEntry
+            value={patternLength}
+            tracks={meta.config.tracks}
+            setPatternLength={actions.setPatternLength}
+          />
           <FollowToggle
             autoFollow={page.autoFollow}
             setAutoFollow={page.setAutoFollow}

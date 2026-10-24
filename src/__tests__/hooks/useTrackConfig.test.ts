@@ -107,6 +107,18 @@ describe('useTrackConfig: lengths', () => {
     expect(r.current.config.tracks.sd.steps).toHaveLength(20);
   });
 
+  it('setPatternLength with a base measures from it', () => {
+    const r = setup();
+    act(() => r.current.tc.setTrackSteps('bd', '1'.repeat(16)));
+    act(() => r.current.tc.setTrackLength('sd', 12));
+    const base = r.current.config.tracks;
+    act(() => r.current.tc.setPatternLength(4, base));
+    expect(r.current.config.tracks.bd.steps).toBe('1111');
+    act(() => r.current.tc.setPatternLength(16, base));
+    expect(r.current.config.tracks.bd.steps).toBe('1'.repeat(16));
+    expect(r.current.config.tracks.sd.steps).toHaveLength(12);
+  });
+
   it('setTrackLength clamps to the pattern length', () => {
     const r = setup();
     act(() => r.current.tc.setTrackLength('bd', 64));
