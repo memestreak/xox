@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  useMemo, useRef, useState,
+  useEffect, useMemo, useRef, useState,
 } from 'react';
 import { SequencerProvider, useSequencer }
   from './SequencerContext';
@@ -26,6 +26,11 @@ const categories = getCategorizedPatterns(
 
 function SequencerInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  // MOCK: ?mock=A|B|C picks a dropdown style (globals.css).
+  useEffect(() => {
+    const v = new URLSearchParams(location.search).get('mock');
+    if (v) document.documentElement.dataset.mock = v;
+  }, []);
   const { state, actions, meta } = useSequencer();
   const { selectedPatternId } = state;
   const { setPattern } = actions;

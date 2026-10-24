@@ -354,7 +354,7 @@ export default function PatternPicker({
             : 'Pattern'
         }
         className={
-          'ss-key h-9 w-full pl-3 pr-2.5 text-sm font-medium'
+          'ss-key ss-dropdown h-9 w-full pl-3 pr-2.5 text-sm font-medium'
           + ' flex items-center justify-between gap-2'
           + (isOpen ? ' border-accent' : ' border-edge')
         }
