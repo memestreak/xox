@@ -136,8 +136,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 0 10px 0 12px;
+  gap: 6px;
+  padding: 0 8px 0 10px;
   border: 1px solid var(--color-line);
   border-radius: 6px;
   background: var(--color-well);
@@ -152,6 +152,15 @@ body {
   text-shadow: 0 0 6px rgb(245 160 58 / 0.35);
   cursor: pointer;
   transition: border-color 120ms;
+}
+/* Below lg the strip's cells are narrow (Kit is 2 of 6
+   columns), so the readout runs a little tighter. */
+@media (max-width: 1023.98px) {
+  .ss-lcd-select {
+    padding: 0 7px 0 9px;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
 }
 .ss-lcd-select:hover:not(:disabled) {
   border-color: #57514a;

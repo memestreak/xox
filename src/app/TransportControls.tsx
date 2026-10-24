@@ -158,7 +158,7 @@ function TransportControlsInner({
                 );
                 if (kit) setKit(kit);
               }}
-              className="h-9 w-full lg:w-24"
+              className="h-9 w-full lg:w-28"
             />
           </Tooltip>
         </PanelSection>
