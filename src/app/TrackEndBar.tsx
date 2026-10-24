@@ -16,11 +16,16 @@ import {
   type CellBox,
 } from './gridUtils';
 
-/** Widest the visible bar gets, px. */
-const BAR_MAX_PX = 6;
-/** Narrowest the visible bar gets, px. */
-const BAR_MIN_PX = 3;
-/** Space kept between the bar and each pad, px. */
+/** Width of the visible bar, px. */
+const BAR_PX = 6; // matches before:w-1.5 below
+/**
+ * The bar's left edge sits where a bar this many px
+ * wide (minus clearance) would be centered in the gap;
+ * the bar then extends rightward from there.
+ */
+const ANCHOR_MAX_PX = 6;
+const ANCHOR_MIN_PX = 3;
+/** Space kept between the bar's left edge and the pad, px. */
 const BAR_CLEARANCE_PX = 1;
 
 /**
@@ -103,12 +108,18 @@ function TrackEndBarInner({
   const spot = handleOnPage
     ? lengthHandleSpot(cells, countOnPage)
     : null;
-  const barPx = spot
+  // Offset of the bar's left edge from the handle's
+  // center. The bar keeps its full width and grows
+  // rightward from that edge.
+  const anchorPx = spot
     ? Math.min(
-      BAR_MAX_PX,
-      Math.max(BAR_MIN_PX, spot.gap - 2 * BAR_CLEARANCE_PX),
+      ANCHOR_MAX_PX,
+      Math.max(
+        ANCHOR_MIN_PX, spot.gap - 2 * BAR_CLEARANCE_PX,
+      ),
     )
-    : BAR_MAX_PX;
+    : BAR_PX;
+  const barLeftPx = -anchorPx / 2;
   const position: React.CSSProperties = spot
     ? { left: spot.x, top: spot.top, height: spot.height }
     : { left: `${(countOnPage / 16) * 100}%` };
@@ -191,7 +202,7 @@ function TrackEndBarInner({
       style={{
         ...position,
         touchAction: 'none',
-        ['--bar-w' as string]: `${barPx}px`,
+        ['--bar-left' as string]: `${barLeftPx}px`,
       }}
       className={
         'absolute top-0 h-full w-4'
@@ -200,9 +211,8 @@ function TrackEndBarInner({
           ? ' cursor-col-resize'
           : ' cursor-default')
         + ' before:absolute before:inset-y-0'
-        + ' before:left-1/2'
-        + ' before:-translate-x-1/2'
-        + ' before:w-(--bar-w) before:rounded-full'
+        + ' before:left-[calc(50%+var(--bar-left))]'
+        + ' before:w-1.5 before:rounded-full'
         + ' before:transition-colors'
         + (isDragging
           ? ' before:bg-ink'
