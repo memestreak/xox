@@ -363,7 +363,7 @@ export default function LcdSelect<T extends string>({
           aria-label={ariaLabel}
           aria-labelledby={ariaLabelledBy}
           data-select-open=""
-          className="ss-lcd-list"
+          className="ss-lcd-list ss-scroll"
           onPointerLeave={() => {
             setHintArmed(false);
             setHintRested(false);

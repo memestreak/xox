@@ -102,13 +102,13 @@ export default function HelpModal({
         if (e.key === 'Escape') onClose();
       }}
       className={
-        'ss-menu backdrop:bg-black/70 text-ink p-0'
+        'ss-menu backdrop:bg-black/70 text-ink p-0 overflow-hidden'
         + ' m-0 w-full max-w-none h-dvh max-h-none rounded-none'
         + ' sm:m-auto sm:max-w-[760px] sm:h-fit'
         + ' sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl'
       }
     >
-      <div className="flex flex-col h-full sm:h-auto sm:max-h-[calc(100dvh-2rem)]">
+      <div className="flex flex-col h-full sm:h-auto sm:max-h-[calc(100dvh-2rem-2px)]">
         <div className="flex items-center justify-between pt-[max(1rem,env(safe-area-inset-top))] pr-3 pl-4 sm:pt-[18px] sm:pr-5 sm:pl-6">
           <div className="flex items-baseline gap-3">
             <h2 id="help-title" className="ss-cap text-[22px]">
@@ -171,7 +171,7 @@ export default function HelpModal({
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={0}
           aria-label="Help content"
-          className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] focus-visible:outline-none"
+          className="ss-scroll flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] focus-visible:outline-none"
         >
           <div className="grid">
             {tabs.map((tab, i) => (
