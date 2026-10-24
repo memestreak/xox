@@ -52,13 +52,10 @@ function renderControls(page = makePage()) {
 }
 
 describe('GlobalControls', () => {
-  it('renders steps dropdown', () => {
+  it('renders the steps entry', () => {
     renderControls();
-    const select = screen.getByRole('combobox');
-    expect(select).toBeDefined();
-    expect(
-      (select as HTMLSelectElement).value
-    ).toBe('16');
+    const input = screen.getByRole('spinbutton', { name: 'Steps' });
+    expect((input as HTMLInputElement).value).toBe('16');
   });
 
   it('renders swing knob', () => {
@@ -73,13 +70,14 @@ describe('GlobalControls', () => {
       .not.toBeInTheDocument();
   });
 
-  it('steps change calls setPatternLength', () => {
+  it('typing a length calls setPatternLength', () => {
     renderControls();
-    const select = screen.getByRole('combobox');
-    fireEvent.change(select, {
-      target: { value: '8' },
-    });
-    expect(mockSetPatternLength).toHaveBeenCalledWith(8);
+    const input = screen.getByRole('spinbutton', { name: 'Steps' });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '8' } });
+    expect(mockSetPatternLength).toHaveBeenCalledWith(
+      8, expect.anything()
+    );
   });
 
   it('swing knob calls setSwing', () => {
@@ -90,13 +88,11 @@ describe('GlobalControls', () => {
     expect(mockSetSwing).toHaveBeenCalled();
   });
 
-  it('renders 64 step options', () => {
+  it('limits the steps entry to 1..64', () => {
     renderControls();
-    const select = screen.getByRole('combobox');
-    const options = select.querySelectorAll('option');
-    expect(options.length).toBe(64);
-    expect(options[0].value).toBe('1');
-    expect(options[63].value).toBe('64');
+    const input = screen.getByRole('spinbutton', { name: 'Steps' });
+    expect(input.getAttribute('aria-valuemin')).toBe('1');
+    expect(input.getAttribute('aria-valuemax')).toBe('64');
   });
 
   it('renders the Follow toggle in the Steps cell', () => {

@@ -8,6 +8,7 @@ import Tooltip from './Tooltip';
 import { getPatternLength } from './types';
 import { FollowToggle, PageLights } from './PageIndicator';
 import type { PageNav } from './PageIndicator';
+import StepsEntry from './StepsEntry';
 
 interface GlobalControlsProps {
   page: PageNav;
@@ -23,15 +24,6 @@ interface GlobalControlsProps {
 function GlobalControlsInner({ page }: GlobalControlsProps) {
   const { state, actions, meta } = useSequencer();
   const patternLength = getPatternLength(meta.config.tracks);
-
-  const handlePatternLength = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      actions.setPatternLength(
-        parseInt(e.target.value, 10)
-      );
-    },
-    [actions]
-  );
 
   const handleSwing = useCallback(
     (v: number) => {
@@ -58,23 +50,11 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
               setPage={page.setPage}
             />
           </div>
-          <Tooltip tooltipKey="steps" position="bottom">
-            <select
-              id="global-steps"
-              value={patternLength}
-              onChange={handlePatternLength}
-              className="ss-key ss-select h-9 w-full pl-3 font-mono text-sm"
-            >
-              {Array.from(
-                { length: 64 },
-                (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}
-                  </option>
-                )
-              )}
-            </select>
-          </Tooltip>
+          <StepsEntry
+            value={patternLength}
+            tracks={meta.config.tracks}
+            setPatternLength={actions.setPatternLength}
+          />
           <FollowToggle
             autoFollow={page.autoFollow}
             setAutoFollow={page.setAutoFollow}

@@ -6,7 +6,7 @@
   "bpm": "Drag up / down to change; click to type",
   "swing": "Drag to adjust swing timing",
   "master": "Volume; double-click to mute",
-  "steps": "Set pattern length (1–64)",
+  "steps": "Pattern length (1–64): drag, use the arrows, or click to type; double-click resets",
   "kit": "Choose sample kit",
   "pattern": "Browse preset patterns (P)",
   "settings": "Settings",

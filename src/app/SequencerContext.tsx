@@ -94,7 +94,10 @@ interface SequencerActions {
   setGain: (trackId: TrackId, value: number) => void;
   setPan: (trackId: TrackId, value: number) => void;
   toggleFreeRun: (trackId: TrackId) => void;
-  setPatternLength: (length: number) => void;
+  setPatternLength: (
+    length: number,
+    base?: Record<TrackId, TrackConfig>
+  ) => void;
   setTrackLength: (
     trackId: TrackId, length: number
   ) => void;

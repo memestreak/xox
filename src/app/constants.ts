@@ -83,6 +83,17 @@ export const BPM_DRAG_PX_PER_STEP = 4;
 export const BPM_DRAG_STEP = 1;
 /** Tempo change per drag step with Shift held (BPM). */
 export const BPM_DRAG_FINE_STEP = 0.1;
+
+// ── Steps entry ─────────────────────────────────────
+/** Vertical px of drag per step on the Steps field. */
+export const STEPS_DRAG_PX_PER_STEP = 4;
+/** Steps per ↑/↓ press with Shift held (one beat). */
+export const STEPS_SHIFT_STEP = 4;
+/** Hold an arrow key this long before it repeats. */
+export const STEPS_REPEAT_DELAY_MS = 400;
+/** Time between repeats while an arrow is held. */
+export const STEPS_REPEAT_INTERVAL_MS = 80;
+
 /** Maximum swing amount. */
 export const SWING_MAX = 100;
 /** Columns the pattern chooser's list aims for. */

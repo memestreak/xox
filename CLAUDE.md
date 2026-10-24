@@ -157,6 +157,12 @@ Supporting files:
 - `MidiEngine.ts` / `MidiContext.tsx` — Web MIDI note
   output; settings live in `SettingsModal.tsx`
 - `TempoController.tsx` — BPM input (clamped 20-300)
+- `StepsEntry.tsx` — pattern length (1-64): LCD field
+  plus a split ▲/▼ key; drag, hold-to-repeat, ↑/↓
+  (Shift = 4), typing; double-click resets to 16.
+  Each gesture passes the tracks
+  from its start as `setPatternLength(n, base)`, so
+  going down and back up within it keeps the steps
 - `SettingsPopover.tsx` — Gear icon settings menu with
   Copy share link
 - `HelpContext.tsx` / `HelpModal.tsx` — Help dialog

@@ -223,6 +223,19 @@ const MOUSE_TAB: HelpTab = {
       ],
     },
     {
+      title: 'Steps',
+      rows: [
+        { gesture: 'drag up / down', text: 'Lengthen / shorten the pattern' },
+        { gesture: 'click or hold ▲ ▼', text: 'One step, or keep going' },
+        {
+          keys: ['↑', '↓'], text: 'One step (in the field)',
+          note: '(Shift: 4)',
+        },
+        { gesture: 'click', text: 'Type a length' },
+        { gesture: 'double-click', text: 'Reset to 16' },
+      ],
+    },
+    {
       title: 'Fill and Temp keys',
       rows: [
         { gesture: 'hold FILL', text: 'Fill while held' },
@@ -277,6 +290,14 @@ const TOUCH_TAB: HelpTab = {
       rows: [
         { gesture: 'drag up / down', text: 'Raise / lower the tempo' },
         { gesture: 'tap', text: 'Type a tempo' },
+      ],
+    },
+    {
+      title: 'Steps',
+      rows: [
+        { gesture: 'drag up / down', text: 'Lengthen / shorten the pattern' },
+        { gesture: 'tap or hold ▲ ▼', text: 'One step, or keep going' },
+        { gesture: 'tap', text: 'Type a length' },
       ],
     },
     {
