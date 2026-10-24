@@ -200,7 +200,7 @@ function KnobInner({
             ? `${descriptionId} ${extraDescribedBy}`
             : descriptionId
         }
-        className="cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-full"
+        className="cursor-ns-resize outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-full"
         style={{ touchAction: 'manipulation' }}
         onClick={resetToDefault}
         onPointerDown={onPointerDown}
