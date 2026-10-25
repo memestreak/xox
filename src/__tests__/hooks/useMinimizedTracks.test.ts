@@ -175,4 +175,170 @@ describe('useMinimizedTracks', () => {
       expect(result.current.minimizedTracks.size).toBe(0);
     });
   });
+  describe('auto-minimize', () => {
+    interface Props {
+      tracks: Record<TrackId, TrackConfig>;
+      autoMinimize: boolean;
+      loadSeq: number;
+    }
+
+    function setupAuto(initial: Partial<Props> = {}) {
+      return renderHook(
+        (props: Props) => useMinimizedTracks(props),
+        {
+          initialProps: {
+            tracks: makeTracks(['bd', 'oh']),
+            autoMinimize: true,
+            loadSeq: 0,
+            ...initial,
+          },
+        }
+      );
+    }
+
+    it('does nothing while the setting is off', () => {
+      const { result, rerender } = setupAuto({
+        autoMinimize: false,
+      });
+      expect(result.current.minimizedTracks.size).toBe(0);
+      rerender({
+        tracks: makeTracks(['oh']),
+        autoMinimize: false, loadSeq: 0,
+      });
+      expect(result.current.minimizedTracks.size).toBe(0);
+    });
+
+    it('minimizes every empty track when turned on', () => {
+      const tracks = makeTracks(['bd', 'oh']);
+      const { result, rerender } = setupAuto({
+        tracks, autoMinimize: false,
+      });
+      rerender({ tracks, autoMinimize: true, loadSeq: 0 });
+      expect(result.current.minimizedTracks.size).toBe(9);
+    });
+
+    it('minimizes a track that loses its last step', () => {
+      const tracks = makeTracks(['bd', 'oh']);
+      const { result, rerender } = setupAuto({ tracks });
+      act(() => result.current.restoreAllTracks());
+      rerender({
+        tracks: { ...tracks, bd: { steps: '0'.repeat(16) } },
+        autoMinimize: true, loadSeq: 0,
+      });
+      expect(sorted(result.current.minimizedTracks))
+        .toEqual(['bd']);
+    });
+
+    it('leaves a restored empty track alone after edits', () => {
+      const tracks = makeTracks(['bd', 'oh']);
+      const { result, rerender } = setupAuto({ tracks });
+      act(() => result.current.restoreTrack('sd'));
+      rerender({
+        tracks: { ...tracks, oh: { steps: '1'.repeat(16) } },
+        autoMinimize: true, loadSeq: 0,
+      });
+      expect(result.current.minimizedTracks.has('sd'))
+        .toBe(false);
+      expect(result.current.minimizedTracks.size).toBe(8);
+    });
+
+    it('minimizes every empty track on a pattern load', () => {
+      const tracks = makeTracks(['bd', 'oh']);
+      const { result, rerender } = setupAuto({ tracks });
+      act(() => result.current.restoreAllTracks());
+      // Same tracks object: reloading the same preset.
+      rerender({ tracks, autoMinimize: true, loadSeq: 1 });
+      expect(result.current.minimizedTracks.size).toBe(9);
+    });
+
+    it('waits while the pointer is on that row', () => {
+      const tracks = makeTracks(['bd', 'oh']);
+      const { result, rerender } = setupAuto({ tracks });
+      act(() => result.current.restoreAllTracks());
+      act(() => result.current.holdAutoMinimize('bd'));
+      rerender({
+        tracks: { ...tracks, bd: { steps: '0'.repeat(16) } },
+        autoMinimize: true, loadSeq: 0,
+      });
+      expect(result.current.minimizedTracks.size).toBe(0);
+      // Moving to another row lets BD go
+      act(() => result.current.holdAutoMinimize('oh'));
+      expect(sorted(result.current.minimizedTracks))
+        .toEqual(['bd']);
+    });
+
+    it('a track off the hovered row minimizes at once', () => {
+      const tracks = makeTracks(['bd', 'oh']);
+      const { result, rerender } = setupAuto({ tracks });
+      act(() => result.current.restoreAllTracks());
+      act(() => result.current.holdAutoMinimize('oh'));
+      rerender({
+        tracks: { ...tracks, bd: { steps: '0'.repeat(16) } },
+        autoMinimize: true, loadSeq: 0,
+      });
+      expect(sorted(result.current.minimizedTracks))
+        .toEqual(['bd']);
+    });
+
+    it("'all' holds every row until released", () => {
+      const tracks = makeTracks(['bd', 'oh']);
+      const { result, rerender } = setupAuto({ tracks });
+      act(() => result.current.restoreAllTracks());
+      act(() => result.current.holdAutoMinimize('all'));
+      rerender({
+        tracks: makeTracks([]),
+        autoMinimize: true, loadSeq: 0,
+      });
+      expect(result.current.minimizedTracks.size).toBe(0);
+      act(() => result.current.holdAutoMinimize(null));
+      expect(sorted(result.current.minimizedTracks))
+        .toEqual(['bd', 'oh']);
+    });
+
+    it('skips a waiting track that got a step back', () => {
+      const tracks = makeTracks(['bd', 'oh']);
+      const { result, rerender } = setupAuto({ tracks });
+      act(() => result.current.restoreAllTracks());
+      act(() => result.current.holdAutoMinimize('bd'));
+      const cleared = {
+        ...tracks, bd: { steps: '0'.repeat(16) },
+      };
+      rerender({
+        tracks: cleared, autoMinimize: true, loadSeq: 0,
+      });
+      rerender({
+        tracks: { ...cleared, bd: { steps: '1'.repeat(16) } },
+        autoMinimize: true, loadSeq: 0,
+      });
+      act(() => result.current.holdAutoMinimize(null));
+      expect(result.current.minimizedTracks.size).toBe(0);
+    });
+
+    it('a pattern load applies even while held', () => {
+      const tracks = makeTracks(['bd', 'oh']);
+      const { result, rerender } = setupAuto({ tracks });
+      act(() => result.current.restoreAllTracks());
+      act(() => result.current.holdAutoMinimize('all'));
+      rerender({
+        tracks: makeTracks(['bd']),
+        autoMinimize: true, loadSeq: 1,
+      });
+      expect(result.current.minimizedTracks.size).toBe(10);
+    });
+
+    it('reset opens every row, even when tracks empty', () => {
+      const { result, rerender } = setupAuto();
+      expect(result.current.minimizedTracks.size).toBe(9);
+      // clearAll empties the tracks and resets in one
+      // batch.
+      act(() => {
+        result.current.reset();
+        rerender({
+          tracks: makeTracks([]),
+          autoMinimize: true, loadSeq: 0,
+        });
+      });
+      expect(result.current.minimizedTracks.size).toBe(0);
+    });
+  });
 });

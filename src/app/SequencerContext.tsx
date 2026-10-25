@@ -21,6 +21,10 @@ import { usePatternMode } from './hooks/usePatternMode';
 import { useTrackConfig } from './hooks/useTrackConfig';
 import { usePlayback } from './hooks/usePlayback';
 import { useMinimizedTracks } from './hooks/useMinimizedTracks';
+import type { AutoMinimizeHold } from './hooks/useMinimizedTracks';
+import {
+  setAutoMinimize, useAutoMinimizeSetting,
+} from './hooks/useAutoMinimizeSetting';
 import type {
   Kit,
   PatternMode,
@@ -77,6 +81,11 @@ interface SequencerState {
   minimizedTracks: ReadonlySet<TrackId>;
   /** Empty tracks that minimizeEmptyTracks would add. */
   minimizableCount: number;
+  /**
+   * "Auto-minimize empty tracks" setting. Per device
+   * (localStorage), not in SequencerConfig.
+   */
+  autoMinimize: boolean;
 }
 
 interface SequencerActions {
@@ -143,6 +152,12 @@ interface SequencerActions {
   minimizeEmptyTracks: () => void;
   restoreTrack: (trackId: TrackId) => void;
   restoreAllTracks: () => void;
+  setAutoMinimize: (value: boolean) => void;
+  /**
+   * Where the pointer is on the grid: the hovered
+   * track's row, 'all' during a press, or null.
+   */
+  holdAutoMinimize: (hold: AutoMinimizeHold) => void;
 }
 
 interface SequencerMeta {
@@ -206,6 +221,17 @@ export function SequencerProvider({
   const [selectedPatternId, setSelectedPatternId] =
     useState(patternsData.patterns[0].id);
 
+  // Counts whole-pattern loads, for auto-minimize. Every
+  // load sets the selected pattern id, so loads go
+  // through this setter; step edits use the plain one.
+  const [loadSeq, setLoadSeq] = useState(0);
+  const setSelectedPatternIdOnLoad = useCallback<
+    React.Dispatch<React.SetStateAction<string>>
+  >(value => {
+    setSelectedPatternId(value);
+    setLoadSeq(n => n + 1);
+  }, []);
+
   // Shared refs owned by orchestrator (breaks
   // circular deps between hooks)
   const configRef = useRef(config);
@@ -268,7 +294,7 @@ export function SequencerProvider({
           : null
       );
       setConfig(result.config);
-      setSelectedPatternId('custom');
+      setSelectedPatternIdOnLoad('custom');
       return true;
     };
 
@@ -279,7 +305,9 @@ export function SequencerProvider({
         const saved = loadSession();
         if (saved) {
           setConfig(saved.config);
-          setSelectedPatternId(saved.selectedPatternId);
+          setSelectedPatternIdOnLoad(
+            saved.selectedPatternId
+          );
         }
       }
       setRestored(true);
@@ -298,7 +326,7 @@ export function SequencerProvider({
         'hashchange', onHashChange
       );
     };
-  }, []);
+  }, [setSelectedPatternIdOnLoad]);
 
   useEffect(() => {
     if (!restored) return;
@@ -347,7 +375,7 @@ export function SequencerProvider({
     isPlayingRef,
     selectedPatternId,
     setConfig,
-    setSelectedPatternId,
+    setSelectedPatternId: setSelectedPatternIdOnLoad,
   });
 
   const playback = usePlayback({
@@ -355,7 +383,7 @@ export function SequencerProvider({
     configRef,
     isPlayingRef,
     setConfig,
-    setSelectedPatternId,
+    setSelectedPatternId: setSelectedPatternIdOnLoad,
     fillActiveRef: fill.fillActiveRef,
     pendingPatternRef: pm.pendingPatternRef,
     tempStateRef: pm.tempStateRef,
@@ -368,8 +396,11 @@ export function SequencerProvider({
     onPlaybackStop: pm.onPlaybackStop,
   });
 
+  const autoMinimize = useAutoMinimizeSetting();
   const minimize = useMinimizedTracks({
     tracks: config.tracks,
+    autoMinimize,
+    loadSeq,
   });
 
   // ─── clearAll composes all hook resets ────────
@@ -433,12 +464,14 @@ export function SequencerProvider({
     importNotice,
     minimizedTracks,
     minimizableCount,
+    autoMinimize,
   }), [
     isPlaying, config.bpm, currentKit, trackStates,
     isLoaded, loadError, config.swing, isFillActive,
     isFillLatched, fillMode, patternMode, tempState,
     isTempLatched, selectedPatternId, pendingPatternId,
     importNotice, minimizedTracks, minimizableCount,
+    autoMinimize,
   ]);
 
   const {
@@ -450,6 +483,7 @@ export function SequencerProvider({
   const { toggleFillLatch, setFillHeld } = fill;
   const {
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
+    holdAutoMinimize,
   } = minimize;
   const {
     toggleStep, setStep, setTrackSteps, toggleMute,
@@ -492,6 +526,8 @@ export function SequencerProvider({
     minimizeEmptyTracks,
     restoreTrack,
     restoreAllTracks,
+    setAutoMinimize,
+    holdAutoMinimize,
   }), [
     togglePlay, setBpm, setKit, setPattern, toggleStep,
     setStep, setTrackSteps, toggleMute, toggleSolo,
@@ -502,6 +538,7 @@ export function SequencerProvider({
     clearParameterLock, setPatternMode, toggleTemp,
     toggleTempLatch, playPreview, dismissError, dismissImportNotice,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
+    holdAutoMinimize,
   ]);
 
   const meta = useMemo<SequencerMeta>(() => ({

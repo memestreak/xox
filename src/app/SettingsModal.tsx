@@ -14,6 +14,9 @@ import type {
 } from './types';
 import { midiEngine } from './MidiEngine';
 import LcdSelect from './LcdSelect';
+import {
+  setAutoMinimize, useAutoMinimizeSetting,
+} from './hooks/useAutoMinimizeSetting';
 
 const NOTE_LENGTH_OPTIONS: {
   label: string;
@@ -149,7 +152,9 @@ function OptionsTab({
   tooltipsEnabled: boolean;
   setTooltipsEnabled: (v: boolean) => void;
 }) {
+  const autoMinimize = useAutoMinimizeSetting();
   return (
+    <div className="flex flex-col gap-3">
     <label className="flex items-center gap-3">
       <input
         type="checkbox"
@@ -162,6 +167,21 @@ function OptionsTab({
       />
       <span className="text-sm">Show tooltips</span>
     </label>
+    <label className="flex items-center gap-3">
+      <input
+        type="checkbox"
+        checked={autoMinimize}
+        onChange={(e) =>
+          setAutoMinimize(e.target.checked)
+        }
+        aria-label="Auto-minimize empty tracks"
+        className="accent-[#f0662a] w-4 h-4"
+      />
+      <span className="text-sm">
+        Auto-minimize empty tracks
+      </span>
+    </label>
+    </div>
   );
 }
 
