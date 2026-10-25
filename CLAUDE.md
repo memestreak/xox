@@ -98,7 +98,9 @@ from the URL.
   a step turned on while Fill is active gets the Fill
   condition (reads `fillActiveRef`); turning a step
   off clears its Fill condition (probability and
-  cycle stay)
+  cycle stay). Step edits and track volume/pan
+  changes mark the pattern `custom`; mute, solo and
+  the accent level don't
 - `usePlayback.ts` — audio engine, handleStep, spacebar
 - `useSelection.ts` — multi-step selection (Ctrl/Shift)
 - `useDragPaint.ts` — pointer drag gestures on the grid

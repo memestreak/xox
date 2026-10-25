@@ -233,6 +233,46 @@ describe('action isolation', () => {
     }
   });
 
+  it('setGain and setPan on a track mark the pattern'
+    + ' custom', () => {
+    for (const change of [
+      (r: ReturnType<typeof renderSequencer>['result']) =>
+        r.current.actions.setGain('bd', 0.4),
+      (r: ReturnType<typeof renderSequencer>['result']) =>
+        r.current.actions.setPan('sd', 0.2),
+    ]) {
+      const { result } = renderSequencer();
+      expect(result.current.state.selectedPatternId)
+        .not.toBe('custom');
+      act(() => change(result));
+      expect(result.current.state.selectedPatternId)
+        .toBe('custom');
+    }
+  });
+
+  it('changing the accent level keeps the preset name',
+    () => {
+      const { result } = renderSequencer();
+      const id = result.current.state.selectedPatternId;
+      act(() => {
+        result.current.actions.setGain('ac', 0.8);
+      });
+      expect(result.current.state.selectedPatternId)
+        .toBe(id);
+    }
+  );
+
+  it('mute and solo keep the preset name', () => {
+    const { result } = renderSequencer();
+    const id = result.current.state.selectedPatternId;
+    act(() => {
+      result.current.actions.toggleMute('bd');
+      result.current.actions.toggleSolo('sd');
+    });
+    expect(result.current.state.selectedPatternId)
+      .toBe(id);
+  });
+
   it('toggleMute flips only targeted track', () => {
     const { result } = renderSequencer();
     expect(
