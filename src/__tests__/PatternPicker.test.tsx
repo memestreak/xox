@@ -447,9 +447,11 @@ describe('PatternPicker', () => {
       const user = userEvent.setup();
       renderPicker('rock-1*');
       await user.keyboard('p');
+      // The cursor starts there, but it isn't shown as
+      // the selected (playing) pattern.
       expect(option('Rock 1')).toHaveFocus();
       expect(option('Rock 1')).toHaveAttribute(
-        'aria-selected', 'true',
+        'aria-selected', 'false',
       );
     });
 

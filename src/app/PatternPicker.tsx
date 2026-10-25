@@ -470,8 +470,13 @@ export default function PatternPicker({
                 className="gap-px"
               >
                 {patternsToShow.map((p, i) => {
-                  const isActive =
-                    p.id === currentPatternId;
+                  // An edited preset isn't what's playing,
+                  // so it doesn't get the amber bar; it
+                  // gets the hover tint, where the cursor
+                  // starts (Enter reloads it).
+                  const isActive = p.id === selectedPatternId;
+                  const isEdited = !isActive
+                    && p.id === currentPatternId;
                   const isCued = p.id === pendingPatternId;
                   return (
                     <button
@@ -499,7 +504,8 @@ export default function PatternPicker({
                         + (isActive
                           ? ' bg-lcd text-[#1a0f03] font-semibold'
                             + ' shadow-[0_0_8px_rgb(245_160_58/0.35)]'
-                          : ' text-lcd hover:bg-lcd/10')
+                          : ' text-lcd hover:bg-lcd/10'
+                            + (isEdited ? ' bg-lcd/10' : ''))
                       }
                     >
                       <span
