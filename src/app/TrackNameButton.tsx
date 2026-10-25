@@ -167,10 +167,7 @@ function TrackNameButtonInner({
             + ' focus-visible:outline-accent'
             + (isTriggered
               ? ' text-lcd bg-accent/20'
-              : isFreeRun
-                ? ' text-accent-hi bg-accent/10'
-                : ' text-ink'
-                  + ' hover:bg-raised')
+              : ' text-ink hover:bg-raised')
           }
         >
           {trackName}

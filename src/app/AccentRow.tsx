@@ -97,9 +97,7 @@ function AccentRowInner({
               + ' tracking-[0.08em] rounded px-1 py-1'
               + ' transition-colors cursor-pointer'
               + ' font-display'
-              + (isFreeRun
-                ? ' text-accent-hi'
-                : ' text-muted')
+              + ' text-muted'
             }
           >
             AC
@@ -137,9 +135,7 @@ function AccentRowInner({
                   + ' leading-none rounded px-1 py-1'
                   + ' transition-colors cursor-pointer'
                   + ' font-display'
-                  + (isFreeRun
-                    ? ' text-accent-hi'
-                    : ' text-muted')
+                  + ' text-muted'
                 }
               >
                 AC
