@@ -1,5 +1,6 @@
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef,
+  useState,
 } from 'react';
 import { shouldIgnoreShortcut } from '../keyboardUtils';
 import { TRACKS } from '../types';
@@ -49,13 +50,6 @@ export interface UseMinimizedTracksReturn {
   minimizeEmptyTracks: () => void;
   restoreTrack: (trackId: TrackId) => void;
   restoreAllTracks: () => void;
-  /**
-   * While held (pointer over the grid), a track that
-   * loses its last step waits to be auto-minimized, so
-   * rows don't move under the pointer. Releasing applies
-   * what waited.
-   */
-  holdAutoMinimize: (held: boolean) => void;
   /** Restores every row (Reset). */
   reset: () => void;
 }
@@ -135,33 +129,12 @@ export function useMinimizedTracks({
   }, []);
 
   // ─── Auto-minimize ───────────────────────────
-  // Tracks that lost their last step while the pointer
-  // was over the grid.
-  const pendingRef = useRef<Set<TrackId>>(new Set());
-  const heldRef = useRef(false);
-
   const addToMinimized = useCallback((ids: TrackId[]) => {
     setMinimized(prev => {
       if (ids.every(id => prev.has(id))) return prev;
       return new Set([...prev, ...ids]);
     });
   }, []);
-
-  const applyPending = useCallback(() => {
-    const stillEmpty = [...pendingRef.current].filter(
-      id => isEmptyTrack(tracksRef.current[id])
-    );
-    pendingRef.current = new Set();
-    if (stillEmpty.length > 0) addToMinimized(stillEmpty);
-  }, [addToMinimized]);
-
-  const holdAutoMinimize = useCallback(
-    (held: boolean) => {
-      heldRef.current = held;
-      if (!held) applyPending();
-    },
-    [applyPending]
-  );
 
   // Reset opens every row, even with auto-minimize on.
   // Bumped by reset() so the effect below doesn't take
@@ -176,7 +149,9 @@ export function useMinimizedTracks({
   const seenLoadSeqRef = useRef(loadSeq);
   const seenResetSeqRef = useRef(resetSeq);
   const wasAutoRef = useRef(false);
-  useEffect(() => {
+  // A layout effect, so a row that loses its last step
+  // is minimized before the browser paints it full.
+  useLayoutEffect(() => {
     const prevTracks = prevTracksRef.current;
     prevTracksRef.current = tracks;
     const loaded = loadSeq !== seenLoadSeqRef.current;
@@ -186,32 +161,19 @@ export function useMinimizedTracks({
     const turnedOn = autoMinimize && !wasAutoRef.current;
     wasAutoRef.current = autoMinimize;
 
-    if (!autoMinimize || wasReset) {
-      pendingRef.current = new Set();
-      return;
-    }
-    // A new pattern (or the setting just turned on):
-    // every row may change anyway, so don't wait for
-    // the pointer to leave.
+    if (!autoMinimize || wasReset) return;
+    // A new pattern, or the setting just turned on.
     if (loaded || turnedOn) {
-      pendingRef.current = new Set();
       addToMinimized(emptyTrackIds(tracks));
       return;
     }
-    for (const id of MINIMIZABLE) {
-      if (
-        prevTracks[id] !== tracks[id]
-        && !isEmptyTrack(prevTracks[id])
-        && isEmptyTrack(tracks[id])
-      ) {
-        pendingRef.current.add(id);
-      }
-    }
-    if (!heldRef.current) applyPending();
-  }, [
-    tracks, loadSeq, resetSeq, autoMinimize,
-    addToMinimized, applyPending,
-  ]);
+    const emptied = MINIMIZABLE.filter(id =>
+      prevTracks[id] !== tracks[id]
+      && !isEmptyTrack(prevTracks[id])
+      && isEmptyTrack(tracks[id])
+    );
+    if (emptied.length > 0) addToMinimized(emptied);
+  }, [tracks, loadSeq, resetSeq, autoMinimize, addToMinimized]);
 
   // H minimizes, Shift+H restores all. ⌘H / Ctrl+H /
   // Alt+H are left to the browser and OS.
@@ -240,7 +202,6 @@ export function useMinimizedTracks({
     minimizeEmptyTracks,
     restoreTrack,
     restoreAllTracks,
-    holdAutoMinimize,
     reset,
   };
 }

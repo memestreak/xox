@@ -251,52 +251,6 @@ describe('useMinimizedTracks', () => {
       expect(result.current.minimizedTracks.size).toBe(9);
     });
 
-    it('waits while held, then minimizes on release', () => {
-      const tracks = makeTracks(['bd', 'oh']);
-      const { result, rerender } = setupAuto({ tracks });
-      act(() => result.current.restoreAllTracks());
-      act(() => result.current.holdAutoMinimize(true));
-      rerender({
-        tracks: { ...tracks, bd: { steps: '0'.repeat(16) } },
-        autoMinimize: true, loadSeq: 0,
-      });
-      expect(result.current.minimizedTracks.size).toBe(0);
-      act(() => result.current.holdAutoMinimize(false));
-      expect(sorted(result.current.minimizedTracks))
-        .toEqual(['bd']);
-    });
-
-    it('skips a held track that gained steps again', () => {
-      const tracks = makeTracks(['bd', 'oh']);
-      const { result, rerender } = setupAuto({ tracks });
-      act(() => result.current.restoreAllTracks());
-      act(() => result.current.holdAutoMinimize(true));
-      const cleared = {
-        ...tracks, bd: { steps: '0'.repeat(16) },
-      };
-      rerender({
-        tracks: cleared, autoMinimize: true, loadSeq: 0,
-      });
-      rerender({
-        tracks: { ...cleared, bd: { steps: '1'.repeat(16) } },
-        autoMinimize: true, loadSeq: 0,
-      });
-      act(() => result.current.holdAutoMinimize(false));
-      expect(result.current.minimizedTracks.size).toBe(0);
-    });
-
-    it('a pattern load applies even while held', () => {
-      const tracks = makeTracks(['bd', 'oh']);
-      const { result, rerender } = setupAuto({ tracks });
-      act(() => result.current.restoreAllTracks());
-      act(() => result.current.holdAutoMinimize(true));
-      rerender({
-        tracks: makeTracks(['bd']),
-        autoMinimize: true, loadSeq: 1,
-      });
-      expect(result.current.minimizedTracks.size).toBe(10);
-    });
-
     it('reset opens every row, even when tracks empty', () => {
       const { result, rerender } = setupAuto();
       expect(result.current.minimizedTracks.size).toBe(9);

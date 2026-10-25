@@ -152,8 +152,6 @@ interface SequencerActions {
   restoreTrack: (trackId: TrackId) => void;
   restoreAllTracks: () => void;
   setAutoMinimize: (value: boolean) => void;
-  /** True while the pointer is over the grid rows. */
-  holdAutoMinimize: (held: boolean) => void;
 }
 
 interface SequencerMeta {
@@ -479,7 +477,6 @@ export function SequencerProvider({
   const { toggleFillLatch, setFillHeld } = fill;
   const {
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
-    holdAutoMinimize,
   } = minimize;
   const {
     toggleStep, setStep, setTrackSteps, toggleMute,
@@ -523,7 +520,6 @@ export function SequencerProvider({
     restoreTrack,
     restoreAllTracks,
     setAutoMinimize,
-    holdAutoMinimize,
   }), [
     togglePlay, setBpm, setKit, setPattern, toggleStep,
     setStep, setTrackSteps, toggleMute, toggleSolo,
@@ -534,7 +530,6 @@ export function SequencerProvider({
     clearParameterLock, setPatternMode, toggleTemp,
     toggleTempLatch, playPreview, dismissError, dismissImportNotice,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
-    holdAutoMinimize,
   ]);
 
   const meta = useMemo<SequencerMeta>(() => ({

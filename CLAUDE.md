@@ -110,9 +110,9 @@ from the URL.
   menu and Settings > Options) also minimizes a track
   that loses its last step and every empty track on a
   pattern load (`loadSeq`, bumped by the setter that
-  pattern loads use). It waits while the pointer is
-  over the rows (`holdAutoMinimize`), so rows never
-  move under it. Reset still opens every row
+  pattern loads use). Both happen at once, even with
+  the pointer on the row (Jeremy asked for instant).
+  Reset still opens every row
 - `useInputModality.ts` — mounted once in `Sequencer`:
   sets `data-input="pointer"` on `<html>` after a
   click/tap and clears it on a navigation key (Tab,
