@@ -1,19 +1,23 @@
+#!/usr/bin/env python3
 """Interactive CLI tool for building XOX drum kits."""
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 
-from .sample_index import build_sample_index
-from .browser import browse_all_slots
-from .assembler import assemble_kit
-from .preview import stop
+from sample_index import build_sample_index
+from browser import browse_all_slots
+from assembler import assemble_kit
+from preview import stop
+from colors import GREEN, RESET
 
-DEFAULT_SAMPLES_ROOT = "/m/media/samples"
-
-GREEN = "\033[32m"
-RESET = "\033[0m"
+DEFAULT_SAMPLES_ROOT = os.path.expanduser("~/media/samples")
+USAGE = (
+    "Usage: build_kit.py [samples_root]"
+    f"  (default: {DEFAULT_SAMPLES_ROOT})"
+)
 
 
 def slugify(text: str) -> str:
@@ -41,10 +45,19 @@ def prompt(message: str, default: str = "",
 
 
 def main() -> None:
+    if len(sys.argv) > 2:
+        print(USAGE, file=sys.stderr)
+        sys.exit(1)
     samples_root = (
-        sys.argv[1] if len(sys.argv) > 1
-        else DEFAULT_SAMPLES_ROOT
+        sys.argv[1] if len(sys.argv) == 2 else DEFAULT_SAMPLES_ROOT
     )
+
+    if not os.path.isdir(samples_root):
+        print(
+            f"Error: not a directory: {samples_root}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     print(f"\nScanning {samples_root}...")
     by_track, all_samples = build_sample_index(samples_root)
@@ -96,4 +109,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        stop()
+        print("\nAborted.")
+        sys.exit(130)

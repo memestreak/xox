@@ -46,6 +46,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Worktree build artifacts:
     ".worktrees/**",
+    // Local Vercel build output:
+    ".vercel/**",
   ]),
 ]);
 

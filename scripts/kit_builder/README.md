@@ -8,11 +8,8 @@ and assemble complete kits.
 ## Usage
 
 ```bash
-npm run kit:build                       # default: /m/media/samples
-npm run kit:build -- /path/to/samples   # custom samples directory
-
-# Or directly:
-./scripts/kit_builder/run [/path/to/samples]
+./scripts/kit_builder/build_kit.py                  # default: ~/media/samples
+./scripts/kit_builder/build_kit.py /path/to/samples # custom directory
 ```
 
 ## Requirements
@@ -26,29 +23,41 @@ npm run kit:build -- /path/to/samples   # custom samples directory
 ### 1. Index
 
 On startup the tool recursively scans the samples directory
-and indexes every `.wav`, `.aif`, and `.aiff` file. Each
-sample is auto-classified into one of the 11 track slots
-based on its directory path and filename:
+and indexes every `.wav`, `.aif`, and `.aiff` file.
+Classification runs through five stages (first match wins):
 
-| Slot | Label      | Matched from                          |
+1. **Directory name** — case-insensitive match against
+   known drum directory names (e.g., `kicks/` → bd,
+   `Snares/` → sd, `Hats/` → ch)
+2. **Subdirectory name** — matches instrument subdirs
+   inside collections (Geist, Elektron, Rample, etc.)
+3. **Filename prefix** — `bd_`, `sd_`, `hh_`, `cl_`,
+   `808 BD`, `909-sd_`, etc. Also handles double
+   prefixes like `pc_bd_`
+4. **HR16 abbreviations** — compressed prefixes like
+   `DRBASS`, `CLHAT`, `OPNHAT`
+5. **Keyword match** — regex against the filename for
+   words like "kick", "snare", "closed hat", etc.
+
+| Slot | Label      | Example matches                       |
 |------|------------|---------------------------------------|
-| bd   | Bass Drum  | `bass_drum/`, prefix `bd_`            |
-| sd   | Snare Drum | `snare/`, prefix `sn_` or `sd_`       |
-| ch   | Closed Hat | `closed_hats/`, prefix `hh_ch_`/`hh_` |
-| oh   | Open Hat   | `open_hats/`, prefix `hh_oh_`         |
-| cy   | Cymbal     | `percussion/` with "cy" in name       |
-| ht   | High Tom   | `toms/` with "hi" in name             |
-| mt   | Mid Tom    | `toms/` with "mid" in name (fallback) |
-| lt   | Low Tom    | `toms/` with "lo" or "floor" in name  |
-| rs   | Rim Shot   | `rim_shots/`                          |
-| cp   | Clap       | `percussion/` with "clap" in name     |
-| cb   | Cowbell    | `percussion/` with "cowbell" in name  |
+| bd   | Bass Drum  | `bass_drum/`, `kicks/`, `bd_`, `kick_`, `808 BD` |
+| sd   | Snare Drum | `snare/`, `sd_`, `sn_`, `snare_`      |
+| ch   | Closed Hat | `closed_hats/`, `hats/`, `hh_`, `ch_` |
+| oh   | Open Hat   | `open_hats/`, `oh_`, `hho_`           |
+| cy   | Cymbal     | `cymbals/`, `crash/`, `ride/`, `cy_`, hats dirs |
+| ht   | High Tom   | `toms/` + "hi" in name, `808 HT`      |
+| mt   | Mid Tom    | `toms/` + "mid" in name (default)      |
+| lt   | Low Tom    | `toms/` + "lo"/"floor" in name         |
+| rs   | Rim Shot   | `rim_shots/`, `sticks/`, `rs_`, `ss_`, `percussion/` |
+| cp   | Clap       | `claps/`, `cl_`, `cp_`, `percussion/`  |
+| cb   | Cowbell    | `cowbell/`, `cb_`, `percussion/`       |
 
-Geist, Elektron, and Rample collections are mapped by their
-internal subdirectory names (e.g., `Kick/` → bd, `Snare/` →
-sd, `HiHat/` → ch).
+Percussion directories (`percussion/`, `perc/`) map to
+cp, cb, rs, and cy simultaneously. Hat directories also
+feed the cy slot. Samples can appear in multiple slots.
 
-Unclassified samples are still available via "Browse all".
+Unclassified samples are available via search fallback.
 
 ### 2. Name the Kit
 
@@ -59,13 +68,19 @@ You're prompted for:
 
 ### 3. Fill Slots
 
-For each of the 11 track slots:
-- Choose **s)uggested**, **a)ll**, or **k)ip**
-- Type a search term to filter by substring match
-- Results are paginated (20 per page); `n` for next page
-- `p3` to preview sample #3, `3` to select it
-- On selection the sample **auto-plays via ffplay** and
-  you confirm (Y/n) or keep browsing
+For each of the 11 track slots, 10 samples are presented
+spread across different source directories for variety.
+All commands are single-keypress (no Enter needed):
+
+- **1-9, 0** — preview a sample (0 = 10th)
+- **a** — accept the last previewed sample (with Y/n
+  confirmation)
+- **n** — deal 10 new samples (no repeats until pool
+  exhausted)
+- **k** — skip this slot
+
+If no auto-suggestions exist for a slot, a text search
+against the full library is offered instead.
 
 ### 4. Assemble
 
@@ -84,14 +99,15 @@ Ctrl+C exits cleanly at any point.
 
 ```
 scripts/kit_builder/
+  build_kit.py      CLI entry point + main loop
   __main__.py       Package entry point (python3 -m)
-  run               Executable entry point (shebang)
-  build_kit.py      CLI flow + main loop
-  types.py          Track IDs, mappings, dataclasses
+  kit_types.py      Track IDs, mappings, regex patterns
   sample_index.py   Recursive scanner + auto-classification
   preview.py        ffplay spawn/kill wrapper
-  browser.py        Interactive search prompts per slot
+  browser.py        Quick-pick UI with single-keypress input
   assembler.py      File copy/convert + kits.json update
+  keys.py           Single-keypress terminal input (tty)
+  colors.py         ANSI color constants
 ```
 
 ## Sample Library Layout

@@ -1,19 +1,21 @@
+#!/usr/bin/env python3
 """Interactive sample browsing and selection."""
 
 from __future__ import annotations
 
-from .types import KIT_TRACK_IDS, TRACK_LABELS, SampleEntry
-from .preview import preview, stop
+import random
+from collections import defaultdict
 
-# ANSI helpers
-BOLD = "\033[1m"
-GREEN = "\033[32m"
-YELLOW = "\033[33m"
-CYAN = "\033[36m"
-DIM = "\033[2m"
-RESET = "\033[0m"
+from kit_types import KIT_TRACK_IDS, TRACK_LABELS, SampleEntry
+from preview import preview, stop
+from colors import BOLD, GREEN, YELLOW, CYAN, DIM, RESET
+from keys import getch
 
-PAGE_SIZE = 20
+PICK_SIZE = 10
+
+# Map keys to pick indices: '1'-'9' → 0-8, '0' → 9
+_KEY_TO_IDX = {str(i): i - 1 for i in range(1, 10)}
+_KEY_TO_IDX["0"] = 9
 
 
 def browse_all_slots(
@@ -50,156 +52,190 @@ def _browse_slot(
     print(f"{BOLD}── {track_id} ({label}) {bar}{RESET}")
 
     if suggested:
-        print(f"  Auto-suggested: {len(suggested)} samples")
-    else:
-        print("  No auto-suggestions for this slot.")
+        print(
+            f"  {len(suggested)} samples available"
+        )
+        return _quick_pick(suggested)
 
-    pool = _choose_pool(track_id, suggested, all_samples)
-    if pool is None:
-        return None
-
-    return _search_and_select(pool)
+    print("  No suggestions for this slot.")
+    return _search_fallback(all_samples)
 
 
-def _choose_pool(
-    track_id: str,
-    suggested: list[SampleEntry],
-    all_samples: list[SampleEntry],
-) -> list[SampleEntry] | None:
-    options: list[tuple[str, str]] = []
-    if suggested:
-        options.append((
-            "s",
-            f"Suggested ({len(suggested)} samples)",
-        ))
-    options.append((
-        "a",
-        f"Browse all ({len(all_samples)} samples)",
-    ))
-    options.append(("k", "Skip this slot"))
+def _spread_pick(
+    pool: list[SampleEntry],
+    count: int,
+    seen: set[str],
+) -> list[SampleEntry]:
+    """Pick up to `count` samples spread across directories.
 
-    print(f"  [{track_id}] Sample source:")
-    for key, desc in options:
-        print(f"    {CYAN}{key}{RESET}) {desc}")
+    Groups by top-level directory, then round-robins one
+    random sample per directory until we have enough.
+    Skips samples in `seen` (by path).
+
+    Args:
+        pool: Samples to choose from.
+        count: Maximum number to return.
+        seen: Paths already shown; updated in place.
+
+    Returns:
+        List of up to `count` samples.
+    """
+    by_dir: dict[str, list[SampleEntry]] = defaultdict(list)
+    for s in pool:
+        if s.path not in seen:
+            top = s.rel_path.split("/")[0]
+            by_dir[top].append(s)
+
+    # Shuffle within each directory
+    for samples in by_dir.values():
+        random.shuffle(samples)
+
+    # Round-robin across directories
+    picks: list[SampleEntry] = []
+    dirs = list(by_dir.keys())
+    random.shuffle(dirs)
+    idx = 0
+    while len(picks) < count and dirs:
+        d = dirs[idx % len(dirs)]
+        bucket = by_dir[d]
+        if bucket:
+            pick = bucket.pop()
+            picks.append(pick)
+            seen.add(pick.path)
+            if not bucket:
+                dirs.remove(d)
+                if dirs:
+                    idx = idx % len(dirs)
+                continue
+        idx = (idx + 1) % len(dirs) if dirs else 0
+
+    return picks
+
+
+def _quick_pick(pool: list[SampleEntry]) -> SampleEntry | None:
+    """Present batches of 10 spread-picked samples."""
+    seen: set[str] = set()
 
     while True:
-        choice = input("  > ").strip().lower()
-        if choice == "s" and suggested:
-            return suggested
-        if choice == "a":
-            return all_samples
-        if choice == "k":
+        picks = _spread_pick(pool, PICK_SIZE, seen)
+        if not picks:
+            print("  No more samples to show.")
             return None
-        valid = ", ".join(k for k, _ in options)
-        print(f"  Enter one of: {valid}")
+
+        _show_picks(picks)
+
+        result = _pick_prompt(picks)
+        if isinstance(result, SampleEntry):
+            return result
+        if result == "skip":
+            return None
+        # result == "next": loop for another batch
 
 
-def _search_and_select(
-    pool: list[SampleEntry],
+def _show_picks(picks: list[SampleEntry]) -> None:
+    """Display numbered sample list (1-9, 0 for 10th)."""
+    print()
+    for i, s in enumerate(picks):
+        key = str(i + 1) if i < 9 else "0"
+        print(f"    {DIM}{key}{RESET}  {s.rel_path}")
+
+
+def _pick_prompt(picks: list[SampleEntry]) -> SampleEntry | str:
+    """Single-keypress prompt for preview/accept/next/skip."""
+    last_previewed: SampleEntry | None = None
+
+    while True:
+        print(
+            f"  [1-{len(picks) if len(picks) < 10 else '0'}"
+            f"=preview, a=accept, n=new 10, k=skip] ",
+            end="",
+            flush=True,
+        )
+        key = getch()
+        print(key)  # echo the keypress
+
+        if key == "n":
+            return "next"
+        if key == "k":
+            return "skip"
+
+        # Accept last previewed
+        if key == "a":
+            if last_previewed is None:
+                print("  Preview a sample first.")
+                continue
+            preview(last_previewed.path)
+            print(
+                f"  {CYAN}♪{RESET} "
+                f"{last_previewed.rel_path}"
+            )
+            print("  Accept? (y/n) ", end="", flush=True)
+            confirm = getch()
+            print(confirm)
+            if confirm == "y":
+                stop()
+                return last_previewed
+            stop()
+            continue
+
+        # Preview by number
+        if key in _KEY_TO_IDX:
+            idx = _KEY_TO_IDX[key]
+            if 0 <= idx < len(picks):
+                last_previewed = picks[idx]
+                preview(last_previewed.path)
+                print(
+                    f"  {CYAN}♪{RESET} "
+                    f"{last_previewed.rel_path}"
+                )
+                continue
+
+        # Ctrl+C passthrough
+        if key == "\x03":
+            raise KeyboardInterrupt
+
+
+def _search_fallback(
+    all_samples: list[SampleEntry],
 ) -> SampleEntry | None:
+    """Text search against full pool when no suggestions."""
     while True:
         term = input(
-            f"\n  Search ({len(pool)} samples, "
-            f"empty=list, q=skip): "
+            f"\n  Search ({len(all_samples)} samples, "
+            f"q=skip): "
         ).strip()
 
         if term.lower() == "q":
             return None
 
-        if term:
-            filtered = [
-                s for s in pool
-                if term.lower() in s.rel_path.lower()
-            ]
-        else:
-            filtered = pool
+        if not term:
+            print("  Enter a search term.")
+            continue
+
+        filtered = [
+            s for s in all_samples
+            if term.lower() in s.rel_path.lower()
+        ]
 
         if not filtered:
             print("  No matches. Try another term.")
             continue
 
-        # Paginated display
-        page = 0
-        while True:
-            start = page * PAGE_SIZE
-            end = start + PAGE_SIZE
-            page_items = filtered[start:end]
+        # Show up to PICK_SIZE results
+        shown = filtered[:PICK_SIZE]
+        remaining = len(filtered) - len(shown)
 
-            for i, s in enumerate(page_items, start + 1):
-                print(f"    {DIM}{i:4d}{RESET} {s.rel_path}")
+        _show_picks(shown)
 
-            remaining = len(filtered) - end
-            if remaining > 0:
-                print(
-                    f"    {DIM}... {remaining} more "
-                    f"(n=next page){RESET}"
-                )
+        if remaining > 0:
+            print(
+                f"    {DIM}... {remaining} more "
+                f"(refine your search){RESET}"
+            )
 
-            result = _pick_from_list(filtered, page, end)
-            if result == "next" and remaining > 0:
-                page += 1
-                continue
-            if result == "search":
-                break
-            if result == "skip":
-                return None
-            if isinstance(result, SampleEntry):
-                return result
-            break  # back to search prompt
-
-
-def _pick_from_list(
-    filtered: list[SampleEntry],
-    page: int,
-    end: int,
-) -> SampleEntry | str:
-    """Prompt for number selection, preview, navigation."""
-    while True:
-        cmd = input(
-            "  # to select, p# to preview, "
-            "n=next, s=search, q=skip: "
-        ).strip().lower()
-
-        if cmd == "n":
-            return "next"
-        if cmd == "s":
-            return "search"
-        if cmd == "q":
-            return "skip"
-
-        # Preview: p<number>
-        if cmd.startswith("p"):
-            try:
-                idx = int(cmd[1:]) - 1
-                if 0 <= idx < len(filtered):
-                    preview(filtered[idx].path)
-                    print(
-                        f"  {CYAN}♪{RESET} "
-                        f"{filtered[idx].rel_path}"
-                    )
-                else:
-                    print(f"  Out of range (1-{len(filtered)})")
-            except ValueError:
-                print("  Use p<number> to preview, e.g. p3")
-            continue
-
-        # Select by number
-        try:
-            idx = int(cmd) - 1
-            if 0 <= idx < len(filtered):
-                sample = filtered[idx]
-                preview(sample.path)
-                print(
-                    f"  {CYAN}♪{RESET} {sample.rel_path}"
-                )
-                confirm = input(
-                    "  Accept? (Y/n): "
-                ).strip().lower()
-                if confirm in ("", "y", "yes"):
-                    stop()
-                    return sample
-                stop()
-                continue
-            print(f"  Out of range (1-{len(filtered)})")
-        except ValueError:
-            print("  Enter a number, p#, n, s, or q")
+        result = _pick_prompt(shown)
+        if isinstance(result, SampleEntry):
+            return result
+        if result == "skip":
+            return None
+        # "next" in search context → back to search prompt

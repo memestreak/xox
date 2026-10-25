@@ -3,6 +3,11 @@
 This file provides guidance to Claude Code (claude.ai/code) when
 working with code in this repository.
 
+## Skills
+
+Always load the `python-development` skill when working
+on files in `scripts/`.
+
 ## Commands
 
 ```bash

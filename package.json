@@ -9,8 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "kit:build": "./scripts/kit_builder/run"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "next": "16.4.2",
