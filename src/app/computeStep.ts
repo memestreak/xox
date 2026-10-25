@@ -4,7 +4,7 @@ import {
   GAIN_EXPONENT,
 } from './constants';
 import { TRACKS, TRACK_IDS, getPatternLength } from './types';
-import { withDefaultLevels, withLevelsFrom } from './mixerUtils';
+import { withPresetLevels, withLevelsFrom } from './mixerUtils';
 import type {
   HomeSnapshot,
   Pattern,
@@ -182,7 +182,9 @@ export function computeStep(
         config: {
           ...config,
           tracks: pendingPattern.tracks,
-          mixer: withDefaultLevels(config.mixer),
+          mixer: withPresetLevels(
+            config.mixer, pendingPattern.mixer
+          ),
         },
         patternId: pendingPattern.id,
       };

@@ -796,6 +796,24 @@ describe('computeStep: pattern boundary signals', () => {
     expect(mixer.ac.gain).toBe(0.9);
   });
 
+  it('applyPending uses the preset\'s own levels', () => {
+    const config = makeConfig();
+    const deps = makeDeps({
+      config,
+      trackStates: trackStatesFrom(config),
+      pendingPattern: {
+        id: 'p', name: 'p', tracks: config.tracks,
+        mixer: { cp: { gain: 0.4, pan: 0.7 } },
+      },
+    });
+    const mixer =
+      computeStep(15, 1.0, deps).applyPending!
+        .config.mixer;
+    expect(mixer.cp.gain).toBe(0.4);
+    expect(mixer.cp.pan).toBe(0.7);
+    expect(mixer.bd.gain).toBe(1);
+  });
+
   it('temp revert restores home levels', () => {
     const config = makeConfig();
     const homeMixer = structuredClone(config.mixer);

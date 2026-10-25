@@ -1283,6 +1283,25 @@ describe('pattern preset resets track levels', () => {
     ).toBe(0.3);
   });
 
+  it('a preset with its own levels sets them', () => {
+    const { result } = renderSequencer();
+    moveLevels(result);
+    const pat: Pattern = {
+      ...makePattern('p', '1000100010001000'),
+      mixer: { bd: { gain: 0.6, pan: 0.25 }, oh: { pan: 0.8 } },
+    };
+    act(() => {
+      result.current.actions.setPattern(pat);
+    });
+    const mixer = result.current.meta.config.mixer;
+    expect(mixer.bd.gain).toBe(0.6);
+    expect(mixer.bd.pan).toBe(0.25);
+    expect(mixer.oh.gain).toBe(1);
+    expect(mixer.oh.pan).toBe(0.8);
+    expect(mixer.sd.pan).toBe(0.5);
+    expect(mixer.ch.isMuted).toBe(true);
+  });
+
   it('stop during temp brings back home levels', () => {
     const { result } = renderSequencer();
     moveLevels(result);

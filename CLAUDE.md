@@ -87,9 +87,10 @@ from the URL.
 - `useFillMode.ts` — fill latch/momentary state, F-key
 - `usePatternMode.ts` — pattern mode state machine, temp
   and its latch (latched Temp re-arms after each temp
-  pattern; T / Shift+T). A preset resets every grid
+  pattern; T / Shift+T). A preset sets every grid
   track's volume and pan when it takes effect (a cued
-  Sequential one at its boundary); mute, solo and the
+  Sequential one at its boundary): its own `mixer`
+  values, else the defaults. Mute, solo and the
   accent level stay (`mixerUtils.ts`). Temp's home
   snapshot keeps the mixer, and the revert restores
   those levels
@@ -202,7 +203,8 @@ Supporting files:
   row goes to the categories
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `data/patterns.json` — preset patterns, one binary step
-  string per track (`"1010101010101010"`)
+  string per track (`"1010101010101010"`), plus an
+  optional `mixer` of per-track `gain`/`pan` (0-1)
 - `data/trackPatterns.json` — single-track presets
 - `public/kits/{808,electro}/` — .wav samples per kit
 

@@ -2,7 +2,9 @@
 
 import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
+import { withPresetLevels } from './mixerUtils';
 import type {
+  PatternMixer,
   SequencerConfig,
   StepConditions,
   StepLocks,
@@ -78,7 +80,10 @@ export function defaultConfig(): SequencerConfig {
     kitId: kitsData.kits[0].id,
     bpm: DEFAULT_BPM,
     tracks,
-    mixer,
+    mixer: withPresetLevels(
+      mixer,
+      (firstPattern as { mixer?: PatternMixer }).mixer
+    ),
     swing: 0,
   };
 }

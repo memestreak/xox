@@ -6,7 +6,7 @@ import {
 } from 'react';
 import { shouldIgnoreShortcut } from '../keyboardUtils';
 import { audioEngine } from '../AudioEngine';
-import { withDefaultLevels } from '../mixerUtils';
+import { withPresetLevels } from '../mixerUtils';
 import type {
   HomeSnapshot,
   Pattern,
@@ -105,7 +105,9 @@ export function usePatternMode({
       setConfig(prev => ({
         ...prev,
         tracks: pattern.tracks,
-        mixer: withDefaultLevels(prev.mixer),
+        mixer: withPresetLevels(
+          prev.mixer, pattern.mixer
+        ),
       }));
       setSelectedPatternId(pattern.id);
     },

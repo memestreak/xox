@@ -9,10 +9,7 @@ import kitsData from '../data/kits.json';
 import { audioEngine } from '../AudioEngine';
 import { midiEngine } from '../MidiEngine';
 import { computeStep } from '../computeStep';
-import {
-  withDefaultLevels,
-  withLevelsFrom,
-} from '../mixerUtils';
+import { withLevelsFrom } from '../mixerUtils';
 import { GAIN_EXPONENT } from '../constants';
 import { getPatternLength } from '../types';
 import { enqueueStep } from '../stepQueue';
@@ -293,7 +290,7 @@ export function usePlayback({
         setConfig(prev => ({
           ...prev,
           tracks: newCfg.tracks,
-          mixer: withDefaultLevels(prev.mixer),
+          mixer: withLevelsFrom(prev.mixer, newCfg.mixer),
         }));
         setSelectedPatternId(patternId);
       }
