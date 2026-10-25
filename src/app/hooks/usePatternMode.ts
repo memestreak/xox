@@ -6,6 +6,7 @@ import {
 } from 'react';
 import { shouldIgnoreShortcut } from '../keyboardUtils';
 import { audioEngine } from '../AudioEngine';
+import { withPresetLevels } from '../mixerUtils';
 import type {
   HomeSnapshot,
   Pattern,
@@ -104,6 +105,9 @@ export function usePatternMode({
       setConfig(prev => ({
         ...prev,
         tracks: pattern.tracks,
+        mixer: withPresetLevels(
+          prev.mixer, pattern.mixer
+        ),
       }));
       setSelectedPatternId(pattern.id);
     },
@@ -126,6 +130,9 @@ export function usePatternMode({
         const snapshot: HomeSnapshot = {
           tracks: structuredClone(
             configRef.current.tracks
+          ),
+          mixer: structuredClone(
+            configRef.current.mixer
           ),
           selectedPatternId,
         };

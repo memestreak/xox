@@ -74,6 +74,7 @@ function useHarness() {
   });
   return {
     pb, config, selectedPatternId, isPlayingRef,
+    configRef, pendingPatternRef,
     tempStateRef, homeSnapshotRef,
     initCycleCounts, onTempReverted, onPlaybackStart,
     onPlaybackStop, setConfig,
@@ -159,6 +160,42 @@ describe('usePlayback', () => {
     expect(r.current.pb.stepRef.current).toBe(-1);
   });
 
+  it('a cued pattern plays its first step at default'
+    + ' levels', async () => {
+    const r = await renderLoaded();
+    act(() => r.current.pb.togglePlay());
+    const handleStep = engine.start.mock.calls[0][1] as (
+      step: number, time: number
+    ) => void;
+    act(() => r.current.setConfig(prev => {
+      const next = {
+        ...prev,
+        mixer: {
+          ...prev.mixer,
+          bd: { ...prev.mixer.bd, gain: 0.3 },
+        },
+      };
+      r.current.configRef.current = next;
+      return next;
+    }));
+    const tracks = structuredClone(
+      r.current.config.tracks
+    );
+    tracks.bd = { steps: '1'.repeat(16) };
+    r.current.pendingPatternRef.current = {
+      id: 'cued', name: 'cued', tracks,
+    };
+    engine.playSound.mockClear();
+    // Last step of the old pattern, then step 0 of the
+    // cued one in the same scheduler pass (no render).
+    handleStep(15, 2.0);
+    handleStep(0, 2.1);
+    const bdCall = engine.playSound.mock.calls.find(
+      c => c[0] === 'bd' && c[1] === 2.1
+    );
+    expect(bdCall?.[2]).toBeCloseTo(1);
+  });
+
   it('stopping during active temp restores home', async () => {
     const r = await renderLoaded();
     const home = r.current.config.tracks;
@@ -166,6 +203,7 @@ describe('usePlayback', () => {
     r.current.tempStateRef.current = 'active';
     r.current.homeSnapshotRef.current = {
       tracks: home,
+      mixer: r.current.config.mixer,
       selectedPatternId: 'home-pattern',
     };
     act(() => r.current.setConfig(prev => ({

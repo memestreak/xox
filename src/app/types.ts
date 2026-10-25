@@ -54,7 +54,22 @@ export interface Pattern {
   name: string;
   category?: string;
   tracks: Record<TrackId, TrackConfig>;
+  /**
+   * Track volume and pan the preset sets when it loads.
+   * A track or field left out gets the default (full
+   * volume, center pan). Grid tracks only, not accent.
+   */
+  mixer?: PatternMixer;
 }
+
+/** A preset's level and pan for one track (0.0 - 1.0). */
+export interface PatternTrackLevels {
+  gain?: number;
+  pan?: number;
+}
+
+export type PatternMixer =
+  Partial<Record<TrackId, PatternTrackLevels>>;
 
 /**
  * A single per-track beat pattern used by the
@@ -131,11 +146,12 @@ export type TempState = 'off' | 'armed' | 'active';
 
 /**
  * Snapshot of config fields preserved for temp mode
- * revert. Mixer state is excluded because setPattern
- * does not modify it.
+ * revert. A pattern preset resets track volume and pan,
+ * so the mixer is kept too; only its levels are restored.
  */
 export interface HomeSnapshot {
   tracks: Record<TrackId, TrackConfig>;
+  mixer: Record<TrackId, TrackMixerState>;
   selectedPatternId: string;
 }
 

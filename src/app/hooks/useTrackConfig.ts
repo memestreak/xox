@@ -424,8 +424,11 @@ export function useTrackConfig({
           },
         },
       }));
+      // Presets set track levels, so a change makes the
+      // pattern custom. The accent level isn't preset data.
+      if (trackId !== 'ac') setSelectedPatternId('custom');
     },
-    [setConfig]
+    [setConfig, setSelectedPatternId]
   );
 
   const setPan = useCallback(
@@ -440,8 +443,11 @@ export function useTrackConfig({
           },
         },
       }));
+      // Presets set track levels, so a change makes the
+      // pattern custom. The accent level isn't preset data.
+      if (trackId !== 'ac') setSelectedPatternId('custom');
     },
-    [setConfig]
+    [setConfig, setSelectedPatternId]
   );
 
   const clearTrack = useCallback(
