@@ -21,20 +21,32 @@ _KEY_TO_IDX["0"] = 9
 def browse_all_slots(
     by_track: dict[str, list[SampleEntry]],
     all_samples: list[SampleEntry],
-) -> list[tuple[str, SampleEntry]]:
-    """Walk each slot. Return list of (track_id, sample)."""
-    assignments: list[tuple[str, SampleEntry]] = []
+) -> dict[str, SampleEntry]:
+    """Walk each slot and let the user pick a sample.
+
+    Args:
+        by_track: Suggested samples per track ID.
+        all_samples: Every sample, for search fallback.
+
+    Returns:
+        Chosen sample per track ID. Skipped slots are
+        absent (the assembler fills them with silence).
+    """
+    assignments: dict[str, SampleEntry] = {}
 
     for track_id in KIT_TRACK_IDS:
         result = _browse_slot(track_id, by_track, all_samples)
         if result:
-            assignments.append((track_id, result))
+            assignments[track_id] = result
             print(
                 f"  {GREEN}✓{RESET} {track_id} → "
                 f"{result.rel_path}"
             )
         else:
-            print(f"  {YELLOW}⊘{RESET} {track_id} — skipped")
+            print(
+                f"  {YELLOW}⊘{RESET} {track_id} — skipped "
+                f"(will be silent)"
+            )
         print()
 
     return assignments

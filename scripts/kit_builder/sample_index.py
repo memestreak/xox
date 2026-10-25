@@ -4,27 +4,39 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from kit_types import (
     AUDIO_EXTENSIONS,
     DIR_MAP,
+    GENERIC_TOM,
     HAT_DIRS,
     HR16_MAP,
     KEYWORD_PATTERNS,
     KIT_TRACK_IDS,
-    PERC_KEYWORD_MAP,
-    PERCUSSION_DIRS,
     PREFIX_MAP,
     SUBDIR_TYPE_MAP,
+    TOM_PITCH_WORDS,
     SampleEntry,
 )
+
+_WORD = re.compile(r"[a-z]+")
+_ALL_TOMS = ["ht", "mt", "lt"]
 
 
 def build_sample_index(
     samples_root: str,
 ) -> tuple[dict[str, list[SampleEntry]], list[SampleEntry]]:
-    """Return (by_track, all_samples)."""
+    """Scan a directory tree and sort samples into slots.
+
+    Args:
+        samples_root: Root of the sample library.
+
+    Returns:
+        (by_track, all_samples): samples per track slot,
+        and every audio file found. Both sorted by path.
+    """
     root = Path(samples_root)
     by_track: dict[str, list[SampleEntry]] = {
         tid: [] for tid in KIT_TRACK_IDS
@@ -47,8 +59,7 @@ def build_sample_index(
             )
             all_samples.append(sample)
 
-            track_ids = _classify(rel_path, fname)
-            for tid in track_ids:
+            for tid in classify(rel_path):
                 by_track[tid].append(sample)
 
     for samples in by_track.values():
@@ -58,123 +69,89 @@ def build_sample_index(
     return by_track, all_samples
 
 
-def _classify(rel_path: str, filename: str) -> list[str]:
+def classify(rel_path: str) -> list[str]:
     """Classify a sample into zero or more track slots.
 
-    Classification priority:
+    Classification priority (first match wins):
     1. Top-level directory name
-    2. Subdirectory names (Geist/Elektron/etc.)
+    2. Subdirectory names, deepest first, so
+       ``geist/percussion/toms/x.wav`` counts as a tom
     3. Filename prefix
     4. HR16 abbreviation prefix
-    5. Keyword match in filename
+    5. Whole-word keyword in the filename
+
+    Generic percussion folders map to nothing on their
+    own; their samples are classified by filename and
+    otherwise left to search.
+
+    Args:
+        rel_path: Path relative to the library root.
+
+    Returns:
+        Track IDs the sample should be offered for.
     """
-    parts = rel_path.split(os.sep)
-    lower_fn = filename.lower()
+    parts = rel_path.lower().split(os.sep)
+    dirs, lower_fn = parts[:-1], parts[-1]
     stem = os.path.splitext(lower_fn)[0]
 
-    # 1. Top-level directory name (case-insensitive)
-    top_dir = parts[0].lower()
-    matched = _match_directory(top_dir, lower_fn)
-    if matched:
-        return matched
-
-    # 2. Subdirectory names — check all path components
-    for part in parts[1:]:
-        result = _match_subdir(part.lower(), lower_fn)
-        if result:
-            return result
-
-    # 3. Filename prefix
-    result = _match_prefix(lower_fn)
-    if result:
-        return result
-
-    # 4. HR16 compressed abbreviations
-    for abbr, track_id in HR16_MAP:
-        if stem.startswith(abbr):
-            return [track_id]
-
-    # 5. Keyword match in filename
-    for pattern, track_id in KEYWORD_PATTERNS:
-        if pattern.search(stem):
-            return [track_id]
-
-    return []
-
-
-def _match_directory(
-    top_dir: str,
-    lower_fn: str,
-) -> list[str]:
-    """Match against DIR_MAP with filename refinement."""
-    mapping = DIR_MAP.get(top_dir)
-    if mapping is None:
+    slot = _match_dirs(dirs) or _match_filename(lower_fn, stem)
+    if slot is None:
         return []
-
-    # Hat directories also feed the cy slot
-    if top_dir in HAT_DIRS:
-        base = mapping if isinstance(mapping, str) else mapping[0]
-        return [base, "cy"]
-
-    # Percussion directories: everything goes to cp and cb,
-    # plus keyword-refined slots
-    if top_dir in PERCUSSION_DIRS:
-        slots = {"cp", "cb"}
-        for pattern, track_id in PERC_KEYWORD_MAP:
-            if pattern.search(lower_fn):
-                slots.add(track_id)
-        return list(slots)
-
-    # Tom directories: refine by filename hints
-    if top_dir in ("toms", "tom"):
-        return [_refine_tom(lower_fn)]
-
-    if isinstance(mapping, list):
-        return mapping
-    return [mapping]
+    if slot == GENERIC_TOM:
+        return tom_slots(stem, dirs)
+    if dirs and dirs[0] in HAT_DIRS:
+        return [slot, "cy"]
+    return [slot]
 
 
-def _match_subdir(
-    subdir: str,
-    lower_fn: str,
-) -> list[str]:
-    """Match a subdirectory name against SUBDIR_TYPE_MAP."""
-    track_id = SUBDIR_TYPE_MAP.get(subdir)
-    if track_id is None:
-        return []
-
-    # Generic tom subdir: refine by filename
-    if track_id == "ht" and subdir in (
-        "tom", "toms", "10 high toms",
-        "10 med toms", "10 floors",
-    ):
-        return [_refine_tom(lower_fn)]
-
-    return [track_id]
+def _match_dirs(dirs: list[str]) -> str | None:
+    """Match the top-level dir, then subdirs deepest first."""
+    if dirs and dirs[0] in DIR_MAP:
+        return DIR_MAP[dirs[0]]
+    for part in reversed(dirs[1:]):
+        if part in SUBDIR_TYPE_MAP:
+            return SUBDIR_TYPE_MAP[part]
+    return None
 
 
-def _refine_tom(lower_fn: str) -> str:
-    """Determine tom pitch from filename hints."""
-    if "hi" in lower_fn or "high" in lower_fn:
-        return "ht"
-    if "lo" in lower_fn or "floor" in lower_fn:
-        return "lt"
-    if "mid" in lower_fn or "med" in lower_fn:
-        return "mt"
-    return "mt"  # default unqualified toms to mid
-
-
-def _match_prefix(lower_fn: str) -> list[str]:
-    """Match filename against PREFIX_MAP.
-
-    Special handling for hh_ prefix: check for 'open'
-    keyword to override to oh.
-    """
+def _match_filename(lower_fn: str, stem: str) -> str | None:
+    """Match a filename by prefix, HR16 code, then keyword."""
     for prefix, track_id in PREFIX_MAP:
         if lower_fn.startswith(prefix):
-            # hh_ without explicit ch/oh qualifier:
-            # check for open-hat keywords
+            # hh_ without explicit ch/oh qualifier
             if prefix == "hh_" and "open" in lower_fn:
-                return ["oh"]
-            return [track_id]
-    return []
+                return "oh"
+            return track_id
+
+    for abbr, track_id in HR16_MAP:
+        if stem.startswith(abbr):
+            return track_id
+
+    for pattern, track_id in KEYWORD_PATTERNS:
+        if pattern.search(stem):
+            return track_id
+
+    return None
+
+
+def tom_slots(stem: str, dirs: list[str]) -> list[str]:
+    """Decide which tom slots a tom sample belongs in.
+
+    Looks for whole pitch words ("hi", "low", "floor"...)
+    in the filename, then in the folder names. "hit" and
+    "slow" do not count. With no pitch word, the tom is
+    offered for all three slots so it can be picked by ear.
+
+    Args:
+        stem: Lowercase filename without extension.
+        dirs: Lowercase directory names, top first.
+
+    Returns:
+        ["ht"], ["mt"], ["lt"], or all three.
+    """
+    for text in (stem, " ".join(reversed(dirs))):
+        words = set(_WORD.findall(text))
+        for pitch_words, track_id in TOM_PITCH_WORDS:
+            if words & pitch_words:
+                return [track_id]
+    return list(_ALL_TOMS)

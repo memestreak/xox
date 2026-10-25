@@ -28,6 +28,10 @@ TRACK_LABELS = {
 
 AUDIO_EXTENSIONS = frozenset((".wav", ".aif", ".aiff"))
 
+# Placeholder slot for a tom of unknown pitch. The
+# classifier replaces it with ht, mt and/or lt.
+GENERIC_TOM = "tom"
+
 
 @dataclass(frozen=True)
 class SampleEntry:
@@ -38,9 +42,8 @@ class SampleEntry:
 
 # --- Directory name → track mapping ---
 # Keys are lowercased for case-insensitive matching.
-# Values can be a single track ID or a list (for
-# directories whose contents map to multiple slots).
-DIR_MAP: dict[str, str | list[str]] = {
+# GENERIC_TOM values are refined to a tom pitch later.
+DIR_MAP: dict[str, str] = {
     # Bass drum
     "bass_drum": "bd",
     "kicks": "bd",
@@ -61,9 +64,9 @@ DIR_MAP: dict[str, str | list[str]] = {
     "cymbals": "cy",
     "crash": "cy",
     "ride": "cy",
-    # Toms (refined by filename in _classify)
-    "toms": "ht",
-    "tom": "ht",
+    # Toms (pitch refined by tom_slots)
+    "toms": GENERIC_TOM,
+    "tom": GENERIC_TOM,
     # Rim shot / side stick
     "rim_shots": "rs",
     "rimshots": "rs",
@@ -76,27 +79,11 @@ DIR_MAP: dict[str, str | list[str]] = {
     "claps": "cp",
     # Cowbell
     "cowbell": "cb",
-    # Percussion → multiple slots
-    "percussion": ["cy", "rs", "cp", "cb"],
-    "perc": ["cy", "rs", "cp", "cb"],
 }
 
 # Directories that contain hats also feed the cy slot.
 HAT_DIRS = {"closed_hats", "closedhats", "hats",
             "hihat", "hihats", "open_hats", "openhats"}
-
-# Directories where filenames need keyword filtering
-# to decide cy vs rs vs cp vs cb.
-PERCUSSION_DIRS = {"percussion", "perc"}
-
-# Keywords that refine a percussion directory match.
-# Checked against the lowercase filename.
-PERC_KEYWORD_MAP: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"cymbal|crash|ride|splash|china"), "cy"),
-    (re.compile(r"rim|sidestick|side.stick|stick"), "rs"),
-    (re.compile(r"clap|handclap"), "cp"),
-    (re.compile(r"cowbell|cow.?bell"), "cb"),
-]
 
 # --- Filename prefix → track mapping ---
 # Checked case-insensitively. Longest prefixes first
@@ -153,8 +140,8 @@ PREFIX_MAP: tuple[tuple[str, str], ...] = (
     ("cymbal_", "cy"),
     ("cymbal ", "cy"),
     # Toms
-    ("tm_", "ht"),
-    ("tom_", "ht"),
+    ("tm_", GENERIC_TOM),
+    ("tom_", GENERIC_TOM),
     ("808 ht", "ht"),
     ("808 mt", "mt"),
     ("808 lt", "lt"),
@@ -187,32 +174,49 @@ PREFIX_MAP: tuple[tuple[str, str], ...] = (
     ("808cow", "cb"),
 )
 
+# --- Tom pitch words ---
+# Whole words (split on anything but letters) that say
+# which tom a sample is. A tom with none of these is
+# offered in all three tom slots.
+TOM_PITCH_WORDS: tuple[tuple[frozenset[str], str], ...] = (
+    (frozenset(("hi", "high", "hitom")), "ht"),
+    (frozenset(("lo", "low", "floor", "flr")), "lt"),
+    (frozenset(("mid", "med", "medium")), "mt"),
+)
+
+
+def _words(*alternatives: str) -> re.Pattern[str]:
+    """Compile alternatives that must stand as whole words.
+
+    Unlike ``\\b``, underscores and digits count as word
+    breaks, so ``cl_medium_clap_01`` matches ``clap``.
+
+    Args:
+        alternatives: Regex fragments to match.
+
+    Returns:
+        The compiled pattern.
+    """
+    joined = "|".join(alternatives)
+    return re.compile(rf"(?<![a-z])(?:{joined})(?![a-z])")
+
+
 # --- Keyword patterns for filename-based fallback ---
-# Checked against the full lowercase filename (without
+# Checked against the lowercase filename (without
 # extension). Order matters: first match wins.
 KEYWORD_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"\bkick\b|\bbass.drum\b|\bbdrum\b"), "bd"),
-    (re.compile(r"\bsnare\b|\bsnr\b"), "sd"),
-    (re.compile(
-        r"\bclosed.hat\b|\bclosed.h.hat\b|\bclsd\b"
-    ), "ch"),
-    (re.compile(
-        r"\bopen.hat\b|\bopen.h.hat\b|\bopenhat\b"
-    ), "oh"),
-    (re.compile(
-        r"\bcymbal\b|\bcrash\b|\bride\b|\bsplash\b"
-    ), "cy"),
-    (re.compile(r"\bhi.tom\b|\bhigh.tom\b"), "ht"),
-    (re.compile(r"\bmid.tom\b|\bmed.tom\b"), "mt"),
-    (re.compile(
-        r"\blow.tom\b|\blo.tom\b|\bfloor.tom\b"
-    ), "lt"),
-    (re.compile(
-        r"\brimshot\b|\brim.shot\b|\bsidestick\b"
-        r"|\bside.stick\b"
-    ), "rs"),
-    (re.compile(r"\bclap\b|\bhandclap\b"), "cp"),
-    (re.compile(r"\bcowbell\b|\bcow.bell\b"), "cb"),
+    (_words(r"kicks?", r"bass.?drums?", "bdrum"), "bd"),
+    (_words(r"snares?", "snr"), "sd"),
+    (_words(r"closed.?h?.?hats?", "clsd"), "ch"),
+    (_words(r"open.?h?.?hats?"), "oh"),
+    (_words(r"cymbals?", "crash", "ride", "splash", "china"), "cy"),
+    (_words(r"hi.?tom", r"high.?tom"), "ht"),
+    (_words(r"mid.?tom", r"med.?tom"), "mt"),
+    (_words(r"low?.?tom", r"floor.?tom"), "lt"),
+    (_words(r"toms?"), GENERIC_TOM),
+    (_words(r"rim.?shots?", r"side.?sticks?"), "rs"),
+    (_words(r"(?:hand)?claps?"), "cp"),
+    (_words(r"cow.?bells?"), "cb"),
 )
 
 # --- HR16-style compressed abbreviations ---
@@ -276,8 +280,8 @@ SUBDIR_TYPE_MAP: dict[str, str] = {
     "ride": "cy",
     "crash": "cy",
     # Toms
-    "tom": "ht",
-    "toms": "ht",
+    "tom": GENERIC_TOM,
+    "toms": GENERIC_TOM,
     "hi tom": "ht",
     "high tom": "ht",
     "10 high toms": "ht",
@@ -303,8 +307,4 @@ SUBDIR_TYPE_MAP: dict[str, str] = {
     "claps": "cp",
     # Cowbell
     "cowbell": "cb",
-    # Generic percussion
-    "percussion": "cp",
-    "perc": "cp",
-    "misc_perc": "cp",
 }
