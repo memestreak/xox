@@ -235,3 +235,35 @@ export function isResizeOf(
       && !a.slice(n).includes('1');
   });
 }
+
+/**
+ * Selected pattern ids
+ *
+ * The selected pattern id is a preset id, 'custom' (a
+ * share link or a Reset grid, no preset), or a preset id
+ * plus MODIFIED_MARK once its steps or levels have been
+ * edited. Keeping the mark in the id means saving,
+ * restoring and the Temp snapshot carry it for free, and
+ * every pattern load clears it by setting a plain id.
+ */
+export const CUSTOM_PATTERN_ID = 'custom';
+export const MODIFIED_MARK = '*';
+
+/** The id with the edited mark added (once). */
+export function markPatternModified(id: string): string {
+  if (id === CUSTOM_PATTERN_ID) return id;
+  if (id.endsWith(MODIFIED_MARK)) return id;
+  return id + MODIFIED_MARK;
+}
+
+/** True if the selected preset was edited since it loaded. */
+export function isPatternModified(id: string): boolean {
+  return id !== CUSTOM_PATTERN_ID && id.endsWith(MODIFIED_MARK);
+}
+
+/** The preset id without the edited mark. */
+export function basePatternId(id: string): string {
+  return isPatternModified(id)
+    ? id.slice(0, -MODIFIED_MARK.length)
+    : id;
+}

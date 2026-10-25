@@ -3,6 +3,7 @@ import {
   MAX_PATTERN_LENGTH,
 } from '../constants';
 import { TRACK_IDS, getPatternLength } from '../types';
+import { markPatternModified } from '../patternUtils';
 import type {
   SequencerConfig,
   StepConditions,
@@ -183,7 +184,7 @@ export function useTrackConfig({
           },
         };
       });
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId, fillActiveRef]
   );
@@ -211,7 +212,7 @@ export function useTrackConfig({
           },
         };
       });
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId, fillActiveRef]
   );
@@ -267,7 +268,7 @@ export function useTrackConfig({
           },
         };
       });
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId, fillActiveRef]
   );
@@ -284,7 +285,7 @@ export function useTrackConfig({
           },
         },
       }));
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId]
   );
@@ -339,7 +340,7 @@ export function useTrackConfig({
           tracks: newTracks,
         };
       });
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId]
   );
@@ -373,7 +374,7 @@ export function useTrackConfig({
           },
         };
       });
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId]
   );
@@ -424,9 +425,12 @@ export function useTrackConfig({
           },
         },
       }));
-      // Presets set track levels, so a change makes the
-      // pattern custom. The accent level isn't preset data.
-      if (trackId !== 'ac') setSelectedPatternId('custom');
+      // Presets set track levels, so a change marks the
+      // pattern modified. The accent level isn't preset
+      // data.
+      if (trackId !== 'ac') {
+        setSelectedPatternId(markPatternModified);
+      }
     },
     [setConfig, setSelectedPatternId]
   );
@@ -443,9 +447,12 @@ export function useTrackConfig({
           },
         },
       }));
-      // Presets set track levels, so a change makes the
-      // pattern custom. The accent level isn't preset data.
-      if (trackId !== 'ac') setSelectedPatternId('custom');
+      // Presets set track levels, so a change marks the
+      // pattern modified. The accent level isn't preset
+      // data.
+      if (trackId !== 'ac') {
+        setSelectedPatternId(markPatternModified);
+      }
     },
     [setConfig, setSelectedPatternId]
   );
@@ -459,7 +466,7 @@ export function useTrackConfig({
           [trackId]: { steps: '0'.repeat(16) },
         },
       }));
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId]
   );
@@ -493,7 +500,7 @@ export function useTrackConfig({
           },
         },
       }));
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId]
   );
@@ -525,7 +532,7 @@ export function useTrackConfig({
           },
         };
       });
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId]
   );
@@ -553,7 +560,7 @@ export function useTrackConfig({
           },
         },
       }));
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId]
   );
@@ -585,7 +592,7 @@ export function useTrackConfig({
           },
         };
       });
-      setSelectedPatternId('custom');
+      setSelectedPatternId(markPatternModified);
     },
     [setConfig, setSelectedPatternId]
   );

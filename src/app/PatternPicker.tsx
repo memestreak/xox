@@ -11,6 +11,10 @@ import type {
 } from 'react';
 import type { Pattern } from './types';
 import {
+  basePatternId,
+  CUSTOM_PATTERN_ID,
+  isPatternModified,
+  MODIFIED_MARK,
   moveChooserCursor,
   patternListRowCount,
 } from './patternUtils';
@@ -83,14 +87,18 @@ export default function PatternPicker({
     handleDrawerKeyDown: (e: KeyboardEvent) => void;
   } | null>(null);
 
-  const isCustom = selectedPatternId === 'custom';
-  // Find the pattern name from categories
+  // An edited preset keeps its name, with an asterisk.
+  const currentPatternId = basePatternId(selectedPatternId);
+  const isCustom = selectedPatternId === CUSTOM_PATTERN_ID;
   const matchedPattern = categories
     .flatMap(g => g.patterns)
-    .find(p => p.id === selectedPatternId);
+    .find(p => p.id === currentPatternId);
   const displayName = isCustom
     ? 'Custom'
-    : (matchedPattern?.name ?? selectedPatternId);
+    : (matchedPattern?.name ?? currentPatternId);
+  const modifiedMark = isPatternModified(selectedPatternId)
+    ? MODIFIED_MARK
+    : null;
   const pendingPattern = pendingPatternId
     ? categories
       .flatMap(g => g.patterns)
@@ -100,11 +108,12 @@ export default function PatternPicker({
 
   /**
    * Open on the cued pattern if one is waiting for the
-   * next bar, else on the current pattern. With neither
-   * (Custom), open on the first category.
+   * next bar, else on the current pattern (an edited
+   * preset counts as its preset). With neither (Custom),
+   * open on the first category.
    */
   const handleOpen = (fromKeyboard: boolean) => {
-    const startId = pendingPatternId ?? selectedPatternId;
+    const startId = pendingPatternId ?? currentPatternId;
     const categoryIndex = categories.findIndex(g =>
       g.patterns.some(p => p.id === startId),
     );
@@ -211,7 +220,7 @@ export default function PatternPicker({
   }, [isOpen]);
 
   const activeCategory = categories.find(g =>
-    g.patterns.some(p => p.id === selectedPatternId),
+    g.patterns.some(p => p.id === currentPatternId),
   );
   const shownCategoryIndex = categories.findIndex(
     g => g.category === selectedCategory,
@@ -313,7 +322,7 @@ export default function PatternPicker({
     ? cursor.index
     : Math.max(shownCategoryIndex, 0);
   const activePatternIndex = patternsToShow.findIndex(
-    p => p.id === selectedPatternId,
+    p => p.id === currentPatternId,
   );
   const patternTabStop = cursor.zone === 'pattern'
     ? cursor.index
@@ -357,7 +366,14 @@ export default function PatternPicker({
         data-open={isOpen || undefined}
         className="ss-lcd-select h-9 w-full"
       >
-        <span className="block truncate">{displayName}</span>
+        <span className="flex min-w-0">
+          <span className="truncate">{displayName}</span>
+          {/* Outside the truncated name, so a long name
+              can't clip it. */}
+          {modifiedMark && (
+            <span className="shrink-0">{modifiedMark}</span>
+          )}
+        </span>
         {pendingPatternId && (
           <span
             aria-hidden="true"
@@ -454,8 +470,14 @@ export default function PatternPicker({
                 className="gap-px"
               >
                 {patternsToShow.map((p, i) => {
-                  const isActive =
-                    p.id === selectedPatternId;
+                  // An edited preset isn't what's playing,
+                  // so it doesn't get the amber bar. It
+                  // gets a blue outline instead: the
+                  // cursor starts there, and Enter
+                  // reloads it.
+                  const isActive = p.id === selectedPatternId;
+                  const isEdited = !isActive
+                    && p.id === currentPatternId;
                   const isCued = p.id === pendingPatternId;
                   return (
                     <button
@@ -483,7 +505,10 @@ export default function PatternPicker({
                         + (isActive
                           ? ' bg-lcd text-[#1a0f03] font-semibold'
                             + ' shadow-[0_0_8px_rgb(245_160_58/0.35)]'
-                          : ' text-lcd hover:bg-lcd/10')
+                          : ' text-lcd hover:bg-lcd/10'
+                            + (isEdited
+                              ? ' outline-2 outline-edited'
+                              : ''))
                       }
                     >
                       <span

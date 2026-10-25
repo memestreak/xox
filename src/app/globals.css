@@ -22,6 +22,9 @@
   --color-mute: #f2b23a;
   /* Red LED: a pattern cued for the next bar. */
   --color-cue: #ff3b30;
+  /* Pattern chooser: an edited preset (where the cursor
+     starts) is outlined in blue, not filled. */
+  --color-edited: #3b8cff;
 
   /* Step keys: one color per group of four steps. */
   --color-step1: #e4502c;

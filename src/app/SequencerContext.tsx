@@ -14,6 +14,7 @@ import patternsData from './data/patterns.json';
 import { defaultConfig, decodeShareLink } from './configCodec';
 import { loadSession, saveSession } from './configStorage';
 import { AUTOSAVE_DEBOUNCE_MS } from './constants';
+import { CUSTOM_PATTERN_ID } from './patternUtils';
 import type { StepEvent } from './stepQueue';
 import { TRACK_IDS } from './types';
 import { useFillMode } from './hooks/useFillMode';
@@ -294,7 +295,7 @@ export function SequencerProvider({
           : null
       );
       setConfig(result.config);
-      setSelectedPatternIdOnLoad('custom');
+      setSelectedPatternIdOnLoad(CUSTOM_PATTERN_ID);
       return true;
     };
 
@@ -424,7 +425,7 @@ export function SequencerProvider({
         swing: 0,
       };
     });
-    setSelectedPatternId('custom');
+    setSelectedPatternId(CUSTOM_PATTERN_ID);
     fillReset();
     pmReset();
     trackConfigReset();

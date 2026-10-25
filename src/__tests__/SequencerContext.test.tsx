@@ -170,7 +170,7 @@ describe('action isolation', () => {
     expect(result.current.meta.config).toBe(before);
   });
 
-  it('toggleStep sets pattern to custom', () => {
+  it('toggleStep marks the preset modified', () => {
     const { result } = renderSequencer();
     // Initially should be first preset
     expect(
@@ -182,7 +182,7 @@ describe('action isolation', () => {
     });
     expect(
       result.current.state.selectedPatternId
-    ).toBe('custom');
+    ).toBe(`${patternsData.patterns[0].id}*`);
   });
 
   it('setTrackSteps replaces full step string', () => {
@@ -199,7 +199,7 @@ describe('action isolation', () => {
     ).toBe('1010101010101010');
   });
 
-  it('setTrackSteps sets selectedPatternId to custom',
+  it('setTrackSteps marks the preset modified',
     () => {
       const { result } = renderHook(
         () => useSequencer(), { wrapper: TestWrapper }
@@ -211,7 +211,7 @@ describe('action isolation', () => {
       });
       expect(
         result.current.state.selectedPatternId
-      ).toBe('custom');
+      ).toBe(`${patternsData.patterns[0].id}*`);
     }
   );
 
@@ -236,8 +236,8 @@ describe('action isolation', () => {
     }
   });
 
-  it('setGain and setPan on a track mark the pattern'
-    + ' custom', () => {
+  it('setGain and setPan on a track mark the preset'
+    + ' modified', () => {
     for (const change of [
       (r: ReturnType<typeof renderSequencer>['result']) =>
         r.current.actions.setGain('bd', 0.4),
@@ -245,11 +245,12 @@ describe('action isolation', () => {
         r.current.actions.setPan('sd', 0.2),
     ]) {
       const { result } = renderSequencer();
+      const presetId = patternsData.patterns[0].id;
       expect(result.current.state.selectedPatternId)
-        .not.toBe('custom');
+        .toBe(presetId);
       act(() => change(result));
       expect(result.current.state.selectedPatternId)
-        .toBe('custom');
+        .toBe(`${presetId}*`);
     }
   });
 
@@ -332,14 +333,14 @@ describe('pattern state machine', () => {
     ).toBe(patternsData.patterns[0].id);
   });
 
-  it('after toggleStep, pattern is custom', () => {
+  it('after toggleStep, pattern is marked modified', () => {
     const { result } = renderSequencer();
     act(() => {
       result.current.actions.toggleStep('bd', 0);
     });
     expect(
       result.current.state.selectedPatternId
-    ).toBe('custom');
+    ).toBe(`${patternsData.patterns[0].id}*`);
   });
 
   it('after setPattern, pattern ID is preset.id', () => {
@@ -355,7 +356,7 @@ describe('pattern state machine', () => {
     ).toBe(preset.id);
   });
 
-  it('setPattern then toggleStep -> custom', () => {
+  it('setPattern then toggleStep -> modified', () => {
     const { result } = renderSequencer();
     const preset = patternsData.patterns[2];
     act(() => {
@@ -372,7 +373,24 @@ describe('pattern state machine', () => {
     });
     expect(
       result.current.state.selectedPatternId
-    ).toBe('custom');
+    ).toBe(`${preset.id}*`);
+
+    // A second edit doesn't add a second mark, and
+    // loading the preset again clears it.
+    act(() => {
+      result.current.actions.toggleStep('sd', 4);
+    });
+    expect(
+      result.current.state.selectedPatternId
+    ).toBe(`${preset.id}*`);
+    act(() => {
+      result.current.actions.setPattern(
+        preset as Pattern
+      );
+    });
+    expect(
+      result.current.state.selectedPatternId
+    ).toBe(preset.id);
   });
 });
 
@@ -632,14 +650,14 @@ describe('clearTrack', () => {
     ).toBe(sdBefore.freeRun);
   });
 
-  it('sets selected pattern to custom', () => {
+  it('marks the selected preset modified', () => {
     const { result } = renderSequencer();
     act(() => {
       result.current.actions.clearTrack('bd');
     });
     expect(
       result.current.state.selectedPatternId
-    ).toBe('custom');
+    ).toBe(`${patternsData.patterns[0].id}*`);
   });
 });
 
