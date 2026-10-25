@@ -99,6 +99,21 @@ describe('SettingsModal', () => {
     expect(checkbox).not.toBeChecked();
   });
 
+  it('has an auto-minimize checkbox, off by default', () => {
+    renderModal();
+    const checkbox = screen.getByLabelText(
+      'Auto-minimize empty tracks'
+    );
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+    expect(
+      window.localStorage.getItem('xox-auto-minimize')
+    ).toBe('true');
+    fireEvent.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+  });
+
   it('switches to MIDI tab', async () => {
     renderModal();
     const midiTab = screen.getByText('MIDI');

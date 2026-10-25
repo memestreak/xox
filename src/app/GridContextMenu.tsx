@@ -6,6 +6,11 @@ import {
 import type { RefObject } from 'react';
 import { MENU_HINT, MENU_ITEM } from './menuStyles';
 
+/** Every usable item, for focus and arrow keys. */
+const MENU_ITEMS_SELECTOR =
+  '[role="menuitem"]:not(:disabled),'
+  + ' [role="menuitemcheckbox"]:not(:disabled)';
+
 /** Space kept between the menu and the viewport edge. */
 const VIEWPORT_MARGIN_PX = 8;
 
@@ -19,6 +24,9 @@ interface GridContextMenuProps {
   canRestore: boolean;
   onMinimize: () => void;
   onRestoreAll: () => void;
+  /** The "Auto-minimize empty tracks" setting. */
+  autoMinimize: boolean;
+  onSetAutoMinimize: (value: boolean) => void;
   /** Clears the pattern (the app's Reset). */
   onReset: () => void;
   onClose: () => void;
@@ -32,7 +40,7 @@ interface GridContextMenuProps {
 
 /**
  * Grid menu: minimize empty tracks, restore all tracks,
- * reset. Opens at the pointer on a right-click in a
+ * the auto-minimize setting, reset. Opens at the pointer on a right-click in a
  * blank part of the grid, or under the ⋯ key over the
  * track names; kept inside the viewport. Closes on a
  * choice, Escape, a press outside, scroll or resize,
@@ -45,6 +53,8 @@ export default function GridContextMenu({
   canRestore,
   onMinimize,
   onRestoreAll,
+  autoMinimize,
+  onSetAutoMinimize,
   onReset,
   onClose,
   anchorRef,
@@ -77,7 +87,7 @@ export default function GridContextMenu({
     const previous = document.activeElement;
     const first =
       menuRef.current?.querySelector<HTMLElement>(
-        '[role="menuitem"]:not(:disabled)'
+        MENU_ITEMS_SELECTOR
       ) ?? menuRef.current;
     first?.focus({ preventScroll: true });
     return () => {
@@ -135,7 +145,7 @@ export default function GridContextMenu({
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       const items = Array.from(
         e.currentTarget.querySelectorAll<HTMLElement>(
-          '[role="menuitem"]:not(:disabled)'
+          MENU_ITEMS_SELECTOR
         )
       );
       if (items.length === 0) return;
@@ -199,6 +209,23 @@ export default function GridContextMenu({
       >
         <span>Restore all tracks</span>
         <span aria-hidden="true" className={MENU_HINT}>⇧H</span>
+      </button>
+      <button
+        role="menuitemcheckbox"
+        aria-checked={autoMinimize}
+        onClick={() => {
+          onSetAutoMinimize(!autoMinimize);
+          onClose();
+        }}
+        className={MENU_ITEM}
+      >
+        <span>Auto-minimize empty tracks</span>
+        <span
+          aria-hidden="true"
+          className={
+            'ss-led shrink-0' + (autoMinimize ? ' ss-led-on' : '')
+          }
+        />
       </button>
       <div role="separator" className="h-px bg-line mx-1.5 my-1" />
       <button

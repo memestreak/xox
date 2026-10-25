@@ -57,8 +57,10 @@ export default function StepGrid({
   setPage,
 }: StepGridProps) {
   const { state, actions, meta } = useSequencer();
-  const { trackStates, minimizedTracks, minimizableCount } =
-    state;
+  const {
+    trackStates, minimizedTracks, minimizableCount,
+    autoMinimize,
+  } = state;
   const {
     toggleStep, setStep, setTrackSteps,
     toggleMute, toggleSolo,
@@ -67,6 +69,7 @@ export default function StepGrid({
     clearTrigCondition, clearParameterLock,
     setTrigCondition,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
+    setAutoMinimize, holdAutoMinimize,
     clearAll,
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
@@ -257,6 +260,18 @@ export default function StepGrid({
     onClearSelection: clearSelection,
   });
 
+  // Auto-minimize waits while the pointer is over the
+  // rows, so clearing a track's last step doesn't move
+  // rows under the pointer. Touch pointers leave when
+  // lifted, so on phones it applies after the tap.
+  const holdAutoMinimizeOn = useCallback(
+    () => holdAutoMinimize(true), [holdAutoMinimize]
+  );
+  const holdAutoMinimizeOff = useCallback(
+    () => holdAutoMinimize(false), [holdAutoMinimize]
+  );
+  useEffect(() => holdAutoMinimizeOff, [holdAutoMinimizeOff]);
+
   // Minimizing drops the selection and closes the step
   // editor, which may point at a row that just shrank.
   const prevMinimizedRef = useRef(minimizedTracks);
@@ -428,6 +443,8 @@ export default function StepGrid({
         ref={dragContainerRef}
         style={{ touchAction: 'pan-y' }}
         {...dragPaint}
+        onPointerEnter={holdAutoMinimizeOn}
+        onPointerLeave={holdAutoMinimizeOff}
         className="space-y-2.5 lg:space-y-2 select-none p-2 lg:px-4 lg:pt-2 lg:pb-4"
       >
         {TRACKS.map((track, i) => (
@@ -533,6 +550,8 @@ export default function StepGrid({
           canRestore={minimizedTracks.size > 0}
           onMinimize={minimizeEmptyTracks}
           onRestoreAll={restoreAllTracks}
+          autoMinimize={autoMinimize}
+          onSetAutoMinimize={setAutoMinimize}
           onReset={clearAll}
           onClose={closeGridMenu}
           anchorRef={menuKeyRef}

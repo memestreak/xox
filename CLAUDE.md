@@ -104,7 +104,15 @@ from the URL.
   A track that gains steps leaves the set; AC never
   minimizes. `StepGrid` passes the visible track order
   to `useDragPaint`/`useSelection` so drags skip
-  minimized rows
+  minimized rows. "Auto-minimize empty tracks"
+  (`useAutoMinimizeSetting.ts`, per-device
+  localStorage, off by default; toggled in the grid
+  menu and Settings > Options) also minimizes a track
+  that loses its last step and every empty track on a
+  pattern load (`loadSeq`, bumped by the setter that
+  pattern loads use). It waits while the pointer is
+  over the rows (`holdAutoMinimize`), so rows never
+  move under it. Reset still opens every row
 - `useInputModality.ts` — mounted once in `Sequencer`:
   sets `data-input="pointer"` on `<html>` after a
   click/tap and clears it on a navigation key (Tab,

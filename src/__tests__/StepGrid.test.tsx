@@ -203,6 +203,27 @@ describe('StepGrid', () => {
       expect(restore).toBeDisabled();
     });
 
+    it('the menu toggles auto-minimize', () => {
+      renderGrid();
+      openGridMenu();
+      const item = screen.getByRole('menuitemcheckbox', {
+        name: 'Auto-minimize empty tracks',
+      });
+      expect(item).toHaveAttribute('aria-checked', 'false');
+      fireEvent.click(item);
+      // Turning it on minimizes the empty tracks now
+      expect(minimizedNames()).toEqual(
+        ['SD', 'CH', 'CY', 'HT', 'MT', 'LT', 'RS', 'CB']
+      );
+      openGridMenu();
+      expect(screen.getByRole('menuitemcheckbox', {
+        name: 'Auto-minimize empty tracks',
+      })).toHaveAttribute('aria-checked', 'true');
+      fireEvent.click(screen.getByRole('menuitemcheckbox', {
+        name: 'Auto-minimize empty tracks',
+      }));
+    });
+
     it('right-click on a step or knob does not', () => {
       renderGrid();
       fireEvent.contextMenu(screen.getByRole('button', {

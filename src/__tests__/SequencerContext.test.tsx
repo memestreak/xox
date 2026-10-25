@@ -11,6 +11,9 @@ import patternsData from '../app/data/patterns.json';
 import kitsData from '../app/data/kits.json';
 import { TestWrapper } from './helpers/sequencer-wrapper';
 import { encodeRaw } from './helpers/encodeRaw';
+import {
+  resetAutoMinimizeForTests, setAutoMinimize,
+} from '../app/hooks/useAutoMinimizeSetting';
 
 // Mock the AudioEngine module
 vi.mock('../app/AudioEngine', () => ({
@@ -1514,4 +1517,126 @@ describe('minimized tracks', () => {
       expect(Object.keys(result.current.meta.config))
         .toEqual(Object.keys(defaultConfig()));
     });
+});
+
+// -------------------------------------------------------
+// Auto-minimize empty tracks setting
+// -------------------------------------------------------
+describe('auto-minimize empty tracks', () => {
+  beforeEach(() => {
+    window.location.hash = '';
+    resetAutoMinimizeForTests();
+  });
+
+  /** A preset with some empty tracks, and its empty ids. */
+  function presetWithEmptyTracks() {
+    const pattern = patternsData.patterns.find(p =>
+      p.tracks.bd.steps.includes('1')
+      && !p.tracks.ch.steps.includes('1')
+    ) as Pattern;
+    const empty = TRACK_IDS.filter(id =>
+      id !== 'ac' && !pattern.tracks[id].steps.includes('1')
+    );
+    return { pattern, empty };
+  }
+
+  it('is off by default', () => {
+    const { result } = renderSequencer();
+    expect(result.current.state.autoMinimize).toBe(false);
+    const { pattern } = presetWithEmptyTracks();
+    act(() => {
+      result.current.actions.setPattern(pattern);
+    });
+    expect(result.current.state.minimizedTracks.size)
+      .toBe(0);
+  });
+
+  it('minimizes the empty tracks of a loaded preset', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setAutoMinimize(true);
+    });
+    act(() => {
+      result.current.actions.restoreAllTracks();
+    });
+    const { pattern, empty } = presetWithEmptyTracks();
+    act(() => {
+      result.current.actions.setPattern(pattern);
+    });
+    expect([...result.current.state.minimizedTracks].sort())
+      .toEqual([...empty].sort());
+  });
+
+  it('minimizes a track when its last step is removed',
+    () => {
+      const { result } = renderSequencer();
+      const { pattern } = presetWithEmptyTracks();
+      act(() => {
+        result.current.actions.setAutoMinimize(true);
+        result.current.actions.setPattern(pattern);
+      });
+      const steps = result.current.meta.config.tracks.bd.steps;
+      act(() => {
+        for (let i = 0; i < steps.length; i++) {
+          if (steps[i] === '1') {
+            result.current.actions.setStep('bd', i, '0');
+          }
+        }
+      });
+      expect(result.current.state.minimizedTracks.has('bd'))
+        .toBe(true);
+    });
+
+  it('waits while the pointer is over the grid', () => {
+    const { result } = renderSequencer();
+    const { pattern } = presetWithEmptyTracks();
+    act(() => {
+      result.current.actions.setAutoMinimize(true);
+      result.current.actions.setPattern(pattern);
+    });
+    act(() => {
+      result.current.actions.holdAutoMinimize(true);
+    });
+    act(() => {
+      result.current.actions.clearTrack('bd');
+    });
+    expect(result.current.state.minimizedTracks.has('bd'))
+      .toBe(false);
+    act(() => {
+      result.current.actions.holdAutoMinimize(false);
+    });
+    expect(result.current.state.minimizedTracks.has('bd'))
+      .toBe(true);
+  });
+
+  it('Reset opens every row with the setting on', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      result.current.actions.setAutoMinimize(true);
+    });
+    expect(result.current.state.minimizedTracks.size)
+      .toBeGreaterThan(0);
+    act(() => {
+      result.current.actions.clearAll();
+    });
+    expect(result.current.state.minimizedTracks.size)
+      .toBe(0);
+  });
+
+  it('H and Shift+H still work with the setting on', () => {
+    const { result } = renderSequencer();
+    act(() => {
+      setAutoMinimize(true);
+    });
+    act(() => {
+      result.current.actions.restoreAllTracks();
+    });
+    expect(result.current.state.minimizedTracks.size)
+      .toBe(0);
+    act(() => {
+      result.current.actions.minimizeEmptyTracks();
+    });
+    expect(result.current.state.minimizedTracks.size)
+      .toBeGreaterThan(0);
+  });
 });
