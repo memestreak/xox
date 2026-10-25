@@ -1587,20 +1587,27 @@ describe('auto-minimize empty tracks', () => {
         .toBe(true);
     });
 
-  it('minimizes at once, even with the pointer on the grid',
-    () => {
-      const { result } = renderSequencer();
-      const { pattern } = presetWithEmptyTracks();
-      act(() => {
-        result.current.actions.setAutoMinimize(true);
-        result.current.actions.setPattern(pattern);
-      });
-      act(() => {
-        result.current.actions.clearTrack('bd');
-      });
-      expect(result.current.state.minimizedTracks.has('bd'))
-        .toBe(true);
+  it('waits until the pointer leaves the row', () => {
+    const { result } = renderSequencer();
+    const { pattern } = presetWithEmptyTracks();
+    act(() => {
+      result.current.actions.setAutoMinimize(true);
+      result.current.actions.setPattern(pattern);
     });
+    act(() => {
+      result.current.actions.holdAutoMinimize('bd');
+    });
+    act(() => {
+      result.current.actions.clearTrack('bd');
+    });
+    expect(result.current.state.minimizedTracks.has('bd'))
+      .toBe(false);
+    act(() => {
+      result.current.actions.holdAutoMinimize(null);
+    });
+    expect(result.current.state.minimizedTracks.has('bd'))
+      .toBe(true);
+  });
 
   it('Reset opens every row with the setting on', () => {
     const { result } = renderSequencer();

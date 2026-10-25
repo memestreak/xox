@@ -110,9 +110,13 @@ from the URL.
   menu and Settings > Options) also minimizes a track
   that loses its last step and every empty track on a
   pattern load (`loadSeq`, bumped by the setter that
-  pattern loads use). Both happen at once, even with
-  the pointer on the row (Jeremy asked for instant).
-  Reset still opens every row
+  pattern loads use). A track that lost its last step
+  waits while the pointer is on its row
+  (`data-row-track`) or pressed on the grid
+  (`holdAutoMinimize`, fed by `StepGrid`), so sparse
+  tracks stay editable and drags don't move rows; it
+  minimizes the moment the pointer moves off. Pattern
+  loads apply at once. Reset still opens every row
 - `useInputModality.ts` — mounted once in `Sequencer`:
   sets `data-input="pointer"` on `<html>` after a
   click/tap and clears it on a navigation key (Tab,

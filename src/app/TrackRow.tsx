@@ -314,7 +314,7 @@ function TrackRowInner({
   }
 
   return (
-    <div>
+    <div data-row-track={trackId}>
       {/* Mobile: track name + M/S above grid */}
       <div className="flex items-center gap-2 mb-1.5 lg:hidden">
         <TrackNameButton

@@ -21,6 +21,7 @@ import { usePatternMode } from './hooks/usePatternMode';
 import { useTrackConfig } from './hooks/useTrackConfig';
 import { usePlayback } from './hooks/usePlayback';
 import { useMinimizedTracks } from './hooks/useMinimizedTracks';
+import type { AutoMinimizeHold } from './hooks/useMinimizedTracks';
 import {
   setAutoMinimize, useAutoMinimizeSetting,
 } from './hooks/useAutoMinimizeSetting';
@@ -152,6 +153,11 @@ interface SequencerActions {
   restoreTrack: (trackId: TrackId) => void;
   restoreAllTracks: () => void;
   setAutoMinimize: (value: boolean) => void;
+  /**
+   * Where the pointer is on the grid: the hovered
+   * track's row, 'all' during a press, or null.
+   */
+  holdAutoMinimize: (hold: AutoMinimizeHold) => void;
 }
 
 interface SequencerMeta {
@@ -477,6 +483,7 @@ export function SequencerProvider({
   const { toggleFillLatch, setFillHeld } = fill;
   const {
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
+    holdAutoMinimize,
   } = minimize;
   const {
     toggleStep, setStep, setTrackSteps, toggleMute,
@@ -520,6 +527,7 @@ export function SequencerProvider({
     restoreTrack,
     restoreAllTracks,
     setAutoMinimize,
+    holdAutoMinimize,
   }), [
     togglePlay, setBpm, setKit, setPattern, toggleStep,
     setStep, setTrackSteps, toggleMute, toggleSolo,
@@ -530,6 +538,7 @@ export function SequencerProvider({
     clearParameterLock, setPatternMode, toggleTemp,
     toggleTempLatch, playPreview, dismissError, dismissImportNotice,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
+    holdAutoMinimize,
   ]);
 
   const meta = useMemo<SequencerMeta>(() => ({

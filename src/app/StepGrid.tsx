@@ -69,7 +69,7 @@ export default function StepGrid({
     clearTrigCondition, clearParameterLock,
     setTrigCondition,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
-    setAutoMinimize,
+    setAutoMinimize, holdAutoMinimize,
     clearAll,
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
@@ -259,6 +259,65 @@ export default function StepGrid({
     onSelectionUpdate: updateRectDrag,
     onClearSelection: clearSelection,
   });
+
+  // Auto-minimize waits while the pointer is on the row
+  // that lost its last step, so sparse tracks stay
+  // editable, and during any press on the grid, so a
+  // drag never moves rows under the pointer. A touch
+  // "leaves" when lifted, so on phones the row waits
+  // for the next touch somewhere else.
+  useEffect(() => {
+    const el = dragContainerRef.current;
+    if (!el) return;
+    let hovered: TrackId | null = null;
+    let pressed = false;
+    const update = () =>
+      holdAutoMinimize(pressed ? 'all' : hovered);
+    const rowOf = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return null;
+      if (!el.contains(target)) return null;
+      const row = target.closest<HTMLElement>(
+        '[data-row-track]'
+      );
+      return (row?.dataset.rowTrack as TrackId) ?? null;
+    };
+    const onOver = (e: PointerEvent) => {
+      hovered = rowOf(e.target);
+      update();
+    };
+    const onLeave = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      hovered = null;
+      update();
+    };
+    const onDown = (e: PointerEvent) => {
+      hovered = rowOf(e.target);
+      pressed = el.contains(e.target as Node);
+      update();
+    };
+    const onUp = () => {
+      if (!pressed) return;
+      pressed = false;
+      update();
+    };
+    el.addEventListener('pointerover', onOver);
+    el.addEventListener('pointerleave', onLeave);
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('pointerup', onUp, true);
+    document.addEventListener('pointercancel', onUp, true);
+    return () => {
+      el.removeEventListener('pointerover', onOver);
+      el.removeEventListener('pointerleave', onLeave);
+      document.removeEventListener(
+        'pointerdown', onDown, true
+      );
+      document.removeEventListener('pointerup', onUp, true);
+      document.removeEventListener(
+        'pointercancel', onUp, true
+      );
+      holdAutoMinimize(null);
+    };
+  }, [holdAutoMinimize]);
 
   // Minimizing drops the selection and closes the step
   // editor, which may point at a row that just shrank.
