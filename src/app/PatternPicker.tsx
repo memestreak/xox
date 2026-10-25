@@ -471,9 +471,10 @@ export default function PatternPicker({
               >
                 {patternsToShow.map((p, i) => {
                   // An edited preset isn't what's playing,
-                  // so it doesn't get the amber bar; it
-                  // gets the hover tint, where the cursor
-                  // starts (Enter reloads it).
+                  // so it doesn't get the amber bar. It
+                  // gets a blue outline instead: the
+                  // cursor starts there, and Enter
+                  // reloads it.
                   const isActive = p.id === selectedPatternId;
                   const isEdited = !isActive
                     && p.id === currentPatternId;
@@ -505,7 +506,9 @@ export default function PatternPicker({
                           ? ' bg-lcd text-[#1a0f03] font-semibold'
                             + ' shadow-[0_0_8px_rgb(245_160_58/0.35)]'
                           : ' text-lcd hover:bg-lcd/10'
-                            + (isEdited ? ' bg-lcd/10' : ''))
+                            + (isEdited
+                              ? ' outline-2 outline-edited'
+                              : ''))
                       }
                     >
                       <span
