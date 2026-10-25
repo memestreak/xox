@@ -25,6 +25,7 @@ def stop() -> None:
     if _current is not None:
         try:
             _current.kill()
+            _current.wait()
         except OSError:
             pass
         _current = None
