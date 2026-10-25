@@ -89,6 +89,13 @@ describe('PatternPicker', () => {
       ).toHaveTextContent('Custom');
     });
 
+    it('shows an edited preset with an asterisk', () => {
+      renderPicker('funk-2*');
+      expect(
+        screen.getByRole('button', { name: /pattern/i }),
+      ).toHaveTextContent('Funk 2*');
+    });
+
     it('has aria-expanded=false initially', () => {
       renderPicker();
       expect(
@@ -434,6 +441,16 @@ describe('PatternPicker', () => {
       renderPicker('custom');
       await user.keyboard('p');
       expect(category('Funk')).toHaveFocus();
+    });
+
+    it('P opens on the edited preset', async () => {
+      const user = userEvent.setup();
+      renderPicker('rock-1*');
+      await user.keyboard('p');
+      expect(option('Rock 1')).toHaveFocus();
+      expect(option('Rock 1')).toHaveAttribute(
+        'aria-selected', 'true',
+      );
     });
 
     it('P opens on the cued pattern', async () => {

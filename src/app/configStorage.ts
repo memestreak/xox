@@ -2,6 +2,7 @@
 
 import { validateConfig } from './configCodec';
 import type { SequencerConfig } from './types';
+import { CUSTOM_PATTERN_ID } from './patternUtils';
 
 /** localStorage key for the autosaved session. */
 export const CONFIG_STORAGE_KEY = 'xox-config';
@@ -58,6 +59,6 @@ export function loadSession(): StoredSession | null {
   const selectedPatternId =
     typeof obj.selectedPatternId === 'string'
       ? obj.selectedPatternId
-      : 'custom';
+      : CUSTOM_PATTERN_ID;
   return { config, selectedPatternId };
 }

@@ -31,11 +31,11 @@ function setup() {
 }
 
 describe('useTrackConfig: steps', () => {
-  it('toggleStep flips a bit and marks pattern custom', () => {
+  it('toggleStep flips a bit and marks the pattern modified', () => {
     const r = setup();
     act(() => r.current.tc.toggleStep('bd', 3));
     expect(r.current.config.tracks.bd.steps[3]).toBe('1');
-    expect(r.current.selectedPatternId).toBe('custom');
+    expect(r.current.selectedPatternId).toBe('start*');
     act(() => r.current.tc.toggleStep('bd', 3));
     expect(r.current.config.tracks.bd.steps[3]).toBe('0');
   });

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import patternsData from '../app/data/patterns.json';
 import {
+  basePatternId,
+  isPatternModified,
+  markPatternModified,
   isResizeOf,
   getCategorizedPatterns,
   keyOnAdjacentLine,
@@ -264,5 +267,24 @@ describe('isResizeOf', () => {
   it('rejects an edited step or a filled pad', () => {
     expect(isResizeOf(tracks('1100'), base)).toBe(false);
     expect(isResizeOf(tracks('110101'), base)).toBe(false);
+  });
+});
+
+describe('modified pattern ids', () => {
+  it('marks a preset id once', () => {
+    expect(markPatternModified('boom-bap')).toBe('boom-bap*');
+    expect(markPatternModified('boom-bap*')).toBe('boom-bap*');
+  });
+
+  it('leaves custom unmarked', () => {
+    expect(markPatternModified('custom')).toBe('custom');
+    expect(isPatternModified('custom')).toBe(false);
+  });
+
+  it('reads the mark and the preset id', () => {
+    expect(isPatternModified('boom-bap*')).toBe(true);
+    expect(isPatternModified('boom-bap')).toBe(false);
+    expect(basePatternId('boom-bap*')).toBe('boom-bap');
+    expect(basePatternId('boom-bap')).toBe('boom-bap');
   });
 });

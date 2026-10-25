@@ -99,8 +99,11 @@ from the URL.
   condition (reads `fillActiveRef`); turning a step
   off clears its Fill condition (probability and
   cycle stay). Step edits and track volume/pan
-  changes mark the pattern `custom`; mute, solo and
-  the accent level don't
+  changes mark the preset modified (its id gets a
+  `*`, shown as "NAME*"; helpers in `patternUtils`);
+  mute, solo and the accent level don't. `custom`
+  is only a share link or Reset. The chooser opens
+  on a modified preset
 - `usePlayback.ts` — audio engine, handleStep, spacebar
 - `useSelection.ts` — multi-step selection (Ctrl/Shift)
 - `useDragPaint.ts` — pointer drag gestures on the grid
