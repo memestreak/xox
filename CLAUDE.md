@@ -87,7 +87,12 @@ from the URL.
 - `useFillMode.ts` — fill latch/momentary state, F-key
 - `usePatternMode.ts` — pattern mode state machine, temp
   and its latch (latched Temp re-arms after each temp
-  pattern; T / Shift+T)
+  pattern; T / Shift+T). A preset resets every grid
+  track's volume and pan when it takes effect (a cued
+  Sequential one at its boundary); mute, solo and the
+  accent level stay (`mixerUtils.ts`). Temp's home
+  snapshot keeps the mixer, and the revert restores
+  those levels
 - `useTrackConfig.ts` — all track/mixer config actions;
   a step turned on while Fill is active gets the Fill
   condition (reads `fillActiveRef`); turning a step

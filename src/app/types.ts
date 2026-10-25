@@ -131,11 +131,12 @@ export type TempState = 'off' | 'armed' | 'active';
 
 /**
  * Snapshot of config fields preserved for temp mode
- * revert. Mixer state is excluded because setPattern
- * does not modify it.
+ * revert. A pattern preset resets track volume and pan,
+ * so the mixer is kept too; only its levels are restored.
  */
 export interface HomeSnapshot {
   tracks: Record<TrackId, TrackConfig>;
+  mixer: Record<TrackId, TrackMixerState>;
   selectedPatternId: string;
 }
 

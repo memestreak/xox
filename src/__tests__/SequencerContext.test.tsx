@@ -1206,6 +1206,109 @@ describe('pattern switch logic', () => {
 });
 
 // -------------------------------------------------
+// Pattern presets reset track volume and pan
+// -------------------------------------------------
+describe('pattern preset resets track levels', () => {
+  /** Move bd and sd off their default levels, mute
+   *  ch, and lower the accent level. */
+  function moveLevels(
+    r: ReturnType<typeof renderSequencer>['result']
+  ) {
+    act(() => {
+      r.current.actions.setGain('bd', 0.3);
+      r.current.actions.setPan('bd', 0.1);
+      r.current.actions.setPan('sd', 0.9);
+      r.current.actions.toggleMute('ch');
+      r.current.actions.setGain('ac', 0.2);
+    });
+  }
+
+  function expectDefaultLevels(
+    r: ReturnType<typeof renderSequencer>['result']
+  ) {
+    const mixer = r.current.meta.config.mixer;
+    expect(mixer.bd.gain).toBe(1);
+    expect(mixer.bd.pan).toBe(0.5);
+    expect(mixer.sd.pan).toBe(0.5);
+    // Mute and the accent level are kept
+    expect(mixer.ch.isMuted).toBe(true);
+    expect(mixer.ac.gain).toBe(0.2);
+  }
+
+  it('stopped: loading a preset resets levels', () => {
+    const { result } = renderSequencer();
+    moveLevels(result);
+    act(() => {
+      result.current.actions.setPattern(
+        makePattern('p', '1000100010001000')
+      );
+    });
+    expectDefaultLevels(result);
+  });
+
+  it('playing + direct-jump: resets levels', () => {
+    const { result } = renderSequencer();
+    moveLevels(result);
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.setPattern(
+        makePattern('p', '1000100010001000')
+      );
+    });
+    expectDefaultLevels(result);
+  });
+
+  it('playing + sequential: levels wait for the cued'
+    + ' pattern', () => {
+    const { result } = renderSequencer();
+    moveLevels(result);
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.setPatternMode(
+        'sequential'
+      );
+    });
+    act(() => {
+      result.current.actions.setPattern(
+        makePattern('p', '1000100010001000')
+      );
+    });
+    // Still cued: the playing pattern keeps its levels
+    expect(
+      result.current.meta.config.mixer.bd.gain
+    ).toBe(0.3);
+  });
+
+  it('stop during temp brings back home levels', () => {
+    const { result } = renderSequencer();
+    moveLevels(result);
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    act(() => {
+      result.current.actions.toggleTemp();
+    });
+    act(() => {
+      result.current.actions.setPattern(
+        makePattern('temp', '1111111111111111')
+      );
+    });
+    expectDefaultLevels(result);
+    act(() => {
+      result.current.actions.togglePlay();
+    });
+    const mixer = result.current.meta.config.mixer;
+    expect(mixer.bd.gain).toBe(0.3);
+    expect(mixer.bd.pan).toBe(0.1);
+    expect(mixer.sd.pan).toBe(0.9);
+  });
+});
+
+// -------------------------------------------------
 // setParameterLock merging
 // -------------------------------------------------
 describe('setParameterLock merging', () => {

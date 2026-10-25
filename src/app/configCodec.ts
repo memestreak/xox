@@ -14,8 +14,11 @@ import { TRACK_IDS } from './types';
 import {
   BPM_MIN,
   BPM_MAX,
+  DEFAULT_ACCENT_LEVEL,
   DEFAULT_BPM,
+  DEFAULT_TRACK_GAIN,
   DEFAULT_TRACK_LENGTH,
+  DEFAULT_TRACK_PAN,
   SWING_MAX,
 } from './constants';
 
@@ -34,8 +37,9 @@ export function defaultConfig(): SequencerConfig {
   const tracks = {} as Record<TrackId, TrackConfig>;
   for (const id of TRACK_IDS) {
     mixer[id] = {
-      gain: id === 'ac' ? 0.5 : 1.0,
-      pan: 0.5,
+      gain: id === 'ac'
+        ? DEFAULT_ACCENT_LEVEL : DEFAULT_TRACK_GAIN,
+      pan: DEFAULT_TRACK_PAN,
       isMuted: false,
       isSolo: false,
     };

@@ -34,6 +34,12 @@ export const MAX_PATTERN_LENGTH = 64;
 export const DEFAULT_TRACK_LENGTH = 16;
 
 // ── Gain / mixing ───────────────────────────────────
+/** Default track volume; a pattern preset resets to it. */
+export const DEFAULT_TRACK_GAIN = 1.0;
+/** Default track pan (center); a preset resets to it. */
+export const DEFAULT_TRACK_PAN = 0.5;
+/** Default accent level (the accent track's gain). */
+export const DEFAULT_ACCENT_LEVEL = 0.5;
 /** Multiplier applied when accent track is active. */
 export const ACCENT_GAIN_MULTIPLIER = 2;
 /** Exponent for cubic gain curve (perceived loudness). */

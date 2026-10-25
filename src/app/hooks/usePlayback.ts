@@ -9,6 +9,10 @@ import kitsData from '../data/kits.json';
 import { audioEngine } from '../AudioEngine';
 import { midiEngine } from '../MidiEngine';
 import { computeStep } from '../computeStep';
+import {
+  withDefaultLevels,
+  withLevelsFrom,
+} from '../mixerUtils';
 import { GAIN_EXPONENT } from '../constants';
 import { getPatternLength } from '../types';
 import { enqueueStep } from '../stepQueue';
@@ -39,6 +43,25 @@ const TRACK_NAMES: Record<TrackId, string> = {
   cp: 'CP',
   cb: 'CB',
 };
+
+/** Mixer state as the audio callback reads it. */
+function buildTrackStates(
+  mixer: SequencerConfig['mixer']
+): Record<TrackId, TrackState> {
+  const result = {} as Record<TrackId, TrackState>;
+  for (const id of Object.keys(mixer) as TrackId[]) {
+    const m = mixer[id];
+    result[id] = {
+      id,
+      name: TRACK_NAMES[id],
+      gain: m.gain,
+      pan: m.pan,
+      isMuted: m.isMuted,
+      isSolo: m.isSolo,
+    };
+  }
+  return result;
+}
 
 // Input types where Space types a character or toggles
 // the control, so it must not start or stop playback.
@@ -156,25 +179,10 @@ export function usePlayback({
     return kit ?? kitsData.kits[0];
   }, [config.kitId]);
 
-  const trackStates = useMemo<
-    Record<TrackId, TrackState>
-  >(() => {
-    const result = {} as Record<TrackId, TrackState>;
-    for (const id of Object.keys(
-      config.mixer
-    ) as TrackId[]) {
-      const m = config.mixer[id];
-      result[id] = {
-        id,
-        name: TRACK_NAMES[id],
-        gain: m.gain,
-        pan: m.pan,
-        isMuted: m.isMuted,
-        isSolo: m.isSolo,
-      };
-    }
-    return result;
-  }, [config.mixer]);
+  const trackStates = useMemo(
+    () => buildTrackStates(config.mixer),
+    [config.mixer]
+  );
 
   // Ref for audio callback
   const trackStatesRef = useRef(trackStates);
@@ -277,10 +285,15 @@ export function usePlayback({
         const { config: newCfg, patternId } =
           result.applyPending;
         configRef.current = newCfg;
+        // The next steps may be scheduled before React
+        // re-renders, so they need the new levels now.
+        trackStatesRef.current =
+          buildTrackStates(newCfg.mixer);
         onPendingApplied();
         setConfig(prev => ({
           ...prev,
           tracks: newCfg.tracks,
+          mixer: withDefaultLevels(prev.mixer),
         }));
         setSelectedPatternId(patternId);
       }
@@ -293,13 +306,20 @@ export function usePlayback({
           needsReset,
         } = result.revertTemp;
         configRef.current = newCfg;
+        trackStatesRef.current =
+          buildTrackStates(newCfg.mixer);
         if (needsReset) {
           audioEngine.setPatternLength(snapPatLen);
         }
         audioEngine.requestReset();
+        const homeMixer =
+          homeSnapshotRef.current?.mixer;
         setConfig(prev => ({
           ...prev,
           tracks: newCfg.tracks,
+          mixer: homeMixer
+            ? withLevelsFrom(prev.mixer, homeMixer)
+            : prev.mixer,
         }));
         setSelectedPatternId(snapPatId);
         onTempReverted();
@@ -331,6 +351,7 @@ export function usePlayback({
         setConfig(prev => ({
           ...prev,
           tracks: snap.tracks,
+          mixer: withLevelsFrom(prev.mixer, snap.mixer),
         }));
         setSelectedPatternId(
           snap.selectedPatternId

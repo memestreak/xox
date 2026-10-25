@@ -772,6 +772,56 @@ describe('computeStep: pattern boundary signals', () => {
     }
   );
 
+  it('applyPending resets track levels, keeps mute'
+    + ' and accent', () => {
+    const config = makeConfig();
+    config.mixer.bd = {
+      ...config.mixer.bd, gain: 0.2, pan: 0.1,
+      isMuted: true,
+    };
+    config.mixer.ac = { ...config.mixer.ac, gain: 0.9 };
+    const deps = makeDeps({
+      config,
+      trackStates: trackStatesFrom(config),
+      pendingPattern: {
+        id: 'p', name: 'p', tracks: config.tracks,
+      },
+    });
+    const mixer =
+      computeStep(15, 1.0, deps).applyPending!
+        .config.mixer;
+    expect(mixer.bd).toEqual({
+      gain: 1, pan: 0.5, isMuted: true, isSolo: false,
+    });
+    expect(mixer.ac.gain).toBe(0.9);
+  });
+
+  it('temp revert restores home levels', () => {
+    const config = makeConfig();
+    const homeMixer = structuredClone(config.mixer);
+    homeMixer.sd = { ...homeMixer.sd, gain: 0.4, pan: 0.8 };
+    config.mixer.sd = {
+      ...config.mixer.sd, isSolo: true,
+    };
+    const deps = makeDeps({
+      config,
+      trackStates: trackStatesFrom(config),
+      tempState: 'active',
+      homeSnapshot: {
+        tracks: config.tracks,
+        mixer: homeMixer,
+        selectedPatternId: 'home',
+      },
+    });
+    const mixer =
+      computeStep(15, 1.0, deps).revertTemp!
+        .config.mixer;
+    // Levels come back; solo set during temp stays
+    expect(mixer.sd).toEqual({
+      gain: 0.4, pan: 0.8, isMuted: false, isSolo: true,
+    });
+  });
+
   it('no pending: no applyPending signal', () => {
     const deps = makeDeps();
     const result = computeStep(15, 1.0, deps);
@@ -808,6 +858,7 @@ describe('computeStep: pattern boundary signals', () => {
       tempState: 'active',
       homeSnapshot: {
         tracks: homeTracks,
+        mixer: config.mixer,
         selectedPatternId: 'home',
       },
     });
@@ -829,6 +880,7 @@ describe('computeStep: pattern boundary signals', () => {
       tempState: 'armed',
       homeSnapshot: {
         tracks: config.tracks,
+        mixer: config.mixer,
         selectedPatternId: 'x',
       },
     });
@@ -852,6 +904,7 @@ describe('computeStep: pattern boundary signals', () => {
         tempState: 'active',
         homeSnapshot: {
           tracks: config.tracks,
+          mixer: config.mixer,
           selectedPatternId: 'home',
         },
         pendingPattern: pending,
@@ -880,6 +933,7 @@ describe('computeStep: pattern boundary signals', () => {
         tempState: 'active',
         homeSnapshot: {
           tracks: homeTracks,
+          mixer: config.mixer,
           selectedPatternId: 'home',
         },
       });
