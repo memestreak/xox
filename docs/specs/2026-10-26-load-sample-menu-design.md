@@ -1,6 +1,7 @@
 # Load Sample from File: Design
 
-Status: approved in brainstorming (2026-10-26).
+Status: approved in brainstorming and grilling
+(2026-10-26).
 
 ## Context
 
@@ -12,6 +13,26 @@ This slice builds only in-app loading from the track name
 menu. The rest comes in later PRs and must fit on top of
 this one without rework.
 
+Direction: today this is a kit-building tool for the
+developer. Long term it should also serve every user
+("use my own snare"), with samples saved across reloads.
+This slice stays memory-only but stores each sample's
+original `File` so Export and persistence can be added
+without changing the stored shape.
+
+### Changes from the parent spec
+
+| Topic | Parent spec | This spec |
+|---|---|---|
+| File types | WAV and AIFF | WAV only |
+| Kit change | Clears custom samples | Keeps them |
+| Bulk clear | None | Grid menu "Reset all samples to kit" |
+| Size limit | Import only (20 MB) | Also at load (20 MB) |
+
+The drag-and-drop and Export slices follow this spec where
+they differ. Export's `base` field becomes the kit that is
+current at export time.
+
 ## Decisions
 
 | Topic | Decision |
@@ -19,34 +40,45 @@ this one without rework.
 | Who sees it | Everyone, on the live site |
 | Entry point | Track name menu (right-click or Ctrl/Cmd-click) |
 | After load | Silent swap; no automatic preview |
+| File types | WAV only, checked in code, not just the picker |
+| Size limit | Refuse files over 20 MB before decoding |
 | Persistence | Memory only: gone on reload |
-| Kit change | Choosing another kit clears all custom samples |
-| Reset | Keeps custom samples (like master volume) |
+| Kit change | Custom samples stay; other tracks follow the kit |
+| Reset (`clearAll`) | Keeps custom samples (like master volume) |
 | Share links | Unchanged; custom audio is not included |
+| Marker | Amber dot with the file name on hover; nothing else |
 | Accent (`ac`) | No sample; no menu item (it has no name button) |
 | Small screens | Menu only exists at `lg` row size today; unchanged |
 
-Out of this slice (later PRs, per the parent spec):
-drag-and-drop onto rows, Export kit, `zipStore.ts`,
-`kitExport.ts`, `import_kit.py`, the share-link note.
+Out of this slice (later PRs): drag-and-drop onto rows,
+Export kit, `zipStore.ts`, `kitExport.ts`, `import_kit.py`,
+the share-link note, saving samples across reloads.
 
 ## 1. User-facing behavior
 
-### Menu
+### Track name menu
 
 The track name menu (`TrackNameButton`) gains, above the
 divider before **Clear track**:
 
 - **Load sample from file...** Opens the browser file
-  picker. Accepts `audio/*,.wav,.aif,.aiff`. The menu
-  closes when the item is chosen.
+  picker, filtered to WAV files. The menu closes when the
+  item is chosen.
 - **Reset to kit sample**, shown only when the track has a
   custom sample. Restores the current kit's sound.
 
 Choosing a file swaps the track's sound silently: no
 preview plays. If playback is running, the next scheduled
 hit uses the new sample. Cancelling the picker changes
-nothing.
+nothing. Loading onto a track that already has a custom
+sample replaces it. Loading a sample does not mark the
+preset modified (it is not part of `SequencerConfig`).
+
+### Grid menu
+
+`GridContextMenu` gains **Reset all samples to kit**,
+shown only when at least one track has a custom sample.
+It clears every custom sample and every dot.
 
 ### Marker
 
@@ -56,34 +88,56 @@ name buttons) and on the minimized row. Hovering the dot
 shows the original file name (e.g. `cl_03-smack_1.wav`)
 through a native `title`. The dot is
 `<span role="img" aria-label="Custom sample:
-cl_03-smack_1.wav">`.
+cl_03-smack_1.wav">`. There is no other marker (no kit
+label count, no name restyle).
 
-### Clearing
+### Lifetime
 
-- Choosing a different kit clears every custom sample and
-  every dot. This includes a kit change from a share link.
+- Changing kits keeps every custom sample; the other
+  tracks switch to the new kit. **Reset to kit sample**
+  then restores the new kit's sound. This includes a kit
+  change from a share link.
 - Reloading the page clears them (memory only).
 - Reset (`clearAll`) does **not** clear them.
+- Only the two reset menu items clear them in-session.
 
 ### Errors
 
-A file the browser can't decode (e.g. `.aif` in Chrome) is
-refused with a `StatusBanner` message:
-"Can't play <file name> in this browser. Try a WAV, or open
-XOX in Safari." The track keeps its previous sound (kit or
-earlier custom sample) and its marker state. The same
-text also appears for a corrupt WAV; that is intended,
-since the advice still applies.
+Each refusal shows a `StatusBanner` message and leaves the
+track's previous sound (kit or earlier custom sample) and
+marker unchanged:
 
-A load that finishes after the kit has changed is
-discarded, so a stale sample never lands on the new kit.
+- Not a WAV: "Only WAV samples are supported (got
+  loop.aif)."
+- Over 20 MB: "big_loop.wav is too large (34 MB). Samples
+  must be under 20 MB." Checked before reading the file.
+- Decode failure: "Couldn't read kick.wav. It may be
+  damaged or use an unusual WAV encoding."
+
+If two loads for the same track overlap, the one started
+last wins; an earlier one that finishes later is dropped.
 
 ### Help
 
-`helpContent.ts` documents both menu items (required by
-CLAUDE.md).
+`helpContent.ts` documents the three new menu items
+(required by CLAUDE.md).
 
 ## 2. Architecture
+
+### `sampleFiles.ts` (new, pure)
+
+- `SAMPLE_EXTENSIONS = ['.wav']` and
+  `SAMPLE_MIME_TYPES = ['audio/wav', 'audio/x-wav',
+  'audio/wave', 'audio/vnd.wave']`.
+- `SAMPLE_ACCEPT`: the picker's `accept` string, built
+  from both lists.
+- `isSupportedSampleFile(file)`: true if the name ends in
+  a listed extension (case-insensitive) or the MIME type
+  is listed.
+- `checkSampleFile(file): string | null`: the type error
+  or the size error message above, else `null`.
+- `MAX_SAMPLE_FILE_BYTES = 20 * 1024 * 1024` lives in
+  `constants.ts` (snapshot test updated).
 
 ### `AudioEngine.ts`
 
@@ -101,41 +155,37 @@ CLAUDE.md).
 
 ### `hooks/useCustomSamples.ts`
 
-- Args: `kitId`.
-- State: `customSamples: Partial<Record<TrackId, string>>`
-  mapping track to original file name. (The parent spec
-  keeps the `File` for Export; that PR can widen the
-  stored value then.)
-- `loadSample(track, file)`: decode, then if the kit has
-  not changed since the load started, call
-  `setCustomSample` and record the name. On decode failure,
-  report the error message above and change nothing.
+- No args (independent of the kit).
+- State: `customSamples: Partial<Record<TrackId, File>>`,
+  the original file per track (name for the marker, bytes
+  for later Export and persistence).
+- `loadSample(track, file)`: run `checkSampleFile`; on an
+  error, set `sampleError` and stop. Otherwise decode;
+  on failure set the decode error. On success, if this is
+  still the latest load for the track (per-track counter
+  in a ref), call `setCustomSample`, store the file, and
+  clear `sampleError`.
 - `resetSample(track)`: `clearCustomSample` and drop the
-  name.
-- On `kitId` change: `clearCustomSamples()` and clear the
-  state. A kit-generation ref, incremented in that
-  effect, guards in-flight loads: a load records the
-  generation when it starts and is dropped if it
-  differs when decoding ends. The effect also runs on
-  mount (twice under StrictMode); that is harmless since
-  nothing is loaded yet.
-- Both actions are stable callbacks (read refs, not state)
+  entry; bumps the track's counter so an in-flight load
+  can't re-add it.
+- `resetAllSamples()`: `clearCustomSamples()`, clear the
+  state, bump every counter.
+- `sampleError: string | null` and `dismissSampleError`.
+- All actions are stable callbacks (read refs, not state)
   so memoized rows skip renders.
 - No `reset()`: deliberately excluded from `clearAll`,
   like `useMasterVolume`. CLAUDE.md documents the
-  exception and the hook in the hooks list.
+  exception and adds the hook to the hooks list.
 
 ### `SequencerContext.tsx`
 
 - Composes `useCustomSamples`. Exposes
-  `state.customSamples` and `actions.loadSample`,
-  `actions.resetSample`.
-- `useCustomSamples` owns `sampleError: string | null`
-  and a stable `dismissSampleError`, exposed as
-  `state.sampleError` and `actions.dismissSampleError`.
-  It does not reuse `usePlayback`'s `loadError`, which
-  the kit loader clears on every kit change. A
-  successful load clears `sampleError`.
+  `state.customSamples`, `state.sampleError`, and
+  `actions.loadSample`, `actions.resetSample`,
+  `actions.resetAllSamples`, `actions.dismissSampleError`.
+- `sampleError` does not reuse `usePlayback`'s
+  `loadError`, which the kit loader clears on every kit
+  change.
 - `Sequencer.tsx` shows one message in `StatusBanner`, in
   this order: `loadError`, then `sampleError`, then
   `importNotice`, with the matching dismiss action.
@@ -147,18 +197,20 @@ CLAUDE.md).
   `useSequencer()` and passes them to each `TrackRow`
   (as `customSampleName`, `onLoadSample`,
   `onResetSample`, bound to the row's track the same way
-  existing per-track callbacks are).
+  existing per-track callbacks are). It passes
+  `hasCustomSamples` and `resetAllSamples` to
+  `GridContextMenu`.
 - `TrackRow` passes them to `TrackNameButton`, and the
   name to `MinimizedTrackRow` for its marker.
 - `TrackNameButton` (lg only) renders a hidden
-  `<input type="file">` (ref) as a sibling of the name
-  button, outside the `menuOpen && ...` block, so it
-  stays mounted after the menu closes. The menu item
-  calls `input.click()` in its click handler (a user
-  gesture, so the picker opens in all browsers), then
-  closes the menu. The input's `onChange` passes the
-  first file to `onLoadSample` and clears `value` so the
-  same file can be chosen again.
+  `<input type="file" accept={SAMPLE_ACCEPT}>` (ref) as a
+  sibling of the name button, outside the
+  `menuOpen && ...` block, so it stays mounted after the
+  menu closes. The menu item calls `input.click()` in its
+  click handler (a user gesture, so the picker opens in
+  all browsers), then closes the menu. The input's
+  `onChange` passes the first file to `onLoadSample` and
+  clears `value` so the same file can be chosen again.
 - The dot (a shared `CustomSampleDot` component) sits
   beside the name button, not inside it, so the `lg`
   button's `w-14 truncate` doesn't clip it and the
@@ -173,28 +225,37 @@ CLAUDE.md).
 ## 3. Testing
 
 Vitest:
+- `sampleFiles`: extension and MIME matching
+  (case-insensitive), non-WAV rejected, size limit
+  boundary, `SAMPLE_ACCEPT` contents.
 - `AudioEngine`: custom buffer preferred over kit buffer;
   cleared custom slot falls back to the kit; `preloadKit`
   leaves custom buffers alone.
-- `useCustomSamples`: load sets name and buffer; decode
-  failure reports the error and keeps the previous state;
-  per-track reset; kit change clears all; a load that
-  finishes after a kit change is discarded; a successful
-  load clears `sampleError`.
+- `useCustomSamples`: load stores the file and sets the
+  buffer; type, size and decode errors each set their
+  message and keep the previous state; per-track reset;
+  reset all; overlapping loads keep the last started; a
+  reset during a load wins; a successful load clears
+  `sampleError`.
 - `SequencerContext.test.tsx`: `clearAll` keeps custom
-  samples; banner precedence in `Sequencer`.
+  samples; a kit change keeps them; banner precedence in
+  `Sequencer`.
 - `TrackRow`/`StepGrid`: minimized row shows the dot;
   props reach the name button.
 - `TrackNameButton`: Load item present; Reset item only
   when custom; file input change calls `onLoadSample`;
   dot with its `title` and `aria-label`; the file input
   is still mounted after the menu closes.
+- `GridContextMenu`: Reset all item only when a track is
+  custom; calls `resetAllSamples`.
 - `helpContent`: new entries.
 
 Browser (per CLAUDE.md, UI change):
 - Right-click OH, load a WAV, confirm the dot and that
   playback and preview use the new sample.
-- Load an undecodable file, confirm the banner and that
-  the old sound remains.
-- Reset to kit sample; switch kits and confirm the dot
-  clears.
+- Switch kits; confirm OH keeps the custom sample and its
+  dot while other tracks change.
+- Pick a non-WAV and a corrupt WAV; confirm the banners
+  and that the old sound remains.
+- Reset to kit sample on one track; load two tracks and
+  use Reset all samples to kit.
