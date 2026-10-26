@@ -51,10 +51,12 @@ nothing.
 ### Marker
 
 A track with a custom sample shows a small amber dot after
-its name, on both the full row and the minimized row. Its
-tooltip is the original file name (e.g.
-`cl_03-smack_1.wav`). The dot has an `aria-label` such as
-"Custom sample: cl_03-smack_1.wav".
+its name: on the full row at both sizes (`sm` and `lg`
+name buttons) and on the minimized row. Hovering the dot
+shows the original file name (e.g. `cl_03-smack_1.wav`)
+through a native `title`. The dot is
+`<span role="img" aria-label="Custom sample:
+cl_03-smack_1.wav">`.
 
 ### Clearing
 
@@ -69,7 +71,9 @@ A file the browser can't decode (e.g. `.aif` in Chrome) is
 refused with a `StatusBanner` message:
 "Can't play <file name> in this browser. Try a WAV, or open
 XOX in Safari." The track keeps its previous sound (kit or
-earlier custom sample) and its marker state.
+earlier custom sample) and its marker state. The same
+text also appears for a corrupt WAV; that is intended,
+since the advice still applies.
 
 A load that finishes after the kit has changed is
 discarded, so a stale sample never lands on the new kit.
@@ -97,8 +101,7 @@ CLAUDE.md).
 
 ### `hooks/useCustomSamples.ts`
 
-- Args: `kitId`, and an error callback that sets the
-  banner message.
+- Args: `kitId`.
 - State: `customSamples: Partial<Record<TrackId, string>>`
   mapping track to original file name. (The parent spec
   keeps the `File` for Export; that PR can widen the
@@ -110,7 +113,12 @@ CLAUDE.md).
 - `resetSample(track)`: `clearCustomSample` and drop the
   name.
 - On `kitId` change: `clearCustomSamples()` and clear the
-  state. A kit-generation ref guards in-flight loads.
+  state. A kit-generation ref, incremented in that
+  effect, guards in-flight loads: a load records the
+  generation when it starts and is dropped if it
+  differs when decoding ends. The effect also runs on
+  mount (twice under StrictMode); that is harmless since
+  nothing is loaded yet.
 - Both actions are stable callbacks (read refs, not state)
   so memoized rows skip renders.
 - No `reset()`: deliberately excluded from `clearAll`,
@@ -122,28 +130,41 @@ CLAUDE.md).
 - Composes `useCustomSamples`. Exposes
   `state.customSamples` and `actions.loadSample`,
   `actions.resetSample`.
-- The error message joins the existing `StatusBanner`
-  flow. Reuse `loadError`/`dismissError` from
-  `usePlayback` if that fits cleanly; otherwise add a
-  `sampleError` with its own dismiss, shown with the same
-  precedence rules in `Sequencer.tsx`. The plan picks one
-  after reading the code.
+- `useCustomSamples` owns `sampleError: string | null`
+  and a stable `dismissSampleError`, exposed as
+  `state.sampleError` and `actions.dismissSampleError`.
+  It does not reuse `usePlayback`'s `loadError`, which
+  the kit loader clears on every kit change. A
+  successful load clears `sampleError`.
+- `Sequencer.tsx` shows one message in `StatusBanner`, in
+  this order: `loadError`, then `sampleError`, then
+  `importNotice`, with the matching dismiss action.
 
 ### Track rows
 
-- `TrackRow` passes `customSampleName`, `onLoadSample`,
-  `onResetSample` to `TrackNameButton`, and the name to
-  the minimized row's marker.
-- `TrackNameButton` owns a hidden
-  `<input type="file">` (ref). The menu item calls
-  `input.click()` inside the click handler (a user
-  gesture, so the picker opens in all browsers). The
-  input's `onChange` passes the first file to
-  `onLoadSample` and clears `value` so the same file can
-  be chosen again.
-- The dot is a small `bg-accent` circle using existing
-  theme tokens; no conditional borders
-  (`xox/no-conditional-border`).
+- `StepGrid` reads `state.customSamples`,
+  `actions.loadSample` and `actions.resetSample` from
+  `useSequencer()` and passes them to each `TrackRow`
+  (as `customSampleName`, `onLoadSample`,
+  `onResetSample`, bound to the row's track the same way
+  existing per-track callbacks are).
+- `TrackRow` passes them to `TrackNameButton`, and the
+  name to `MinimizedTrackRow` for its marker.
+- `TrackNameButton` (lg only) renders a hidden
+  `<input type="file">` (ref) as a sibling of the name
+  button, outside the `menuOpen && ...` block, so it
+  stays mounted after the menu closes. The menu item
+  calls `input.click()` in its click handler (a user
+  gesture, so the picker opens in all browsers), then
+  closes the menu. The input's `onChange` passes the
+  first file to `onLoadSample` and clears `value` so the
+  same file can be chosen again.
+- The dot (a shared `CustomSampleDot` component) sits
+  beside the name button, not inside it, so the `lg`
+  button's `w-14 truncate` doesn't clip it and the
+  existing `<Tooltip tooltipKey="track-…">` is unchanged.
+  It is a small `bg-accent` circle using theme tokens; no
+  conditional borders (`xox/no-conditional-border`).
 - New interactive elements get `aria-label`s and keyboard
   access (jsx-a11y is at error severity). Menu arrow-key
   navigation already picks up new `role="menuitem"`
@@ -158,11 +179,16 @@ Vitest:
 - `useCustomSamples`: load sets name and buffer; decode
   failure reports the error and keeps the previous state;
   per-track reset; kit change clears all; a load that
-  finishes after a kit change is discarded; `clearAll`
-  keeps samples.
+  finishes after a kit change is discarded; a successful
+  load clears `sampleError`.
+- `SequencerContext.test.tsx`: `clearAll` keeps custom
+  samples; banner precedence in `Sequencer`.
+- `TrackRow`/`StepGrid`: minimized row shows the dot;
+  props reach the name button.
 - `TrackNameButton`: Load item present; Reset item only
   when custom; file input change calls `onLoadSample`;
-  dot and its tooltip/label.
+  dot with its `title` and `aria-label`; the file input
+  is still mounted after the menu closes.
 - `helpContent`: new entries.
 
 Browser (per CLAUDE.md, UI change):
