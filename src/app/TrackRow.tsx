@@ -388,10 +388,12 @@ function TrackRowInner({
               onLoadSample={handleLoadSample}
               onResetSample={handleResetSample}
             />
+            {/* The dot sits over the name button's corner;
+                let clicks and right-clicks reach the button. */}
             {customSampleName !== undefined && (
               <CustomSampleDot
                 fileName={customSampleName}
-                className="absolute top-0 right-0"
+                className="absolute top-0 right-0 pointer-events-none"
               />
             )}
           </div>
