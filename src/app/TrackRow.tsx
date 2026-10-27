@@ -10,6 +10,7 @@ import TrackNameButton from './TrackNameButton';
 import TrackMixer from './TrackMixer';
 import TrackEndBar from './TrackEndBar';
 import StepButton from './StepButton';
+import CustomSampleDot from './CustomSampleDot';
 
 export interface TrackRowProps {
   trackId: TrackId;
@@ -69,6 +70,10 @@ export interface TrackRowProps {
    * (a margin, not a border, so nothing reflows).
    */
   tightBelow?: boolean;
+  /** File name when the track plays a custom sample. */
+  customSampleName?: string;
+  onLoadSample?: (trackId: TrackId, file: File) => void;
+  onResetSample?: (trackId: TrackId) => void;
 }
 
 interface MinimizedTrackRowProps {
@@ -80,6 +85,7 @@ interface MinimizedTrackRowProps {
   tightBelow: boolean;
   onRestore: () => void;
   onPlayPreview: () => void;
+  customSampleName?: string;
 }
 
 /**
@@ -96,6 +102,7 @@ function MinimizedTrackRow({
   tightBelow,
   onRestore,
   onPlayPreview,
+  customSampleName,
 }: MinimizedTrackRowProps) {
   return (
     <div
@@ -153,6 +160,9 @@ function MinimizedTrackRow({
         >
           {trackName}
         </button>
+        {customSampleName !== undefined && (
+          <CustomSampleDot fileName={customSampleName} />
+        )}
       </div>
       <button
         type="button"
@@ -223,6 +233,9 @@ function TrackRowInner({
   isMinimized = false,
   onRestore,
   tightBelow = false,
+  customSampleName,
+  onLoadSample,
+  onResetSample,
 }: TrackRowProps) {
   const stepGridRef = useRef<HTMLDivElement>(null);
   // ─── Bound callbacks ──────────────────────────
@@ -253,6 +266,14 @@ function TrackRowInner({
   const handlePlayPreview = useCallback(
     () => onPlayPreview(trackId),
     [onPlayPreview, trackId]
+  );
+  const handleLoadSample = useCallback(
+    (file: File) => onLoadSample?.(trackId, file),
+    [onLoadSample, trackId]
+  );
+  const handleResetSample = useCallback(
+    () => onResetSample?.(trackId),
+    [onResetSample, trackId]
   );
   const handleSetLength = useCallback(
     (len: number) => onSetTrackLength(trackId, len),
@@ -309,6 +330,7 @@ function TrackRowInner({
         tightBelow={tightBelow}
         onRestore={handleRestore}
         onPlayPreview={handlePlayPreview}
+        customSampleName={customSampleName}
       />
     );
   }
@@ -326,7 +348,13 @@ function TrackRowInner({
           onToggleFreeRun={handleFreeRun}
           onClearTrack={handleClearTrack}
           onPlayPreview={handlePlayPreview}
+          customSampleName={customSampleName}
+          onLoadSample={handleLoadSample}
+          onResetSample={handleResetSample}
         />
+        {customSampleName !== undefined && (
+          <CustomSampleDot fileName={customSampleName} />
+        )}
         <div className="flex gap-1 ml-auto items-center">
           <TrackMixer
             trackName={trackName}
@@ -346,16 +374,27 @@ function TrackRowInner({
       <div className="flex gap-4 items-center">
         {/* Desktop: sidebar */}
         <div className="hidden lg:flex w-56 items-center gap-2">
-          <TrackNameButton
-            size="lg"
-            trackId={trackId}
-            trackName={trackName}
-            isFreeRun={isFreeRun}
-            isTriggered={isTriggered}
-            onToggleFreeRun={handleFreeRun}
-            onClearTrack={handleClearTrack}
-            onPlayPreview={handlePlayPreview}
-          />
+          <div className="relative shrink-0">
+            <TrackNameButton
+              size="lg"
+              trackId={trackId}
+              trackName={trackName}
+              isFreeRun={isFreeRun}
+              isTriggered={isTriggered}
+              onToggleFreeRun={handleFreeRun}
+              onClearTrack={handleClearTrack}
+              onPlayPreview={handlePlayPreview}
+              customSampleName={customSampleName}
+              onLoadSample={handleLoadSample}
+              onResetSample={handleResetSample}
+            />
+            {customSampleName !== undefined && (
+              <CustomSampleDot
+                fileName={customSampleName}
+                className="absolute top-0 right-0"
+              />
+            )}
+          </div>
           <TrackMixer
             trackName={trackName}
             isMuted={isMuted}
