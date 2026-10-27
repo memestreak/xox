@@ -9,6 +9,7 @@ import {
   MENU_HINT, MENU_ITEM, MENU_ITEM_BASE,
 } from './menuStyles';
 import { SAMPLE_ACCEPT } from './sampleFiles';
+import CustomSampleDot from './CustomSampleDot';
 
 interface TrackNameButtonProps {
   size: 'sm' | 'lg';
@@ -178,8 +179,19 @@ function TrackNameButtonInner({
               ? ' text-lcd bg-accent/20'
               : ' text-ink hover:bg-raised')
           }
+          aria-label={trackName}
         >
-          {trackName}
+          {size === 'lg' && customSampleName !== undefined ? (
+            // The dot sits just after the name; clicks on it
+            // reach the button.
+            <span className="relative">
+              {trackName}
+              <CustomSampleDot
+                fileName={customSampleName}
+                className="absolute left-full top-0"
+              />
+            </span>
+          ) : trackName}
         </button>
         {size === 'lg' && (
           <input

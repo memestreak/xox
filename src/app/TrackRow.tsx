@@ -374,29 +374,19 @@ function TrackRowInner({
       <div className="flex gap-4 items-center">
         {/* Desktop: sidebar */}
         <div className="hidden lg:flex w-56 items-center gap-2">
-          <div className="relative shrink-0">
-            <TrackNameButton
-              size="lg"
-              trackId={trackId}
-              trackName={trackName}
-              isFreeRun={isFreeRun}
-              isTriggered={isTriggered}
-              onToggleFreeRun={handleFreeRun}
-              onClearTrack={handleClearTrack}
-              onPlayPreview={handlePlayPreview}
-              customSampleName={customSampleName}
-              onLoadSample={handleLoadSample}
-              onResetSample={handleResetSample}
-            />
-            {/* The dot sits over the name button's corner;
-                let clicks and right-clicks reach the button. */}
-            {customSampleName !== undefined && (
-              <CustomSampleDot
-                fileName={customSampleName}
-                className="absolute top-0 right-0 pointer-events-none"
-              />
-            )}
-          </div>
+          <TrackNameButton
+            size="lg"
+            trackId={trackId}
+            trackName={trackName}
+            isFreeRun={isFreeRun}
+            isTriggered={isTriggered}
+            onToggleFreeRun={handleFreeRun}
+            onClearTrack={handleClearTrack}
+            onPlayPreview={handlePlayPreview}
+            customSampleName={customSampleName}
+            onLoadSample={handleLoadSample}
+            onResetSample={handleResetSample}
+          />
           <TrackMixer
             trackName={trackName}
             isMuted={isMuted}
