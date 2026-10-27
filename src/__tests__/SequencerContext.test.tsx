@@ -26,6 +26,10 @@ vi.mock('../app/AudioEngine', () => ({
     playSound: vi.fn(),
     onStep: vi.fn(),
     requestReset: vi.fn(),
+    decodeSample: vi.fn().mockResolvedValue({}),
+    setCustomSample: vi.fn(),
+    clearCustomSample: vi.fn(),
+    clearCustomSamples: vi.fn(),
   },
 }));
 
@@ -1818,5 +1822,79 @@ describe('auto-minimize empty tracks', () => {
     });
     expect(result.current.state.minimizedTracks.size)
       .toBeGreaterThan(0);
+  });
+});
+
+// -------------------------------------------------------
+// Custom samples (memory only, kept by Reset and kits)
+// -------------------------------------------------------
+describe('custom samples', () => {
+  const wav = () =>
+    new File(['x'], 'kick.wav', { type: 'audio/wav' });
+
+  it('loads a sample onto a track', async () => {
+    const { result } = renderSequencer();
+    const file = wav();
+    await act(() =>
+      result.current.actions.loadSample('sd', file)
+    );
+    expect(result.current.state.customSamples.sd).toBe(file);
+  });
+
+  it('Reset keeps custom samples', async () => {
+    const { result } = renderSequencer();
+    await act(() =>
+      result.current.actions.loadSample('sd', wav())
+    );
+    act(() => result.current.actions.clearAll());
+    expect(result.current.state.customSamples.sd)
+      .toBeDefined();
+  });
+
+  it('a kit change keeps custom samples', async () => {
+    const { result } = renderSequencer();
+    await act(() =>
+      result.current.actions.loadSample('sd', wav())
+    );
+    const electro = kitsData.kits.find(
+      k => k.id === 'electro'
+    )!;
+    act(() => result.current.actions.setKit(electro));
+    expect(result.current.state.currentKit.id)
+      .toBe('electro');
+    expect(result.current.state.customSamples.sd)
+      .toBeDefined();
+  });
+
+  it('exposes a refused file as sampleError', async () => {
+    const { result } = renderSequencer();
+    await act(() =>
+      result.current.actions.loadSample(
+        'sd', new File(['x'], 'a.aif')
+      )
+    );
+    expect(result.current.state.sampleError).toBe(
+      'Only WAV samples are supported (got a.aif).'
+    );
+    act(() => result.current.actions.dismissSampleError());
+    expect(result.current.state.sampleError).toBeNull();
+  });
+
+  it('resetAllSamples clears every track', async () => {
+    const { result } = renderSequencer();
+    await act(() =>
+      result.current.actions.loadSample('sd', wav())
+    );
+    act(() => result.current.actions.resetAllSamples());
+    expect(result.current.state.customSamples).toEqual({});
+  });
+
+  it('keeps actions stable across a load', async () => {
+    const { result } = renderSequencer();
+    const actions = result.current.actions;
+    await act(() =>
+      result.current.actions.loadSample('sd', wav())
+    );
+    expect(result.current.actions).toBe(actions);
   });
 });
