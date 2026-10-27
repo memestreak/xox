@@ -70,7 +70,7 @@ export default function StepGrid({
     setTrigCondition,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
     setAutoMinimize, holdAutoMinimize,
-    clearAll, loadSample, resetSample,
+    clearAll, loadSample, resetSample, resetAllSamples,
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
@@ -601,6 +601,10 @@ export default function StepGrid({
           autoMinimize={autoMinimize}
           onSetAutoMinimize={setAutoMinimize}
           onReset={clearAll}
+          hasCustomSamples={
+            Object.keys(customSamples).length > 0
+          }
+          onResetAllSamples={resetAllSamples}
           onClose={closeGridMenu}
           anchorRef={menuKeyRef}
         />
