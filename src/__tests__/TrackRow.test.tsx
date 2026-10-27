@@ -425,3 +425,58 @@ describe('TrackRow minimized', () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe('TrackRow custom samples', () => {
+  const dots = () => screen.queryAllByRole('img', {
+    name: 'Custom sample: kick.wav',
+  });
+
+  it('shows no dot for a kit sample', () => {
+    renderTrackRow();
+    expect(screen.queryAllByRole('img')).toHaveLength(0);
+  });
+
+  it('shows the dot at both row sizes', () => {
+    renderTrackRow({ customSampleName: 'kick.wav' });
+    // Phone and desktop name areas are both in the DOM.
+    expect(dots()).toHaveLength(2);
+  });
+
+  it('shows the dot on a minimized row', () => {
+    renderTrackRow({
+      steps: '0'.repeat(16),
+      trackLength: 16,
+      patternLength: 16,
+      isMinimized: true,
+      customSampleName: 'kick.wav',
+    });
+    expect(dots()).toHaveLength(1);
+  });
+
+  it('binds load and reset to the track', () => {
+    const onLoadSample = vi.fn();
+    const onResetSample = vi.fn();
+    renderTrackRow({
+      customSampleName: 'kick.wav',
+      onLoadSample,
+      onResetSample,
+    });
+    const file = new File(['x'], 'snare.wav');
+    fireEvent.change(
+      screen.getByLabelText('Load sample for BD'),
+      { target: { files: [file] } }
+    );
+    expect(onLoadSample).toHaveBeenCalledWith('bd', file);
+
+    const names = screen.getAllByRole('button', { name: 'BD' });
+    // The desktop name button has the menu.
+    const lg = names.find(
+      b => b.getAttribute('aria-haspopup') === 'menu'
+    )!;
+    fireEvent.contextMenu(lg);
+    fireEvent.click(screen.getByRole('menuitem', {
+      name: /reset to kit sample/i,
+    }));
+    expect(onResetSample).toHaveBeenCalledWith('bd');
+  });
+});

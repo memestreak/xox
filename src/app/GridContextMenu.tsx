@@ -29,6 +29,9 @@ interface GridContextMenuProps {
   onSetAutoMinimize: (value: boolean) => void;
   /** Clears the pattern (the app's Reset). */
   onReset: () => void;
+  /** True when at least one track has a custom sample. */
+  hasCustomSamples: boolean;
+  onResetAllSamples: () => void;
   onClose: () => void;
   /**
    * The key that toggles the menu. A press on it is not
@@ -40,8 +43,9 @@ interface GridContextMenuProps {
 
 /**
  * Grid menu: minimize empty tracks, restore all tracks,
- * the auto-minimize setting, reset. Opens at the pointer on a right-click in a
- * blank part of the grid, or under the ⋯ key over the
+ * the auto-minimize setting, reset samples, reset.
+ * Opens at the pointer on a right-click in a blank
+ * part of the grid, or under the ⋯ key over the
  * track names; kept inside the viewport. Closes on a
  * choice, Escape, a press outside, scroll or resize,
  * and returns focus to where it was.
@@ -56,6 +60,8 @@ export default function GridContextMenu({
   autoMinimize,
   onSetAutoMinimize,
   onReset,
+  hasCustomSamples,
+  onResetAllSamples,
   onClose,
   anchorRef,
 }: GridContextMenuProps) {
@@ -228,6 +234,18 @@ export default function GridContextMenu({
         />
       </button>
       <div role="separator" className="h-px bg-line mx-1.5 my-1" />
+      {hasCustomSamples && (
+        <button
+          role="menuitem"
+          onClick={() => {
+            onResetAllSamples();
+            onClose();
+          }}
+          className={MENU_ITEM}
+        >
+          <span>Reset all samples to kit</span>
+        </button>
+      )}
       <button
         role="menuitem"
         onClick={() => {

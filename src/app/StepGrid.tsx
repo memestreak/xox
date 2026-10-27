@@ -59,7 +59,7 @@ export default function StepGrid({
   const { state, actions, meta } = useSequencer();
   const {
     trackStates, minimizedTracks, minimizableCount,
-    autoMinimize,
+    autoMinimize, customSamples,
   } = state;
   const {
     toggleStep, setStep, setTrackSteps,
@@ -70,7 +70,7 @@ export default function StepGrid({
     setTrigCondition,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
     setAutoMinimize, holdAutoMinimize,
-    clearAll,
+    clearAll, loadSample, resetSample, resetAllSamples,
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
@@ -544,6 +544,9 @@ export default function StepGrid({
             onShiftClick={shiftClickCell}
             onPlainClick={toggleSelected}
             onClearSelection={clearSelection}
+            customSampleName={customSamples[track.id]?.name}
+            onLoadSample={loadSample}
+            onResetSample={resetSample}
           />
         ))}
         <AccentRow
@@ -598,6 +601,10 @@ export default function StepGrid({
           autoMinimize={autoMinimize}
           onSetAutoMinimize={setAutoMinimize}
           onReset={clearAll}
+          hasCustomSamples={
+            Object.keys(customSamples).length > 0
+          }
+          onResetAllSamples={resetAllSamples}
           onClose={closeGridMenu}
           anchorRef={menuKeyRef}
         />

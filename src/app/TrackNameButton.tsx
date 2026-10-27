@@ -8,6 +8,8 @@ import Tooltip from './Tooltip';
 import {
   MENU_HINT, MENU_ITEM, MENU_ITEM_BASE,
 } from './menuStyles';
+import { SAMPLE_ACCEPT } from './sampleFiles';
+import CustomSampleDot from './CustomSampleDot';
 
 interface TrackNameButtonProps {
   size: 'sm' | 'lg';
@@ -18,6 +20,10 @@ interface TrackNameButtonProps {
   onToggleFreeRun: () => void;
   onClearTrack: () => void;
   onPlayPreview: () => void;
+  /** File name when the track plays a custom sample. */
+  customSampleName?: string;
+  onLoadSample?: (file: File) => void;
+  onResetSample?: () => void;
 }
 
 /**
@@ -34,10 +40,14 @@ function TrackNameButtonInner({
   onToggleFreeRun,
   onClearTrack,
   onPlayPreview,
+  customSampleName,
+  onLoadSample,
+  onResetSample,
 }: TrackNameButtonProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLButtonElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
@@ -169,9 +179,36 @@ function TrackNameButtonInner({
               ? ' text-lcd bg-accent/20'
               : ' text-ink hover:bg-raised')
           }
+          aria-label={trackName}
         >
-          {trackName}
+          {size === 'lg' && customSampleName !== undefined ? (
+            // The dot sits just after the name; clicks on it
+            // reach the button.
+            <span className="relative">
+              {trackName}
+              <CustomSampleDot
+                fileName={customSampleName}
+                className="absolute left-full top-0"
+              />
+            </span>
+          ) : trackName}
         </button>
+        {size === 'lg' && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={SAMPLE_ACCEPT}
+            aria-label={`Load sample for ${trackName}`}
+            tabIndex={-1}
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              // Clear so the same file can be picked again.
+              e.target.value = '';
+              if (file) onLoadSample?.(file);
+            }}
+          />
+        )}
       {menuOpen && size === 'lg' && (
         <div
           ref={menuRef}
@@ -218,6 +255,30 @@ function TrackNameButtonInner({
             <span>Preview sound</span>
             <span className={MENU_HINT}>Click</span>
           </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              // Opens the picker inside the click (a user
+              // gesture), then closes the menu.
+              fileInputRef.current?.click();
+              closeMenu();
+            }}
+            className={MENU_ITEM}
+          >
+            <span>Load sample from file...</span>
+          </button>
+          {customSampleName !== undefined && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onResetSample?.();
+                closeMenu();
+              }}
+              className={MENU_ITEM}
+            >
+              <span>Reset to kit sample</span>
+            </button>
+          )}
           <div className="h-px bg-line mx-1.5 my-1" />
           <button
             role="menuitem"

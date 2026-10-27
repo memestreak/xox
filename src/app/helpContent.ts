@@ -161,7 +161,8 @@ const MOUSE_TAB: HelpTab = {
       rows: [
         { gesture: 'click', text: 'Preview the sound' },
         {
-          gesture: 'right-click', text: 'Track menu',
+          gesture: 'right-click',
+          text: 'Track menu: free-run, preview, load or reset a sample, clear',
           note: '(also ⌘-click)',
         },
         { keys: ['shift'], gesture: 'click', text: 'Clear the track' },
@@ -172,7 +173,7 @@ const MOUSE_TAB: HelpTab = {
       rows: [
         {
           gesture: 'right-click',
-          text: 'Grid menu: minimize, restore, auto-minimize, reset',
+          text: 'Grid menu: minimize, restore, auto-minimize, reset samples, reset',
           note: '(also the ⋯ key over the track names)',
         },
       ],
@@ -277,7 +278,7 @@ const TOUCH_TAB: HelpTab = {
         { gesture: 'hold end bar', text: 'Free-run on / off' },
         {
           gesture: 'tap ⋯ over the tracks',
-          text: 'Minimize, restore, auto-minimize or reset tracks',
+          text: 'Minimize, restore, auto-minimize, reset samples or reset tracks',
         },
         {
           gesture: 'tap caret or line',

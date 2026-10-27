@@ -12,6 +12,7 @@ import TransportControls from './TransportControls';
 import StepGrid from './StepGrid';
 import ErrorBoundary from './ErrorBoundary';
 import StatusBanner from './StatusBanner';
+import { pickStatus } from './statusMessage';
 import type { PageNav } from './PageIndicator';
 import { getPatternLength } from './types';
 import PatternPicker from './PatternPicker';
@@ -30,6 +31,7 @@ function SequencerInner() {
   const { selectedPatternId } = state;
   const { setPattern } = actions;
   const patternLength = getPatternLength(meta.config.tracks);
+  const status = pickStatus(state);
 
   const [currentPage, setCurrentPage] = useState(0);
   const [autoFollow, setAutoFollow] = useState(true);
@@ -102,11 +104,13 @@ function SequencerInner() {
           )}
         </PatternPicker>
         <StatusBanner
-          message={state.loadError ?? state.importNotice}
+          message={status?.message ?? null}
           onDismiss={
-            state.loadError
+            status?.source === 'load'
               ? actions.dismissError
-              : actions.dismissImportNotice
+              : status?.source === 'sample'
+                ? actions.dismissSampleError
+                : actions.dismissImportNotice
           }
         />
         <div
