@@ -15,6 +15,8 @@ function renderButton(overrides = {}) {
     onToggleFreeRun: vi.fn(),
     onClearTrack: vi.fn(),
     onPlayPreview: vi.fn(),
+    onLoadSample: vi.fn(),
+    onResetSample: vi.fn(),
     ...overrides,
   };
   render(<TrackNameButton {...props} />);
@@ -89,7 +91,7 @@ describe('TrackNameButton', () => {
   it('arrow keys move focus between menu items', () => {
     renderButton();
     const menu = openMenu();
-    const [freeRun, preview, clear] =
+    const [freeRun, preview, , clear] =
       screen.getAllByRole('menuitem');
     expect(freeRun).toHaveFocus();
     fireEvent.keyDown(menu, { key: 'ArrowDown' });
@@ -153,5 +155,75 @@ describe('TrackNameButton', () => {
     expect(btn).not.toHaveAttribute('aria-haspopup');
     fireEvent.contextMenu(btn);
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('offers Load sample from file', () => {
+    renderButton();
+    openMenu();
+    expect(screen.getByRole('menuitem', {
+      name: /load sample from file/i,
+    })).toBeInTheDocument();
+  });
+
+  it('offers Reset only for a custom track', () => {
+    renderButton();
+    openMenu();
+    expect(screen.queryByRole('menuitem', {
+      name: /reset to kit sample/i,
+    })).toBeNull();
+  });
+
+  it('Reset to kit sample calls onResetSample', () => {
+    const props = renderButton({
+      customSampleName: 'kick.wav',
+    });
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', {
+      name: /reset to kit sample/i,
+    }));
+    expect(props.onResetSample).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('Load opens the file picker and closes the menu', () => {
+    renderButton();
+    openMenu();
+    const input = screen.getByLabelText(
+      'Load sample for SD'
+    ) as HTMLInputElement;
+    const click = vi.spyOn(input, 'click');
+    fireEvent.click(screen.getByRole('menuitem', {
+      name: /load sample from file/i,
+    }));
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
+    // Still mounted after the menu closed.
+    expect(input.isConnected).toBe(true);
+  });
+
+  it('a chosen file goes to onLoadSample', () => {
+    const props = renderButton();
+    const input = screen.getByLabelText(
+      'Load sample for SD'
+    ) as HTMLInputElement;
+    expect(input.accept).toBe(
+      '.wav,audio/wav,audio/x-wav,audio/wave,audio/vnd.wave'
+    );
+    const file = new File(['x'], 'kick.wav');
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(props.onLoadSample).toHaveBeenCalledWith(file);
+  });
+
+  it('a cancelled picker loads nothing', () => {
+    const props = renderButton();
+    const input = screen.getByLabelText('Load sample for SD');
+    fireEvent.change(input, { target: { files: [] } });
+    expect(props.onLoadSample).not.toHaveBeenCalled();
+  });
+
+  it('small size has no file input', () => {
+    renderButton({ size: 'sm' });
+    expect(screen.queryByLabelText('Load sample for SD'))
+      .toBeNull();
   });
 });
