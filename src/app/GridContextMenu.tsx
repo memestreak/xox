@@ -43,8 +43,9 @@ interface GridContextMenuProps {
 
 /**
  * Grid menu: minimize empty tracks, restore all tracks,
- * the auto-minimize setting, reset samples, reset. Opens at the pointer on a right-click in a
- * blank part of the grid, or under the ⋯ key over the
+ * the auto-minimize setting, reset samples, reset.
+ * Opens at the pointer on a right-click in a blank
+ * part of the grid, or under the ⋯ key over the
  * track names; kept inside the viewport. Closes on a
  * choice, Escape, a press outside, scroll or resize,
  * and returns focus to where it was.
