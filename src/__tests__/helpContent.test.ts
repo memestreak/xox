@@ -71,4 +71,19 @@ describe('helpContent', () => {
       text: 'Restore a minimized track',
     }));
   });
+
+  it('lists the sample menu items', () => {
+    const desk = getHelpTabs(false)
+      .flatMap(t => t.sections)
+      .flatMap(sec => sec.rows.map(r => ({ ...r, section: sec.title })));
+    expect(desk).toContainEqual(expect.objectContaining({
+      section: 'Track name',
+      gesture: 'right-click',
+      text: expect.stringMatching(/load or reset a sample/),
+    }));
+    expect(desk).toContainEqual(expect.objectContaining({
+      section: 'Grid (blank area)',
+      text: expect.stringMatching(/reset samples/),
+    }));
+  });
 });

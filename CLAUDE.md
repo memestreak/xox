@@ -114,6 +114,15 @@ from the URL.
 - `useDragPaint.ts` — pointer drag gestures on the grid
 - `useMasterVolume.ts` — master fader (localStorage,
   no `reset()`: Reset deliberately keeps it)
+- `useCustomSamples.ts` — samples loaded from WAV files
+  onto tracks (track name menu: Load sample from
+  file... / Reset to kit sample; grid menu: Reset all
+  samples to kit). Memory only, not in
+  `SequencerConfig` or share links; kept by kit changes
+  and by Reset (no `reset()`). Each load/reset bumps a
+  per-track counter so the latest request wins. Checks
+  (WAV only, 20 MB) live in `sampleFiles.ts`;
+  `AudioEngine.customBuffers` win over kit buffers
 - `useMinimizedTracks.ts` — which empty grid rows are
   drawn minimized (`state.minimizedTracks`), H / Shift+H.
   View state only: not in `SequencerConfig`, not saved.
@@ -146,16 +155,20 @@ from the URL.
 
 Every hook that manages resettable state must expose a
 `reset()` method. The orchestrator's `clearAll` composes
-all hook resets.
+all hook resets. Exceptions: `useMasterVolume` and
+`useCustomSamples`, which Reset deliberately keeps.
 
 **Component decomposition:**
 - `TrackRow.tsx` → `TrackNameButton.tsx`,
   `TrackMixer.tsx`, `TrackEndBar.tsx`; an
   `isMinimized` row renders caret + name + step line
 - `StepGrid.tsx` → `GridContextMenu.tsx` (grid menu:
-  minimize empty / restore all tracks, Reset pattern.
+  minimize empty / restore all tracks, Reset all samples
+  to kit (only when a track is custom), Reset pattern.
   Opens from the ⋯ key over the track names, the only
   way in on phones, or a right-click on a blank spot)
+- `CustomSampleDot.tsx` — amber dot (file name on hover)
+  on a track with a custom sample
 - `LatchKey.tsx` — split key for Fill and Temp: the body
   does the key's action, the right section toggles the
   latch (its LED means latched only)
@@ -365,9 +378,11 @@ from `main` is fine.
 - Top-level `ErrorBoundary` wraps the entire
   `SequencerProvider` in `Sequencer.tsx`
 - `StepGrid.tsx` wraps `StepPopover` in a boundary
-- `StatusBanner` shows kit load errors and share-link
-  notices (uses `role="alert"`). MIDI unavailability is
-  shown in the MIDI tab of `SettingsModal` instead
+- `StatusBanner` shows kit load errors, refused samples
+  and share-link notices, one at a time in that order
+  (`statusMessage.pickStatus`; uses `role="alert"`). MIDI
+  unavailability is shown in the MIDI tab of
+  `SettingsModal` instead
 
 ## Accessibility
 
