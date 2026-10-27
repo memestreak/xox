@@ -713,3 +713,107 @@ describe('AudioEngine first step on start', () => {
       expect(log[0]).toEqual({ step: 0, time: 0.5, late: false });
     });
 });
+
+describe('AudioEngine custom samples', () => {
+  function engineCtx(): MockAudioContext {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (audioEngine as any).ctx as MockAudioContext;
+  }
+
+  function kitBuffers(): Map<TrackId, unknown> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (audioEngine as any).buffers;
+  }
+
+  /** Plays `id` and returns the buffer the source got. */
+  function playedBuffer(id: TrackId): unknown {
+    const ctx = engineCtx();
+    const spy = vi.spyOn(ctx, 'createBufferSource');
+    audioEngine.playSound(id, 0, 1);
+    const source = spy.mock.results.at(-1)?.value as
+      { buffer: unknown } | undefined;
+    spy.mockRestore();
+    return source?.buffer;
+  }
+
+  const fakeFile = {
+    arrayBuffer: async () => new ArrayBuffer(8),
+  } as unknown as File;
+
+  beforeEach(async () => {
+    // The failed fetches log one error per sample.
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Make sure the context exists.
+    vi.stubGlobal(
+      'fetch', vi.fn().mockRejectedValue(new Error('x'))
+    );
+    await audioEngine.preloadKit('808');
+  });
+
+  afterEach(() => {
+    audioEngine.clearCustomSamples();
+    vi.mocked(console.error).mockRestore();
+  });
+
+  it('decodeSample decodes the file bytes', async () => {
+    const decoded = { decoded: true };
+    engineCtx().decodeAudioData = vi.fn(async () => decoded);
+    await expect(audioEngine.decodeSample(fakeFile))
+      .resolves.toBe(decoded);
+    expect(engineCtx().decodeAudioData).toHaveBeenCalledWith(
+      expect.any(ArrayBuffer)
+    );
+  });
+
+  it('decodeSample rejects when decoding fails', async () => {
+    engineCtx().decodeAudioData = vi.fn(
+      async () => { throw new Error('bad'); }
+    );
+    await expect(audioEngine.decodeSample(fakeFile))
+      .rejects.toThrow();
+  });
+
+  it('plays the custom buffer instead of the kit one', () => {
+    const kit = { kit: true };
+    const custom = { custom: true };
+    kitBuffers().set('sd', kit);
+    audioEngine.setCustomSample(
+      'sd', custom as unknown as AudioBuffer
+    );
+    expect(playedBuffer('sd')).toBe(custom);
+  });
+
+  it('falls back to the kit after clearing a track', () => {
+    const kit = { kit: true };
+    kitBuffers().set('sd', kit);
+    audioEngine.setCustomSample(
+      'sd', {} as unknown as AudioBuffer
+    );
+    audioEngine.clearCustomSample('sd');
+    expect(playedBuffer('sd')).toBe(kit);
+  });
+
+  it('clearCustomSamples clears every track', () => {
+    const kit = { kit: true };
+    kitBuffers().set('sd', kit);
+    kitBuffers().set('oh', kit);
+    audioEngine.setCustomSample(
+      'sd', {} as unknown as AudioBuffer
+    );
+    audioEngine.setCustomSample(
+      'oh', {} as unknown as AudioBuffer
+    );
+    audioEngine.clearCustomSamples();
+    expect(playedBuffer('sd')).toBe(kit);
+    expect(playedBuffer('oh')).toBe(kit);
+  });
+
+  it('a kit load keeps custom samples', async () => {
+    const custom = { custom: true };
+    audioEngine.setCustomSample(
+      'sd', custom as unknown as AudioBuffer
+    );
+    await audioEngine.preloadKit('electro');
+    expect(playedBuffer('sd')).toBe(custom);
+  });
+});

@@ -52,6 +52,9 @@ class AudioEngine {
   private meters: AnalyserNode[] = [];
   private meterData: Float32Array<ArrayBuffer> | null = null;
   private buffers: Map<TrackId, AudioBuffer> = new Map();
+  // Samples loaded from files, by track. They win over
+  // the kit's buffers and survive kit changes.
+  private customBuffers: Map<TrackId, AudioBuffer> = new Map();
   private silentAudio: HTMLAudioElement | null = null;
 
   // Scheduler State
@@ -245,6 +248,31 @@ class AudioEngine {
   }
 
   /**
+   * Decodes an audio file into a buffer. Rejects if the
+   * browser can't decode it.
+   */
+  public async decodeSample(file: File): Promise<AudioBuffer> {
+    this.init();
+    const data = await file.arrayBuffer();
+    return this.ctx!.decodeAudioData(data);
+  }
+
+  /** Plays `buffer` for this track instead of the kit's. */
+  public setCustomSample(id: TrackId, buffer: AudioBuffer) {
+    this.customBuffers.set(id, buffer);
+  }
+
+  /** Goes back to the kit's sound for this track. */
+  public clearCustomSample(id: TrackId) {
+    this.customBuffers.delete(id);
+  }
+
+  /** Goes back to the kit's sound on every track. */
+  public clearCustomSamples() {
+    this.customBuffers.clear();
+  }
+
+  /**
    * Starts the sequencer playback loop. Must be called from a
    * user gesture (tap/click) to ensure iOS audio works.
    */
@@ -354,7 +382,8 @@ class AudioEngine {
     id: TrackId, time: number,
     gainValue: number, panValue = 0.5
   ) {
-    const buffer = this.buffers.get(id);
+    const buffer =
+      this.customBuffers.get(id) ?? this.buffers.get(id);
     if (!buffer || !this.ctx || !this.masterGain) return;
 
     const source = this.ctx.createBufferSource();
