@@ -118,3 +118,7 @@ export const DROPDOWN_TYPEAHEAD_RESET_MS = 600;
 export const DROPDOWN_HINT_DELAY_MS = 500;
 /** Gap between a dropdown list and a row's help, in px. */
 export const DROPDOWN_HINT_GAP_PX = 6;
+
+// ── Custom samples ──────────────────────────────────
+/** Largest sample file a track will load (20 MB). */
+export const MAX_SAMPLE_FILE_BYTES = 20 * 1024 * 1024;
