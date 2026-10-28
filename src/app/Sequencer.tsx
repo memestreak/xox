@@ -87,7 +87,10 @@ function SequencerInner() {
       >
         {latchMessage}
       </div>
-      <div className="max-w-none lg:max-w-5xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-6 flex flex-col flex-1 lg:min-h-0">
+      <div
+        data-chooser-area
+        className="max-w-none lg:max-w-5xl w-full mx-auto px-3 lg:px-8 pt-3 lg:pt-6 flex flex-col flex-1 lg:min-h-0"
+      >
         <PatternPicker
           categories={categories}
           selectedPatternId={selectedPatternId}

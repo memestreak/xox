@@ -7,6 +7,9 @@ import PatternPicker from '../app/PatternPicker';
 import type { Pattern } from '../app/types';
 import { TRACK_IDS } from '../app/types';
 import type { PatternCategory } from '../app/patternUtils';
+import {
+  setChooserClickAway,
+} from '../app/hooks/useChooserClickAwaySetting';
 
 // --------------- fixtures ---------------
 
@@ -50,20 +53,28 @@ function renderPicker(
   onSelect = vi.fn(),
   pendingPatternId: string | null = null,
 ) {
+  // Like Sequencer: the app's column holds the picker,
+  // and the page beside it is outside.
   return render(
-    <PatternPicker
-      categories={categories}
-      selectedPatternId={selectedPatternId}
-      pendingPatternId={pendingPatternId}
-      onSelect={onSelect}
-    >
-      {({ trigger, drawer }) => (
-        <>
-          {trigger}
-          {drawer}
-        </>
-      )}
-    </PatternPicker>,
+    <>
+      <div data-testid="beside">beside</div>
+      <div data-chooser-area>
+        <PatternPicker
+          categories={categories}
+          selectedPatternId={selectedPatternId}
+          pendingPatternId={pendingPatternId}
+          onSelect={onSelect}
+        >
+          {({ trigger, drawer }) => (
+            <>
+              {trigger}
+              {drawer}
+              <div data-testid="grid">grid</div>
+            </>
+          )}
+        </PatternPicker>
+      </div>
+    </>,
   );
 }
 
@@ -596,6 +607,93 @@ describe('PatternPicker', () => {
       await user.keyboard('p');
       expect(getDrawer())
         .toHaveAttribute('data-pattern-chooser-open');
+    });
+  });
+  describe('click beside', () => {
+    const openByMouse = async (
+      user: ReturnType<typeof userEvent.setup>,
+    ) => {
+      const trigger = screen.getByRole('button', {
+        name: /pattern/i,
+      });
+      await user.click(trigger);
+      // A mouse open focuses the panel on the next frame.
+      await waitFor(() => {
+        expect(
+          screen.getByRole('group', {
+            name: 'Categories and patterns',
+          }),
+        ).toHaveFocus();
+      });
+      return trigger;
+    };
+
+    it('closes like Escape and returns focus to the key', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      const trigger = await openByMouse(user);
+      await user.click(screen.getByTestId('beside'));
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'true',
+      );
+      expect(trigger).toHaveFocus();
+    });
+
+    it('stays open for clicks in the column', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      await openByMouse(user);
+      await user.click(screen.getByTestId('grid'));
+      await user.click(screen.getByText('Funk 2'));
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
+      );
+    });
+
+    it('ignores a right-click beside', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      await openByMouse(user);
+      await user.pointer({
+        keys: '[MouseRight]',
+        target: screen.getByTestId('beside'),
+      });
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
+      );
+    });
+
+    it('waits for a menu on top', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      await openByMouse(user);
+      const menu = document.createElement('div');
+      menu.setAttribute('role', 'menu');
+      document.body.appendChild(menu);
+      // The menu closes itself on the press.
+      const beside = screen.getByTestId('beside');
+      beside.addEventListener(
+        'pointerdown', () => menu.remove(), { once: true },
+      );
+      await user.click(beside);
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
+      );
+      await user.click(beside);
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'true',
+      );
+    });
+
+    it('stays open when the setting is off', async () => {
+      setChooserClickAway(false);
+      const user = userEvent.setup();
+      renderPicker();
+      await openByMouse(user);
+      await user.click(screen.getByTestId('beside'));
+      expect(getDrawer()).toHaveAttribute(
+        'aria-hidden', 'false',
+      );
     });
   });
 });

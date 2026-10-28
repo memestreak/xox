@@ -1,3 +1,5 @@
+import { getChooserClickAway } from './hooks/useChooserClickAwaySetting';
+
 /**
  * Shared checks for the app's global keyboard shortcuts.
  */
@@ -60,4 +62,28 @@ export function isPatternChooserOpen(): boolean {
   return document.querySelector(
     `[${PATTERN_CHOOSER_OPEN_ATTR}]`
   ) !== null;
+}
+
+/**
+ * Marks the area a click can land in without closing the
+ * pattern chooser: the centered column with the transport,
+ * the chooser and the step grid (`Sequencer.tsx`).
+ */
+export const CHOOSER_AREA_ATTR = 'data-chooser-area';
+
+/**
+ * True when a press on `target` should close the open
+ * pattern chooser: the "Click beside the pattern chooser
+ * to close it" setting is on and the press lands beside
+ * the app's column. Such a press does only that, like
+ * Escape, so the step selection waits for the next one.
+ */
+export function isChooserClickAway(
+  target: EventTarget | null,
+): boolean {
+  if (!isPatternChooserOpen() || !getChooserClickAway()) {
+    return false;
+  }
+  if (!(target instanceof Element)) return false;
+  return target.closest(`[${CHOOSER_AREA_ATTR}]`) === null;
 }
