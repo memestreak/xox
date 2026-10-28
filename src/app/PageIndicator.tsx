@@ -6,6 +6,8 @@ import Tooltip from './Tooltip';
 /** Page navigation state, owned by `Sequencer`. */
 export interface PageNav {
   currentPage: number;
+  /** Page the playhead is on, or -1 when stopped. */
+  playingPage: number;
   pageCount: number;
   autoFollow: boolean;
   setPage: (page: number) => void;
@@ -49,15 +51,25 @@ function FollowToggleInner({
 }
 
 type PageLightsProps = Pick<
-  PageNav, 'currentPage' | 'pageCount' | 'setPage'
+  PageNav, 'currentPage' | 'playingPage' | 'pageCount' | 'setPage'
 >;
+
+/** Lit page light: a filled dot with a soft glow. */
+const SHOWN_LIGHT =
+  'bg-accent shadow-[0_0_8px_rgb(240_102_42/0.6)]';
+const PLAYING_LIGHT =
+  'bg-playing shadow-[0_0_8px_rgb(61_220_106/0.6)]';
 
 /**
  * One light per 16-step page; clicking a light shows
- * that page. Renders nothing for a single page.
+ * that page. The page on screen is amber; while
+ * playing, the page the playhead is on is green (green
+ * wins when they're the same page). Renders nothing for
+ * a single page.
  */
 function PageLightsInner({
   currentPage,
+  playingPage,
   pageCount,
   setPage,
 }: PageLightsProps) {
@@ -65,13 +77,18 @@ function PageLightsInner({
   if (pageCount <= 1) return null;
   return (
     <div className="flex gap-1.5">
-      {Array.from(
-        { length: pageCount },
-        (_, i) => (
+      {Array.from({ length: pageCount }, (_, i) => {
+        const isPlaying = i === playingPage;
+        let light = 'bg-edge hover:bg-faint';
+        if (isPlaying) light = PLAYING_LIGHT;
+        else if (i === currentPage) light = SHOWN_LIGHT;
+        return (
           // Top: below would cover the Follow key.
           <Tooltip key={i} tooltipKey="page" position="top">
             <button
-              aria-label={`Page ${i + 1}`}
+              aria-label={
+                `Page ${i + 1}` + (isPlaying ? ', playing' : '')
+              }
               aria-current={i === currentPage ? 'true' : undefined}
               onClick={() => setPage(i)}
               className={
@@ -80,15 +97,12 @@ function PageLightsInner({
                 + ' focus-visible:outline-2'
                 + ' focus-visible:outline-offset-2'
                 + ' focus-visible:outline-accent '
-                + (i === currentPage
-                  ? 'bg-accent'
-                    + ' shadow-[0_0_8px_rgb(240_102_42/0.6)]'
-                  : 'bg-edge hover:bg-faint')
+                + light
               }
             />
           </Tooltip>
-        )
-      )}
+        );
+      })}
     </div>
   );
 }

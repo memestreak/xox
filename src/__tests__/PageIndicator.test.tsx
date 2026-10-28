@@ -7,6 +7,7 @@ import { FollowToggle, PageLights } from '../app/PageIndicator';
 describe('PageLights and FollowToggle', () => {
   const defaults = {
     currentPage: 0,
+    playingPage: -1,
     pageCount: 4,
     autoFollow: true,
     setPage: vi.fn(),
@@ -51,6 +52,49 @@ describe('PageLights and FollowToggle', () => {
       name: /^Page \d/,
     });
     expect(dots[1].className).toContain('bg-accent');
+  });
+
+  it('playing page light is green', () => {
+    render(
+      <PageLights
+        {...defaults}
+        currentPage={0}
+        playingPage={2}
+      />
+    );
+    const dots = screen.getAllByRole('button', {
+      name: /^Page \d/,
+    });
+    expect(dots[0].className).toContain('bg-accent');
+    expect(dots[2].className).toContain('bg-playing');
+    expect(dots[2].getAttribute('aria-label'))
+      .toBe('Page 3, playing');
+    expect(dots[1].className).not.toContain('bg-playing');
+  });
+
+  it('green wins when the shown page is playing', () => {
+    render(
+      <PageLights
+        {...defaults}
+        currentPage={1}
+        playingPage={1}
+      />
+    );
+    const dots = screen.getAllByRole('button', {
+      name: /^Page \d/,
+    });
+    expect(dots[1].className).toContain('bg-playing');
+    expect(dots[1].className).not.toContain('bg-accent');
+  });
+
+  it('no green light when stopped', () => {
+    render(<PageLights {...defaults} />);
+    const dots = screen.getAllByRole('button', {
+      name: /^Page \d/,
+    });
+    for (const dot of dots) {
+      expect(dot.className).not.toContain('bg-playing');
+    }
   });
 
   it('follow toggle shows active state', () => {
