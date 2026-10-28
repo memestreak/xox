@@ -122,7 +122,12 @@ def _fake_convert(src: str, dest: Path) -> None:
 def _sample(tmp_path: Path) -> SampleEntry:
   """Create a dummy source sample."""
   src = tmp_path / "src.wav"
-  src.write_bytes(b"RIFF")
+  # A 16-bit WAV with leading silence for trim_wav.
+  with wave.open(str(src), "wb") as out:
+    out.setnchannels(1)
+    out.setsampwidth(2)
+    out.setframerate(assembler.SAMPLE_RATE)
+    out.writeframes(b"\x00\x00" * 4410 + b"\x10\x27" * 4410)
   return SampleEntry(str(src), "src.wav", "src.wav")
 
 
@@ -159,7 +164,12 @@ class TestAssembleKit:
     kit_dir = kit_env / "kits" / "new"
     names = sorted(p.name for p in kit_dir.iterdir())
     assert names == sorted(f"{t}.wav" for t in KIT_TRACK_IDS)
-    assert (kit_dir / "bd.wav").read_bytes() == b"RIFF"
+    with wave.open(str(kit_dir / "bd.wav")) as picked:
+      # Picks are trimmed: the 0.1 s lead-in is gone.
+      preroll = int(
+        assembler.SAMPLE_RATE * assembler.TRIM_PREROLL_SECONDS
+      )
+      assert picked.getnframes() == preroll + 4410
     with wave.open(str(kit_dir / "sd.wav")) as silent:
       assert silent.getframerate() == assembler.SAMPLE_RATE
       assert silent.getsampwidth() == 2

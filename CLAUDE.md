@@ -222,7 +222,15 @@ Supporting files:
   from its start as `setPatternLength(n, base)`, so
   going down and back up within it keeps the steps
 - `SettingsPopover.tsx` — Gear icon settings menu with
-  Copy share link
+  Copy share link (notes that custom samples aren't
+  included) and Export kit...
+- `ExportKitDialog.tsx` — modal `<dialog>`: Name, ID
+  (slug follows the name until edited) and the slots;
+  downloads `<id>.zip` for
+  `scripts/kit_builder/import_kit.py`. Helpers in
+  `kitExport.ts` (slug rule, `exportPlan`: a custom
+  sample that is on, else the current kit's, and
+  `buildKitZip`); `zipStore.ts` writes the stored zip
 - `HelpContext.tsx` / `HelpModal.tsx` — Help dialog
   (shortcuts and gestures), opened by the header
   "?" key (hidden below `sm`), the gear menu's Help item,
@@ -230,8 +238,8 @@ Supporting files:
   **update it whenever a shortcut or gesture changes**
 - `keyboardUtils.ts` — `shouldIgnoreShortcut` for global
   key handlers: skips form fields and any open modal
-  `<dialog>` (Help, Settings). `isPopupOpen` (a menu or
-  the step editor) and `isPatternChooserOpen` set the
+  `<dialog>` (Help, Settings, Export kit).
+  `isPopupOpen` (a menu or the step editor) and `isPatternChooserOpen` set the
   Esc order: dialog, then popup, then the pattern
   chooser, then the step selection
 - `PatternPicker.tsx` — pattern chooser drawer. P opens

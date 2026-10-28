@@ -1,5 +1,5 @@
 import {
-  render, screen, waitFor, fireEvent,
+  act, render, screen, waitFor, fireEvent,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
@@ -8,6 +8,23 @@ import {
 import SettingsPopover from '../app/SettingsPopover';
 import { TestWrapper } from './helpers/sequencer-wrapper';
 import { HelpProvider } from '../app/HelpContext';
+import { useSequencer } from '../app/SequencerContext';
+
+/** Loads a WAV onto SD, as the track menu would. */
+function LoadSampleButton() {
+  const { actions } = useSequencer();
+  return (
+    <button
+      onClick={() =>
+        actions.loadSample(
+          'sd', new File(['x'], 'snare.wav', { type: 'audio/wav' })
+        )
+      }
+    >
+      load sample
+    </button>
+  );
+}
 
 // jsdom doesn't implement HTMLDialogElement methods
 beforeAll(() => {
@@ -30,6 +47,10 @@ vi.mock('../app/AudioEngine', () => ({
     setPatternLength: vi.fn(),
     playSound: vi.fn(),
     onStep: vi.fn(),
+    decodeSample: vi.fn().mockResolvedValue({}),
+    setCustomSample: vi.fn(),
+    clearCustomSample: vi.fn(),
+    clearCustomSamples: vi.fn(),
   },
 }));
 
@@ -37,6 +58,7 @@ function renderPopover() {
   return render(
     <TestWrapper>
       <SettingsPopover />
+      <LoadSampleButton />
     </TestWrapper>
   );
 }
@@ -222,5 +244,50 @@ describe('SettingsPopover', () => {
     expect(screen.queryByRole('menuitem', {
       name: /minimize|restore|reset/i,
     })).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsPopover kit export', () => {
+  it('Export kit opens the dialog', () => {
+    renderPopover();
+    fireEvent.click(
+      screen.getByRole('button', { name: /settings/i })
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: /export kit/i })
+    );
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('dialog', { name: 'Export kit' })
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(
+      screen.queryByRole('dialog', { name: 'Export kit' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('the share link notes custom samples are left out', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      writable: true,
+      configurable: true,
+    });
+    renderPopover();
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'load sample' })
+      );
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: /settings/i })
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: /copy share link/i })
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByText("Copied! Custom samples aren't included.")
+      ).toBeInTheDocument();
+    });
   });
 });
