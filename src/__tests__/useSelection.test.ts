@@ -4,6 +4,9 @@ import { describe, it, expect, vi, beforeEach }
 import { useSelection } from '../app/hooks/useSelection';
 import type { TrackConfig, TrackId } from '../app/types';
 import type { RefObject } from 'react';
+import {
+  setChooserClickAway,
+} from '../app/hooks/useChooserClickAwaySetting';
 
 function makeTracks(
   len = 16
@@ -464,6 +467,37 @@ describe('useSelection', () => {
       act(() => press(dialog));
       expect(result.current.selected.size).toBe(1);
       dialog.remove();
+      r.cleanup();
+    });
+
+    it('a press beside the open pattern chooser only closes it', () => {
+      const r = makeRegion();
+      const drawer = document.createElement('div');
+      drawer.setAttribute('data-pattern-chooser-open', '');
+      document.body.appendChild(drawer);
+      const { result } = setup({ regionRef: r.regionRef });
+      act(() => result.current.ctrlClickCell('bd', 3));
+      // `outside` sits beside the app's column (no
+      // data-chooser-area around it).
+      act(() => press(r.outside));
+      expect(result.current.selected.size).toBe(1);
+      drawer.remove();
+      act(() => press(r.outside));
+      expect(result.current.selected.size).toBe(0);
+      r.cleanup();
+    });
+
+    it('clears beside the chooser when the setting is off', () => {
+      setChooserClickAway(false);
+      const r = makeRegion();
+      const drawer = document.createElement('div');
+      drawer.setAttribute('data-pattern-chooser-open', '');
+      document.body.appendChild(drawer);
+      const { result } = setup({ regionRef: r.regionRef });
+      act(() => result.current.ctrlClickCell('bd', 3));
+      act(() => press(r.outside));
+      expect(result.current.selected.size).toBe(0);
+      drawer.remove();
       r.cleanup();
     });
   });

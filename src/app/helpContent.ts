@@ -187,6 +187,16 @@ const MOUSE_TAB: HelpTab = {
       ],
     },
     {
+      title: 'Pattern chooser',
+      rows: [
+        {
+          gesture: 'click beside the chooser or grid',
+          text: 'Close the chooser',
+          note: '(can be turned off in Settings > Options)',
+        },
+      ],
+    },
+    {
       title: 'Minimized track',
       rows: [
         {

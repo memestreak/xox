@@ -6,6 +6,7 @@ import {
 import type { RefObject } from 'react';
 import {
   isFormFieldTarget, isModalDialogOpen,
+  isChooserClickAway,
   isPatternChooserOpen,
 } from '../keyboardUtils';
 import {
@@ -405,6 +406,9 @@ export function useSelection({
       if (popoverOpenRef.current) return;
       // Help or Settings is open: the press belongs to it.
       if (isModalDialogOpen()) return;
+      // A press beside the open pattern chooser closes
+      // only the chooser, like Escape.
+      if (isChooserClickAway(e.target)) return;
       const region = regionRef.current;
       if (
         region

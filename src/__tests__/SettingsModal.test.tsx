@@ -114,6 +114,19 @@ describe('SettingsModal', () => {
     expect(checkbox).not.toBeChecked();
   });
 
+  it('has a click-beside checkbox, on by default', () => {
+    renderModal();
+    const checkbox = screen.getByLabelText(
+      'Click beside the pattern chooser to close it'
+    );
+    expect(checkbox).toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+    expect(
+      window.localStorage.getItem('xox-chooser-click-away')
+    ).toBe('false');
+  });
+
   it('switches to MIDI tab', async () => {
     renderModal();
     const midiTab = screen.getByText('MIDI');

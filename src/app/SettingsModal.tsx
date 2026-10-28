@@ -17,6 +17,9 @@ import LcdSelect from './LcdSelect';
 import {
   setAutoMinimize, useAutoMinimizeSetting,
 } from './hooks/useAutoMinimizeSetting';
+import {
+  setChooserClickAway, useChooserClickAwaySetting,
+} from './hooks/useChooserClickAwaySetting';
 
 const NOTE_LENGTH_OPTIONS: {
   label: string;
@@ -153,6 +156,7 @@ function OptionsTab({
   setTooltipsEnabled: (v: boolean) => void;
 }) {
   const autoMinimize = useAutoMinimizeSetting();
+  const chooserClickAway = useChooserClickAwaySetting();
   return (
     <div className="flex flex-col gap-3">
     <label className="flex items-center gap-3">
@@ -179,6 +183,20 @@ function OptionsTab({
       />
       <span className="text-sm">
         Auto-minimize empty tracks
+      </span>
+    </label>
+    <label className="flex items-center gap-3">
+      <input
+        type="checkbox"
+        checked={chooserClickAway}
+        onChange={(e) =>
+          setChooserClickAway(e.target.checked)
+        }
+        aria-label="Click beside the pattern chooser to close it"
+        className="accent-[#f0662a] w-4 h-4"
+      />
+      <span className="text-sm">
+        Click beside the pattern chooser to close it
       </span>
     </label>
     </div>

@@ -23,6 +23,7 @@ import type {
   PatternCategory,
 } from './patternUtils';
 import {
+  isChooserClickAway,
   isModalDialogOpen,
   isPopupOpen,
   PATTERN_CHOOSER_OPEN_ATTR,
@@ -217,6 +218,36 @@ export default function PatternPicker({
     document.addEventListener('keydown', handleKey);
     return () =>
       document.removeEventListener('keydown', handleKey);
+  }, [isOpen]);
+
+  // Close on a click beside the app's column, the same
+  // way Escape does (a setting, on by default). The
+  // press decides, before a menu on top closes itself;
+  // the close waits for the click so focus can go back
+  // to the Pattern key after the browser has moved it.
+  useEffect(() => {
+    if (!isOpen) return;
+    let armed = false;
+    const handleDown = (e: PointerEvent) => {
+      armed = e.button === 0
+        && !isModalDialogOpen()
+        && !isPopupOpen()
+        && isChooserClickAway(e.target);
+    };
+    const handleClick = (e: MouseEvent) => {
+      if (!armed) return;
+      armed = false;
+      if (!isChooserClickAway(e.target)) return;
+      latestRef.current?.handleClose();
+    };
+    document.addEventListener('pointerdown', handleDown, true);
+    document.addEventListener('click', handleClick, true);
+    return () => {
+      document.removeEventListener(
+        'pointerdown', handleDown, true
+      );
+      document.removeEventListener('click', handleClick, true);
+    };
   }, [isOpen]);
 
   const activeCategory = categories.find(g =>

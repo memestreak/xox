@@ -259,7 +259,14 @@ Supporting files:
   `patternUtils.moveChooserCursor`: ← → wrap; on the
   category keys ↑ ↓ move between their wrapped lines
   (measured from the DOM); in the list ↑ from the top
-  row goes to the categories
+  row goes to the categories. A click beside the app's
+  column (outside `data-chooser-area` in `Sequencer`)
+  closes it like Esc and does nothing else (the step
+  selection stays; `keyboardUtils.isChooserClickAway`).
+  Settings > Options turns that off
+  (`useChooserClickAwaySetting.ts`, per-device
+  localStorage, on by default). Per-device on/off
+  settings use `hooks/createDeviceSetting.ts`
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `data/patterns.json` — preset patterns, one binary step
   string per track (`"1010101010101010"`), plus an
