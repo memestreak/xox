@@ -36,6 +36,9 @@ function SequencerInner() {
 
   const [currentPage, setCurrentPage] = useState(0);
   const [autoFollow, setAutoFollow] = useState(true);
+  // Page the playhead is on (-1 when stopped), set by
+  // StepGrid's playhead loop.
+  const [playingPage, setPlayingPage] = useState(-1);
 
   const pageCount = Math.ceil(patternLength / 16);
   const clampedPage = Math.min(
@@ -46,11 +49,12 @@ function SequencerInner() {
   // Memoized so the memoized header can skip renders.
   const page = useMemo<PageNav>(() => ({
     currentPage: clampedPage,
+    playingPage,
     pageCount,
     autoFollow,
     setPage: setCurrentPage,
     setAutoFollow,
-  }), [clampedPage, pageCount, autoFollow]);
+  }), [clampedPage, playingPage, pageCount, autoFollow]);
 
   const liveMessage = state.isPlaying
     ? `Playing at ${state.bpm} BPM`
@@ -123,6 +127,7 @@ function SequencerInner() {
             pageOffset={pageOffset}
             autoFollow={autoFollow}
             setPage={setCurrentPage}
+            setPlayingPage={setPlayingPage}
           />
           <footer className="grid grid-cols-3 items-center pt-4 lg:pt-8">
             <div />

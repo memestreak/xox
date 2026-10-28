@@ -41,6 +41,8 @@ interface StepGridProps {
   pageOffset: number;
   autoFollow: boolean;
   setPage: (page: number) => void;
+  /** Reports the playhead's page (-1 when stopped). */
+  setPlayingPage: (page: number) => void;
 }
 
 /**
@@ -55,6 +57,7 @@ export default function StepGrid({
   pageOffset,
   autoFollow,
   setPage,
+  setPlayingPage,
 }: StepGridProps) {
   const { state, actions, meta } = useSequencer();
   const {
@@ -406,14 +409,17 @@ export default function StepGrid({
         setDisplayStep(step);
         setDisplayTotal(Math.max(0, totalSteps - 1));
         flashTriggered(due.triggered);
+        const playingPage = Math.floor(step / 16);
+        setPlayingPage(playingPage);
         if (autoFollowRef.current) {
-          setPage(Math.floor(step / 16));
+          setPage(playingPage);
         }
       } else if (stepRef.current === -1 && shownStep !== -1) {
         // Playback stopped.
         shownStep = -1;
         setDisplayStep(-1);
         setDisplayTotal(0);
+        setPlayingPage(-1);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -425,7 +431,10 @@ export default function StepGrid({
         clearTimeout(triggerTimerRef.current);
       }
     };
-  }, [stepRef, stepQueueRef, flashTriggered, setPage]);
+  }, [
+    stepRef, stepQueueRef, flashTriggered, setPage,
+    setPlayingPage,
+  ]);
 
   return (
     // Right-click on a blank spot opens the grid menu,

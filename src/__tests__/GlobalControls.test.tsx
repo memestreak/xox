@@ -39,6 +39,7 @@ vi.mock('../app/SequencerContext', () => ({
 function makePage(overrides: Partial<PageNav> = {}): PageNav {
   return {
     currentPage: 0,
+    playingPage: -1,
     pageCount: 1,
     autoFollow: true,
     setPage: vi.fn(),

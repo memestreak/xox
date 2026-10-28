@@ -51,6 +51,7 @@ beforeEach(() => {
 
 const page = {
   currentPage: 0,
+  playingPage: -1,
   pageCount: 1,
   autoFollow: true,
   setPage: vi.fn(),

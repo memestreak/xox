@@ -46,6 +46,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
           <div className="flex justify-center">
             <PageLights
               currentPage={page.currentPage}
+              playingPage={page.playingPage}
               pageCount={page.pageCount}
               setPage={page.setPage}
             />

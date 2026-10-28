@@ -60,6 +60,7 @@ function renderGrid(pageOffset = 0) {
           pageOffset={pageOffset}
           autoFollow={true}
           setPage={setPage}
+          setPlayingPage={vi.fn()}
         />
       </div>
     </TestWrapper>
