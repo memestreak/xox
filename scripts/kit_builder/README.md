@@ -103,6 +103,7 @@ Once all slots are filled:
 - Every pick is converted with ffmpeg to 44.1 kHz 16-bit
   WAV named `{trackId}.wav` (e.g., `bd.wav`), so browsers
   decode every kit the same way
+- Then it is trimmed (`assembler.trim_wav`, see below)
 - The kit is built in a temporary folder and moved to
   `public/kits/{folder}/` only when every file is written;
   if anything fails, nothing is left behind
@@ -113,6 +114,47 @@ Once all slots are filled:
 After assembly you can build another kit or exit.
 Ctrl+C exits cleanly at any point.
 
+## Importing a kit exported from XOX
+
+Build a kit by ear in the app, then turn it into a
+committed kit:
+
+1. Load samples onto tracks (track name menu > Load
+   sample from file...). Click a track's amber dot to
+   compare with the kit sample.
+2. Gear menu > **Export kit...**, pick a name and ID, and
+   save `<id>.zip`. A custom sample that is on goes in
+   its slot; every other slot is the current kit's sample.
+3. Import it:
+
+```bash
+scripts/kit_builder/import_kit.py ~/Downloads/<id>.zip
+scripts/kit_builder/import_kit.py ~/Downloads/<id>.zip --replace
+```
+
+The zip must hold `kit.json` and exactly `bd.wav` ...
+`cb.wav`. Each slot is converted with ffmpeg, trimmed,
+checked (44.1 kHz, 16-bit, 1-2 channels, within its
+length cap) and installed at `public/kits/<id>/` with an
+entry in `src/app/data/kits.json`. An ID that is already
+taken is refused unless `--replace` is given, which
+overwrites the kit and keeps its place in the list.
+Nothing changes unless every step passes. It prints each
+slot's source and length, then the `git add` command; it
+doesn't commit.
+
+### Trimming
+
+Both the builder and the importer trim each sample:
+- audio more than 50 dB below the peak is cut from the
+  start (keeping 1 ms before the hit) and from the end
+- the length is capped per slot: bd 2.0 s, sd 1.2 s,
+  ch 0.5 s, oh 1.5 s, cy 3.0 s, ht/mt/lt 1.5 s, rs 0.6 s,
+  cp 1.0 s, cb 0.8 s
+- the last 20 ms fade out (at most a quarter of the
+  sample)
+- an all-silent file is only capped
+
 ## File Structure
 
 ```
@@ -122,7 +164,8 @@ scripts/kit_builder/
   sample_index.py   Recursive scanner + auto-classification
   preview.py        ffplay spawn/kill wrapper
   browser.py        Quick-pick UI with single-keypress input
-  assembler.py      File copy/convert + kits.json update
+  assembler.py      Convert, trim + kits.json update
+  import_kit.py     Install a kit zip from Export kit...
   keys.py           Single-keypress terminal input (tty)
   colors.py         ANSI color constants
 ```
@@ -151,5 +194,6 @@ accessible through "Browse all".
 ## Tests
 
 ```bash
-uv run --extra dev pytest scripts/tests/test_kit_builder.py
+uv run --extra dev pytest scripts/tests/test_kit_builder.py \
+  scripts/tests/test_import_kit.py
 ```

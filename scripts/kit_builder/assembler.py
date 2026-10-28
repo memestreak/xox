@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import tempfile
 import wave
+from array import array
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,20 @@ KITS_JSON = PROJECT_ROOT / "src" / "app" / "data" / "kits.json"
 # (Safari especially) decode them the same way.
 SAMPLE_RATE = 44100
 SILENCE_SECONDS = 0.1
+
+# Trim: audio more than this far below the peak counts
+# as silence at either end.
+TRIM_THRESHOLD_DB = 50.0
+# Kept before the first audible frame, so the attack
+# isn't clipped.
+TRIM_PREROLL_SECONDS = 0.001
+FADE_OUT_SECONDS = 0.02
+# Longest sample per slot, in seconds.
+SLOT_CAPS: dict[str, float] = {
+    "bd": 2.0, "sd": 1.2, "ch": 0.5, "oh": 1.5, "cy": 3.0,
+    "ht": 1.5, "mt": 1.5, "lt": 1.5, "rs": 0.6, "cp": 1.0,
+    "cb": 0.8,
+}
 
 
 def kit_conflict(kit_id: str, folder: str) -> str | None:
@@ -48,7 +63,8 @@ def assemble_kit(
 ) -> None:
     """Write every slot's sample and register the kit.
 
-    Picks are converted to 44.1 kHz 16-bit WAV; skipped
+    Picks are converted to 44.1 kHz 16-bit WAV and
+    trimmed (`trim_wav`); skipped
     slots get a short silent file, since the app loads all
     11 files. The kit is built in a temporary folder and
     only moved into place once every file is written, so
@@ -79,6 +95,7 @@ def assemble_kit(
                 _write_silence(dest)
             else:
                 _convert(sample.path, dest)
+                trim_wav(dest, track_id)
     except BaseException:
         # Also on Ctrl+C: never leave a half-built kit.
         shutil.rmtree(tmp_dir)
@@ -120,3 +137,70 @@ def _write_silence(dest: Path) -> None:
         out.setsampwidth(2)
         out.setframerate(SAMPLE_RATE)
         out.writeframes(b"\x00\x00" * frames)
+
+
+def trim_wav(path: Path, slot: str) -> float:
+    """Trim a 16-bit WAV in place for use as a kit sample.
+
+    Drops leading audio more than TRIM_THRESHOLD_DB below
+    the peak (keeping TRIM_PREROLL_SECONDS before the first
+    louder frame), cuts after the last louder frame, caps
+    the length at SLOT_CAPS[slot] and fades out the last
+    FADE_OUT_SECONDS (at most a quarter of what's left).
+    An all-silent file is only capped.
+
+    Args:
+        path: 16-bit PCM WAV, rewritten in place.
+        slot: Track ID whose length cap applies.
+
+    Returns:
+        The new length in seconds.
+
+    Raises:
+        ValueError: If the file isn't 16-bit PCM.
+        KeyError: If the slot has no length cap.
+    """
+    cap_seconds = SLOT_CAPS[slot]
+    with wave.open(str(path), "rb") as src:
+        params = src.getparams()
+        raw = src.readframes(params.nframes)
+    if params.sampwidth != 2:
+        raise ValueError(f"{path.name} is not 16-bit PCM")
+    channels = params.nchannels
+    rate = params.framerate
+    samples = array("h")
+    samples.frombytes(raw)
+    frames = len(samples) // channels
+
+    peak = max((abs(s) for s in samples), default=0)
+    if peak == 0:
+        start, end = 0, frames
+    else:
+        threshold = peak * 10 ** (-TRIM_THRESHOLD_DB / 20)
+        first = next(
+            i for i, s in enumerate(samples) if abs(s) >= threshold
+        )
+        last = next(
+            i for i in range(len(samples) - 1, -1, -1)
+            if abs(samples[i]) >= threshold
+        )
+        preroll = int(rate * TRIM_PREROLL_SECONDS)
+        start = max(0, first // channels - preroll)
+        end = last // channels + 1
+    end = min(end, start + int(rate * cap_seconds))
+    kept = samples[start * channels:end * channels]
+
+    if peak:
+        fade = min(int(rate * FADE_OUT_SECONDS), (end - start) // 4)
+        first_faded = (end - start - fade) * channels
+        for offset in range(fade * channels):
+            gain = (fade - 1 - offset // channels) / fade
+            index = first_faded + offset
+            kept[index] = int(kept[index] * gain)
+
+    with wave.open(str(path), "wb") as out:
+        out.setnchannels(channels)
+        out.setsampwidth(2)
+        out.setframerate(rate)
+        out.writeframes(kept.tobytes())
+    return (end - start) / rate

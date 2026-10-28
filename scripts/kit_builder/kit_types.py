@@ -26,6 +26,9 @@ TRACK_LABELS = {
     "cb": "Cowbell",
 }
 
+# Kit IDs and folders: lowercase words joined by hyphens.
+SLUG_RE = r"^[a-z0-9]+(-[a-z0-9]+)*$"
+
 AUDIO_EXTENSIONS = frozenset((".wav", ".aif", ".aiff"))
 
 # Placeholder slot for a tom of unknown pitch. The

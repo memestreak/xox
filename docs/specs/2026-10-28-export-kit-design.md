@@ -33,7 +33,7 @@ now: the track menu is the preferred way in.
 | File types in zip | Original extension (`.wav`, `.aif`) | Always `.wav` (load is WAV only) |
 | `base` | Kit the samples were loaded on | Kit current at export time |
 | Toggled-off slot | n/a | Exports the kit sample ("export what you hear") |
-| All-silent slot | Import error | Kept as a short silent file (the kit builder writes these for skipped slots) |
+| All-silent slot | Import error | Kept, only capped (the kit builder writes silent files for skipped slots) |
 | Export errors | `StatusBanner` | Inline in the dialog |
 
 ## 1. User-facing behavior
@@ -123,7 +123,7 @@ is untouched until every step passes.
    - cap length: bd 2.0 s, sd 1.2 s, ch 0.5 s, oh 1.5 s,
      cy 3.0 s, ht/mt/lt 1.5 s, rs 0.6 s, cp 1.0 s, cb 0.8 s
    - 20 ms linear fade-out, at most a quarter of what's left
-   - an all-silent file is left as is
+   - an all-silent file is only capped
 5. **Verify** 11 files, each 44.1 kHz, 16-bit, 1 or 2
    channels, at least one frame, within its cap.
    Steps 3-5 run in a temp folder under `public/kits/`

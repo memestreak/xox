@@ -14,9 +14,7 @@ from browser import browse_all_slots
 from assembler import assemble_kit, kit_conflict
 from preview import stop
 from colors import GREEN, RESET
-
-# Kit IDs and folders: lowercase words joined by hyphens.
-SLUG_RE = r"^[a-z0-9]+(-[a-z0-9]+)*$"
+from kit_types import SLUG_RE
 
 DEFAULT_SAMPLES_ROOT = os.path.expanduser("~/media/samples")
 USAGE = (
