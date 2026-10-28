@@ -1,11 +1,13 @@
 "use client";
 
 import {
-  cloneElement, useId,
+  cloneElement, useEffect, useId, useRef,
 } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import tooltips from './data/tooltips.json';
 import { useTooltips } from './TooltipContext';
+import { TOOLTIP_EDGE_MARGIN_PX } from './constants';
+import { tooltipShift, visibleBand } from './tooltipFit';
 
 type TooltipKey = keyof typeof tooltips;
 
@@ -26,12 +28,38 @@ export default function Tooltip({
 }: TooltipProps) {
   const id = useId();
   const { tooltipsEnabled } = useTooltips();
+  const tipRef = useRef<HTMLSpanElement>(null);
 
+  // On hover, nudge the tooltip sideways if it would
+  // spill past the window or a clipping ancestor (the
+  // track area scrolls, so it cuts off anything that
+  // pokes out of it). It shows after a delay, so it is
+  // laid out, though invisible, when this measures.
   const text =
     tooltips[tooltipKey as TooltipKey] as
       string | undefined;
+  const shown = Boolean(text) && tooltipsEnabled;
+  useEffect(() => {
+    const tip = tipRef.current;
+    const host = tip?.parentElement;
+    if (!shown || !tip || !host) return;
+    const fit = () => {
+      tip.style.marginLeft = '';
+      const rect = tip.getBoundingClientRect();
+      const shift = tooltipShift(
+        rect, visibleBand(tip), TOOLTIP_EDGE_MARGIN_PX,
+      );
+      if (shift !== 0) {
+        tip.style.marginLeft = `${shift}px`;
+      }
+    };
+    host.addEventListener('pointerenter', fit);
+    return () => {
+      host.removeEventListener('pointerenter', fit);
+    };
+  }, [shown]);
 
-  if (!text || !tooltipsEnabled) {
+  if (!shown) {
     return children;
   }
 
@@ -46,6 +74,7 @@ export default function Tooltip({
   const tooltipSpan = (
     <span
       key="__tooltip"
+      ref={tipRef}
       id={id}
       role="tooltip"
       className={
@@ -54,7 +83,7 @@ export default function Tooltip({
           ? ' right-0'
           : ' left-1/2 -translate-x-1/2')
         + ' ' + posClass
-        + ' z-50 whitespace-nowrap'
+        + ' z-50 w-max max-w-[calc(100vw-8px)]'
         + ' px-1.5 py-0.5'
         + ' text-xs font-medium normal-case tracking-normal font-sans'
         + ' bg-raised text-ink border border-edge'

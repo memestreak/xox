@@ -48,6 +48,7 @@ exports[`constants snapshot 1`] = `
   "STEPS_REPEAT_INTERVAL_MS": 80,
   "STEPS_SHIFT_STEP": 4,
   "SWING_MAX": 100,
+  "TOOLTIP_EDGE_MARGIN_PX": 4,
   "TRIGGER_FLASH_MS": 150,
 }
 `;
