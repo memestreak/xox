@@ -59,7 +59,7 @@ export default function StepGrid({
   const { state, actions, meta } = useSequencer();
   const {
     trackStates, minimizedTracks, minimizableCount,
-    autoMinimize, customSamples,
+    autoMinimize, customSamples, disabledSamples,
   } = state;
   const {
     toggleStep, setStep, setTrackSteps,
@@ -71,6 +71,7 @@ export default function StepGrid({
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
     setAutoMinimize, holdAutoMinimize,
     clearAll, loadSample, resetSample, resetAllSamples,
+    toggleSample,
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
@@ -545,8 +546,10 @@ export default function StepGrid({
             onPlainClick={toggleSelected}
             onClearSelection={clearSelection}
             customSampleName={customSamples[track.id]?.name}
+            isCustomSampleOn={!disabledSamples[track.id]}
             onLoadSample={loadSample}
             onResetSample={resetSample}
+            onToggleSample={toggleSample}
           />
         ))}
         <AccentRow

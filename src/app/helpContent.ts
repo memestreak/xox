@@ -166,6 +166,10 @@ const MOUSE_TAB: HelpTab = {
           note: '(also ⌘-click)',
         },
         { keys: ['shift'], gesture: 'click', text: 'Clear the track' },
+        {
+          gesture: 'click the amber dot',
+          text: 'Switch between the loaded sample and the kit sample',
+        },
       ],
     },
     {
@@ -276,6 +280,10 @@ const TOUCH_TAB: HelpTab = {
         { gesture: 'tap name', text: 'Preview the sound' },
         { gesture: 'drag end bar', text: 'Set the track length' },
         { gesture: 'hold end bar', text: 'Free-run on / off' },
+        {
+          gesture: 'tap the amber dot',
+          text: 'Switch between the loaded sample and the kit sample',
+        },
         {
           gesture: 'tap ⋯ over the tracks',
           text: 'Minimize, restore, auto-minimize, reset samples or reset tracks',

@@ -72,8 +72,11 @@ export interface TrackRowProps {
   tightBelow?: boolean;
   /** File name when the track plays a custom sample. */
   customSampleName?: string;
+  /** False while a custom track plays the kit sample. */
+  isCustomSampleOn?: boolean;
   onLoadSample?: (trackId: TrackId, file: File) => void;
   onResetSample?: (trackId: TrackId) => void;
+  onToggleSample?: (trackId: TrackId) => void;
 }
 
 interface MinimizedTrackRowProps {
@@ -86,6 +89,8 @@ interface MinimizedTrackRowProps {
   onRestore: () => void;
   onPlayPreview: () => void;
   customSampleName?: string;
+  isCustomSampleOn: boolean;
+  onToggleSample: () => void;
 }
 
 /**
@@ -103,6 +108,8 @@ function MinimizedTrackRow({
   onRestore,
   onPlayPreview,
   customSampleName,
+  isCustomSampleOn,
+  onToggleSample,
 }: MinimizedTrackRowProps) {
   return (
     <div
@@ -161,7 +168,11 @@ function MinimizedTrackRow({
           {trackName}
         </button>
         {customSampleName !== undefined && (
-          <CustomSampleDot fileName={customSampleName} />
+          <CustomSampleDot
+            fileName={customSampleName}
+            isOn={isCustomSampleOn}
+            onToggle={onToggleSample}
+          />
         )}
       </div>
       <button
@@ -234,8 +245,10 @@ function TrackRowInner({
   onRestore,
   tightBelow = false,
   customSampleName,
+  isCustomSampleOn = true,
   onLoadSample,
   onResetSample,
+  onToggleSample,
 }: TrackRowProps) {
   const stepGridRef = useRef<HTMLDivElement>(null);
   // ─── Bound callbacks ──────────────────────────
@@ -274,6 +287,10 @@ function TrackRowInner({
   const handleResetSample = useCallback(
     () => onResetSample?.(trackId),
     [onResetSample, trackId]
+  );
+  const handleToggleSample = useCallback(
+    () => onToggleSample?.(trackId),
+    [onToggleSample, trackId]
   );
   const handleSetLength = useCallback(
     (len: number) => onSetTrackLength(trackId, len),
@@ -331,6 +348,8 @@ function TrackRowInner({
         onRestore={handleRestore}
         onPlayPreview={handlePlayPreview}
         customSampleName={customSampleName}
+        isCustomSampleOn={isCustomSampleOn}
+        onToggleSample={handleToggleSample}
       />
     );
   }
@@ -349,11 +368,17 @@ function TrackRowInner({
           onClearTrack={handleClearTrack}
           onPlayPreview={handlePlayPreview}
           customSampleName={customSampleName}
+          isCustomSampleOn={isCustomSampleOn}
           onLoadSample={handleLoadSample}
           onResetSample={handleResetSample}
+          onToggleSample={handleToggleSample}
         />
         {customSampleName !== undefined && (
-          <CustomSampleDot fileName={customSampleName} />
+          <CustomSampleDot
+            fileName={customSampleName}
+            isOn={isCustomSampleOn}
+            onToggle={handleToggleSample}
+          />
         )}
         <div className="flex gap-1 ml-auto items-center">
           <TrackMixer
@@ -384,8 +409,10 @@ function TrackRowInner({
             onClearTrack={handleClearTrack}
             onPlayPreview={handlePlayPreview}
             customSampleName={customSampleName}
+            isCustomSampleOn={isCustomSampleOn}
             onLoadSample={handleLoadSample}
             onResetSample={handleResetSample}
+            onToggleSample={handleToggleSample}
           />
           <TrackMixer
             trackName={trackName}

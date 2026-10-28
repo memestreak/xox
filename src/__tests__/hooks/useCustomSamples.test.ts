@@ -146,6 +146,61 @@ describe('useCustomSamples', () => {
     expect(result.current.customSamples).toEqual({});
   });
 
+  it('toggleSample switches to the kit and back', async () => {
+    const { result } = renderHook(() => useCustomSamples());
+    const file = wav();
+    await act(() => result.current.loadSample('sd', file));
+    expect(result.current.disabledSamples).toEqual({});
+
+    act(() => result.current.toggleSample('sd'));
+    expect(engine.clearCustomSample).toHaveBeenCalledWith('sd');
+    expect(result.current.disabledSamples).toEqual({ sd: true });
+    // The file is kept while off.
+    expect(result.current.customSamples.sd).toBe(file);
+
+    act(() => result.current.toggleSample('sd'));
+    expect(engine.setCustomSample).toHaveBeenCalledTimes(2);
+    expect(engine.setCustomSample)
+      .toHaveBeenLastCalledWith('sd', bufA);
+    expect(engine.decodeSample).toHaveBeenCalledTimes(1);
+    expect(result.current.disabledSamples).toEqual({});
+  });
+
+  it('toggleSample ignores a kit-sample track', () => {
+    const { result } = renderHook(() => useCustomSamples());
+    act(() => result.current.toggleSample('sd'));
+    expect(engine.clearCustomSample).not.toHaveBeenCalled();
+    expect(result.current.disabledSamples).toEqual({});
+  });
+
+  it('a new load turns the sample back on', async () => {
+    const { result } = renderHook(() => useCustomSamples());
+    await act(() => result.current.loadSample('sd', wav()));
+    act(() => result.current.toggleSample('sd'));
+    engine.decodeSample.mockResolvedValueOnce(bufB);
+    await act(() =>
+      result.current.loadSample('sd', wav('snare.wav'))
+    );
+    expect(engine.setCustomSample)
+      .toHaveBeenLastCalledWith('sd', bufB);
+    expect(result.current.disabledSamples).toEqual({});
+  });
+
+  it('reset forgets a sample that was off', async () => {
+    const { result } = renderHook(() => useCustomSamples());
+    await act(() => result.current.loadSample('sd', wav()));
+    await act(() => result.current.loadSample('oh', wav()));
+    act(() => result.current.toggleSample('sd'));
+    act(() => result.current.toggleSample('oh'));
+    act(() => result.current.resetSample('sd'));
+    expect(result.current.disabledSamples).toEqual({ oh: true });
+    act(() => result.current.resetAllSamples());
+    expect(result.current.disabledSamples).toEqual({});
+    engine.setCustomSample.mockClear();
+    act(() => result.current.toggleSample('oh'));
+    expect(engine.setCustomSample).not.toHaveBeenCalled();
+  });
+
   it('the load started last wins', async () => {
     const { result } = renderHook(() => useCustomSamples());
     const slow = deferredDecode();
@@ -224,6 +279,8 @@ describe('useCustomSamples', () => {
     expect(result.current.resetSample).toBe(before.resetSample);
     expect(result.current.resetAllSamples)
       .toBe(before.resetAllSamples);
+    expect(result.current.toggleSample)
+      .toBe(before.toggleSample);
     expect(result.current.dismissSampleError)
       .toBe(before.dismissSampleError);
   });

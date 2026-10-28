@@ -427,13 +427,56 @@ describe('TrackRow minimized', () => {
 });
 
 describe('TrackRow custom samples', () => {
-  const dots = () => screen.queryAllByRole('img', {
+  const dots = () => screen.queryAllByRole('button', {
     name: 'Custom sample: kick.wav',
   });
 
   it('shows no dot for a kit sample', () => {
     renderTrackRow();
-    expect(screen.queryAllByRole('img')).toHaveLength(0);
+    expect(screen.queryAllByRole('button', {
+      name: /custom sample/i,
+    })).toHaveLength(0);
+  });
+
+  it('clicking a dot toggles the track sample', () => {
+    const onToggleSample = vi.fn();
+    const onPlayPreview = vi.fn();
+    renderTrackRow({
+      customSampleName: 'kick.wav',
+      onToggleSample,
+      onPlayPreview,
+    });
+    for (const dot of dots()) {
+      fireEvent.mouseDown(dot);
+      fireEvent.click(dot);
+    }
+    expect(onToggleSample).toHaveBeenCalledTimes(2);
+    expect(onToggleSample).toHaveBeenCalledWith('bd');
+    expect(onPlayPreview).not.toHaveBeenCalled();
+  });
+
+  it('draws hollow dots while the sample is off', () => {
+    renderTrackRow({
+      customSampleName: 'kick.wav',
+      isCustomSampleOn: false,
+    });
+    for (const dot of dots()) {
+      expect(dot).toHaveAttribute('aria-pressed', 'false');
+    }
+  });
+
+  it('toggles from a minimized row', () => {
+    const onToggleSample = vi.fn();
+    renderTrackRow({
+      steps: '0'.repeat(16),
+      trackLength: 16,
+      patternLength: 16,
+      isMinimized: true,
+      customSampleName: 'kick.wav',
+      onToggleSample,
+    });
+    fireEvent.click(dots()[0]);
+    expect(onToggleSample).toHaveBeenCalledWith('bd');
   });
 
   it('shows the dot at both row sizes', () => {

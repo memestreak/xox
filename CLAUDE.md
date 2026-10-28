@@ -120,7 +120,11 @@ from the URL.
   samples to kit). Memory only, not in
   `SequencerConfig` or share links; kept by kit changes
   and by Reset (no `reset()`). Each load/reset bumps a
-  per-track counter so the latest request wins. Checks
+  per-track counter so the latest request wins.
+  `toggleSample` (click the dot) switches a custom
+  track to the kit sample and back: the file and its
+  decoded buffer stay, `state.disabledSamples` marks
+  it off, and a new load turns it back on. Checks
   (WAV only, 20 MB) live in `sampleFiles.ts`;
   `AudioEngine.customBuffers` win over kit buffers
 - `useMinimizedTracks.ts` — which empty grid rows are
@@ -167,8 +171,11 @@ all hook resets. Exceptions: `useMasterVolume` and
   to kit (only when a track is custom), Reset pattern.
   Opens from the ⋯ key over the track names, the only
   way in on phones, or a right-click on a blank spot)
-- `CustomSampleDot.tsx` — amber dot (file name on hover)
-  on a track with a custom sample
+- `CustomSampleDot.tsx` — amber dot button on a track
+  with a custom sample: solid when on, hollow when off,
+  click toggles, hover explains. On desktop rows it sits
+  in an overlay over the name button (an invisible copy
+  of the name places it) so it isn't nested in a button
 - `LatchKey.tsx` — split key for Fill and Temp: the body
   does the key's action, the right section toggles the
   latch (its LED means latched only)
