@@ -122,3 +122,7 @@ export const DROPDOWN_HINT_GAP_PX = 6;
 // ── Custom samples ──────────────────────────────────
 /** Largest sample file a track will load (20 MB). */
 export const MAX_SAMPLE_FILE_BYTES = 20 * 1024 * 1024;
+
+// ── Tooltips ────────────────────────────────────────
+/** Keeps a tooltip this far inside the edge that would clip it. */
+export const TOOLTIP_EDGE_MARGIN_PX = 4;

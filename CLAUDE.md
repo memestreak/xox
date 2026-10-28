@@ -245,6 +245,11 @@ Supporting files:
   "?" key (hidden below `sm`), the gear menu's Help item,
   or the `?` key. Its text lives in `helpContent.ts`:
   **update it whenever a shortcut or gesture changes**
+- `Tooltip.tsx` — hover tooltips (texts in
+  `data/tooltips.json`). On hover a tooltip shifts
+  sideways to stay inside the window and any clipping
+  ancestor, such as the scrolling track area
+  (`tooltipFit.ts`), and wraps if wider than the window
 - `keyboardUtils.ts` — `shouldIgnoreShortcut` for global
   key handlers: skips form fields and any open modal
   `<dialog>` (Help, Settings, Export kit).
