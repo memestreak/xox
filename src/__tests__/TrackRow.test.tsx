@@ -523,3 +523,37 @@ describe('TrackRow custom samples', () => {
     expect(onResetSample).toHaveBeenCalledWith('bd');
   });
 });
+
+describe('TrackRow file drop', () => {
+  const fileDrag = (files: File[] = []) => ({
+    dataTransfer: { types: ['Files'], files, dropEffect: 'none' },
+  });
+
+  it('a dropped file loads onto the track', () => {
+    const onLoadSample = vi.fn();
+    const { container } = renderTrackRow({ onLoadSample });
+    const row = container.querySelector('[data-row-track="bd"]')!;
+    const file = new File(['x'], 'kick.wav');
+    fireEvent.dragEnter(row, fileDrag());
+    expect(row).toHaveClass('outline-dashed');
+    fireEvent.drop(row, fileDrag([file]));
+    expect(onLoadSample).toHaveBeenCalledWith('bd', file);
+    expect(row).not.toHaveClass('outline-dashed');
+  });
+
+  it('a minimized row takes drops too', () => {
+    const onLoadSample = vi.fn();
+    const { container } = renderTrackRow({
+      steps: '0'.repeat(16),
+      trackLength: 16,
+      patternLength: 16,
+      isMinimized: true,
+      onLoadSample,
+    });
+    const row = container.querySelector('[data-minimized="BD"]')!;
+    const file = new File(['x'], 'kick.wav');
+    fireEvent.drop(row, fileDrag([file]));
+    expect(onLoadSample).toHaveBeenCalledWith('bd', file);
+  });
+});
+

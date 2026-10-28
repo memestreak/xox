@@ -87,6 +87,15 @@ describe('helpContent', () => {
     }));
   });
 
+  it('lists the drop gesture on desktop', () => {
+    const rows = getHelpTabs(false)
+      .flatMap(t => t.sections)
+      .flatMap(sec => sec.rows);
+    expect(rows).toContainEqual(expect.objectContaining({
+      gesture: 'drop a WAV on a track',
+    }));
+  });
+
   it('explains the sample dot on both tabs', () => {
     for (const touch of [false, true]) {
       const rows = getHelpTabs(touch)

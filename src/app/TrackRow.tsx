@@ -11,6 +11,12 @@ import TrackMixer from './TrackMixer';
 import TrackEndBar from './TrackEndBar';
 import StepButton from './StepButton';
 import CustomSampleDot from './CustomSampleDot';
+import { useFileDrop } from './hooks/useFileDrop';
+import type { FileDropHandlers } from './hooks/useFileDrop';
+
+/** Marks a row a file is being dragged over (no layout shift). */
+const DROP_TARGET =
+  ' rounded outline-2 outline-dashed outline-accent outline-offset-2';
 
 export interface TrackRowProps {
   trackId: TrackId;
@@ -91,6 +97,8 @@ interface MinimizedTrackRowProps {
   customSampleName?: string;
   isCustomSampleOn: boolean;
   onToggleSample: () => void;
+  dropHandlers: FileDropHandlers;
+  isDropTarget: boolean;
 }
 
 /**
@@ -110,13 +118,17 @@ function MinimizedTrackRow({
   customSampleName,
   isCustomSampleOn,
   onToggleSample,
+  dropHandlers,
+  isDropTarget,
 }: MinimizedTrackRowProps) {
   return (
     <div
       data-minimized={trackName}
+      {...dropHandlers}
       className={
         'flex gap-2 lg:gap-4 items-center'
         + (tightBelow ? ' mb-1 lg:mb-0.5' : '')
+        + (isDropTarget ? DROP_TARGET : '')
       }
     >
       <div className="relative flex items-center gap-1 lg:gap-2 w-[76px] lg:w-56 shrink-0">
@@ -292,6 +304,9 @@ function TrackRowInner({
     () => onToggleSample?.(trackId),
     [onToggleSample, trackId]
   );
+  const drop = useFileDrop(
+    onLoadSample ? handleLoadSample : undefined
+  );
   const handleSetLength = useCallback(
     (len: number) => onSetTrackLength(trackId, len),
     [onSetTrackLength, trackId]
@@ -350,12 +365,18 @@ function TrackRowInner({
         customSampleName={customSampleName}
         isCustomSampleOn={isCustomSampleOn}
         onToggleSample={handleToggleSample}
+        dropHandlers={drop.handlers}
+        isDropTarget={drop.isOver}
       />
     );
   }
 
   return (
-    <div data-row-track={trackId}>
+    <div
+      data-row-track={trackId}
+      {...drop.handlers}
+      className={drop.isOver ? DROP_TARGET.trim() : undefined}
+    >
       {/* Mobile: track name + M/S above grid */}
       <div className="flex items-center gap-2 mb-1.5 lg:hidden">
         <TrackNameButton
