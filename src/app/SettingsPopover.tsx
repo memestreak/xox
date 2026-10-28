@@ -11,6 +11,7 @@ import { encodeConfig } from './configCodec';
 import { FEEDBACK_TIMEOUT_MS } from './constants';
 import Tooltip from './Tooltip';
 import SettingsModal from './SettingsModal';
+import ExportKitDialog from './ExportKitDialog';
 import { useHelp } from './HelpContext';
 
 /**
@@ -21,12 +22,16 @@ import { useHelp } from './HelpContext';
  * updates the address bar.
  */
 export default function SettingsPopover() {
-  const { meta } = useSequencer();
+  const { state, meta } = useSequencer();
   const help = useHelp();
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsKey, setSettingsKey] = useState(0);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportKey, setExportKey] = useState(0);
+  const hasCustomSamples =
+    Object.keys(state.customSamples).length > 0;
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -84,13 +89,15 @@ export default function SettingsPopover() {
         '#' +
         hash;
       await navigator.clipboard.writeText(url);
-      setFeedback('Copied!');
+      setFeedback(hasCustomSamples
+        ? "Copied! Custom samples aren't included."
+        : 'Copied!');
       setTimeout(() => setFeedback(''), FEEDBACK_TIMEOUT_MS);
     } catch {
       setFeedback('Failed');
       setTimeout(() => setFeedback(''), FEEDBACK_TIMEOUT_MS);
     }
-  }, [meta.config]);
+  }, [meta.config, hasCustomSamples]);
 
   return (
     <div className="relative">
@@ -133,6 +140,20 @@ export default function SettingsPopover() {
               <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
             </svg>
             {feedback || 'Copy share link'}
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              setExportKey((k) => k + 1);
+              setExportOpen(true);
+              setIsOpen(false);
+            }}
+            className="w-full text-left px-2.5 py-2 rounded-[5px] text-sm text-ink hover:bg-[#2f2c27] flex items-center gap-2.5 focus-visible:outline-none focus-visible:bg-[#2f2c27]"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-muted shrink-0">
+              <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+            </svg>
+            Export kit…
           </button>
           <div className="h-px bg-line mx-1.5 my-1" />
           <button
@@ -177,6 +198,16 @@ export default function SettingsPopover() {
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
+      {exportOpen && (
+        <ExportKitDialog
+          key={exportKey}
+          isOpen={exportOpen}
+          onClose={() => setExportOpen(false)}
+          kit={state.currentKit}
+          customSamples={state.customSamples}
+          disabledSamples={state.disabledSamples}
+        />
+      )}
     </div>
   );
 }
