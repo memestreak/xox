@@ -22,8 +22,11 @@ interface TrackNameButtonProps {
   onPlayPreview: () => void;
   /** File name when the track plays a custom sample. */
   customSampleName?: string;
+  /** False while a custom track plays the kit sample. */
+  isCustomSampleOn?: boolean;
   onLoadSample?: (file: File) => void;
   onResetSample?: () => void;
+  onToggleSample?: () => void;
 }
 
 /**
@@ -41,8 +44,10 @@ function TrackNameButtonInner({
   onClearTrack,
   onPlayPreview,
   customSampleName,
+  isCustomSampleOn = true,
   onLoadSample,
   onResetSample,
+  onToggleSample,
 }: TrackNameButtonProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -181,18 +186,28 @@ function TrackNameButtonInner({
           }
           aria-label={trackName}
         >
-          {size === 'lg' && customSampleName !== undefined ? (
-            // The dot sits just after the name; clicks on it
-            // reach the button.
+          {trackName}
+        </button>
+        {size === 'lg' && customSampleName !== undefined && (
+          // Lays an invisible copy of the name over the
+          // button so the dot lands just after the text.
+          // The dot is its own button (it toggles the
+          // sample); the rest of the overlay lets clicks
+          // through to the name.
+          <span className="absolute inset-0 px-1 py-1 pointer-events-none font-display font-bold uppercase tracking-[0.08em] leading-none text-[22px] whitespace-nowrap">
             <span className="relative">
-              {trackName}
+              <span aria-hidden="true" className="invisible">
+                {trackName}
+              </span>
               <CustomSampleDot
                 fileName={customSampleName}
-                className="absolute left-full top-0"
+                isOn={isCustomSampleOn}
+                onToggle={onToggleSample}
+                className="absolute left-full top-0 pointer-events-auto"
               />
             </span>
-          ) : trackName}
-        </button>
+          </span>
+        )}
         {size === 'lg' && (
           <input
             ref={fileInputRef}

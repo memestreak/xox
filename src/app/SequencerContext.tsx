@@ -27,7 +27,9 @@ import {
   setAutoMinimize, useAutoMinimizeSetting,
 } from './hooks/useAutoMinimizeSetting';
 import { useCustomSamples } from './hooks/useCustomSamples';
-import type { CustomSamples } from './hooks/useCustomSamples';
+import type {
+  CustomSamples, DisabledSamples,
+} from './hooks/useCustomSamples';
 import type {
   Kit,
   PatternMode,
@@ -94,6 +96,8 @@ interface SequencerState {
    * kept by Reset and kit changes.
    */
   customSamples: CustomSamples;
+  /** Custom tracks switched back to the kit sample. */
+  disabledSamples: DisabledSamples;
   /** Why the last sample load was refused. */
   sampleError: string | null;
 }
@@ -170,6 +174,8 @@ interface SequencerActions {
   holdAutoMinimize: (hold: AutoMinimizeHold) => void;
   loadSample: (trackId: TrackId, file: File) => Promise<void>;
   resetSample: (trackId: TrackId) => void;
+  /** Switch a custom track between its file and the kit. */
+  toggleSample: (trackId: TrackId) => void;
   resetAllSamples: () => void;
   dismissSampleError: () => void;
 }
@@ -461,7 +467,7 @@ export function SequencerProvider({
     patternMode, tempState, isTempLatched, pendingPatternId,
   } = pm;
   const { minimizedTracks, minimizableCount } = minimize;
-  const { customSamples, sampleError } = samples;
+  const { customSamples, disabledSamples, sampleError } = samples;
 
   const state = useMemo<SequencerState>(() => ({
     isPlaying,
@@ -484,6 +490,7 @@ export function SequencerProvider({
     minimizableCount,
     autoMinimize,
     customSamples,
+    disabledSamples,
     sampleError,
   }), [
     isPlaying, config.bpm, currentKit, trackStates,
@@ -491,7 +498,8 @@ export function SequencerProvider({
     isFillLatched, fillMode, patternMode, tempState,
     isTempLatched, selectedPatternId, pendingPatternId,
     importNotice, minimizedTracks, minimizableCount,
-    autoMinimize, customSamples, sampleError,
+    autoMinimize, customSamples, disabledSamples,
+    sampleError,
   ]);
 
   const {
@@ -514,7 +522,7 @@ export function SequencerProvider({
   } = trackConfig;
   const {
     loadSample, resetSample, resetAllSamples,
-    dismissSampleError,
+    toggleSample, dismissSampleError,
   } = samples;
 
   const actions = useMemo<SequencerActions>(() => ({
@@ -554,6 +562,7 @@ export function SequencerProvider({
     holdAutoMinimize,
     loadSample,
     resetSample,
+    toggleSample,
     resetAllSamples,
     dismissSampleError,
   }), [
@@ -567,7 +576,7 @@ export function SequencerProvider({
     toggleTempLatch, playPreview, dismissError, dismissImportNotice,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
     holdAutoMinimize, loadSample, resetSample,
-    resetAllSamples, dismissSampleError,
+    toggleSample, resetAllSamples, dismissSampleError,
   ]);
 
   const meta = useMemo<SequencerMeta>(() => ({

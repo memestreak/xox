@@ -86,4 +86,15 @@ describe('helpContent', () => {
       text: expect.stringMatching(/reset samples/),
     }));
   });
+
+  it('explains the sample dot on both tabs', () => {
+    for (const touch of [false, true]) {
+      const rows = getHelpTabs(touch)
+        .flatMap(t => t.sections)
+        .flatMap(sec => sec.rows);
+      expect(rows).toContainEqual(expect.objectContaining({
+        text: 'Switch between the loaded sample and the kit sample',
+      }));
+    }
+  });
 });
