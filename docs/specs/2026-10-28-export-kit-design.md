@@ -22,14 +22,15 @@ This slice closes the loop for building kits:
 5. git add / commit
 ```
 
-Drag-and-drop loading from the parent spec is dropped for
-now: the track menu is the preferred way in.
+Drag-and-drop loading comes last (section 6), after Export
+and `import_kit.py` ship: the track menu stays the main way
+in.
 
 ### Changes from the parent spec
 
 | Topic | Parent spec | This spec |
 |---|---|---|
-| Drag-and-drop | Drop files on a row | Not built |
+| Drag-and-drop | Built with loading | Last step, a separate PR (section 6) |
 | File types in zip | Original extension (`.wav`, `.aif`) | Always `.wav` (load is WAV only) |
 | `base` | Kit the samples were loaded on | Kit current at export time |
 | Toggled-off slot | n/a | Exports the kit sample ("export what you hear") |
@@ -186,8 +187,53 @@ export, run `import_kit.py` on the download into a scratch
 copy of the repo, confirm the kit shows in the Kit menu and
 plays.
 
+## 6. Later: drag-and-drop
+
+Built after this slice ships, as its own PR. A second way
+into the same `loadSample(track, file)` path; the track menu
+stays.
+
+### Behavior
+
+- Dragging files over a track row (full, phone or minimized)
+  highlights that row; leaving it or dropping clears the
+  highlight. Only drags that carry files react, so step
+  painting and text drags are untouched.
+- Dropping loads the first file onto that track, through
+  the same WAV and 20 MB checks as the menu. A refused file
+  shows the usual `StatusBanner` message and the track keeps
+  its sound.
+- A drop is a new load, so a toggled-off track comes back
+  on with the new sample (same as the menu).
+- Dropping anywhere else on the page does nothing (the
+  browser doesn't navigate to the file).
+- The accent row takes no drops.
+- Help gains a row: "Drop a WAV on a track: load it as the
+  track's sample".
+
+### Architecture
+
+- `TrackRow` gets HTML drag handlers (`dragenter`,
+  `dragover`, `dragleave`, `drop`) on the row wrapper,
+  separate from the pointer events `useDragPaint` uses. A
+  depth counter keeps the highlight steady while the drag
+  moves over child elements.
+- Highlight with an outline or ring, never a conditional
+  border (`xox/no-conditional-border`).
+- `Sequencer` (or `StepGrid`) calls `preventDefault` on
+  `dragover`/`drop` for the page so a stray drop doesn't
+  open the file.
+
+### Testing
+
+- Vitest: drop calls `onLoadSample` with the first file;
+  non-file drags are ignored; highlight on enter, cleared
+  on leave and drop; minimized rows accept drops.
+- Browser on inky: drag a WAV from Finder onto a row; on
+  Playwright, dispatch the drag events with a `DataTransfer`.
+
 ## Out of scope
 
-Drag-and-drop, importing zips in the app, saving custom
+Importing zips in the app, saving custom
 samples across reloads, custom audio in share links,
 loudness normalization, re-trimming existing kits.
