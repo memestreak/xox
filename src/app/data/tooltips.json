@@ -10,7 +10,7 @@
   "kit": "Choose sample kit",
   "pattern": "Browse preset patterns (P)",
   "settings": "Settings",
-  "gridMenu": "Minimize, restore and reset tracks",
+  "gridMenu": "Track and pattern options",
   "help": "Help and shortcuts (?)",
   "mute": "Mute this track",
   "solo": "Solo this track",
