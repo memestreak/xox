@@ -19,6 +19,7 @@ import PatternPicker from './PatternPicker';
 import patternsData from './data/patterns.json';
 import { getCategorizedPatterns } from './patternUtils';
 import { useInputModality } from './hooks/useInputModality';
+import { usePreventFileNavigation } from './hooks/useFileDrop';
 import type { Pattern } from './types';
 
 const categories = getCategorizedPatterns(
@@ -160,6 +161,7 @@ export default function Sequencer() {
   // No focus ring left on a clicked button when a key
   // like Space or Esc is pressed afterwards.
   useInputModality();
+  usePreventFileNavigation();
 
   return (
     <ErrorBoundary>

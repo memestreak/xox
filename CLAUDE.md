@@ -116,7 +116,8 @@ from the URL.
   no `reset()`: Reset deliberately keeps it)
 - `useCustomSamples.ts` — samples loaded from WAV files
   onto tracks (track name menu: Load sample from
-  file... / Reset to kit sample; grid menu: Reset all
+  file... / Reset to kit sample, or drop a WAV on a
+  row; grid menu: Reset all
   samples to kit). Memory only, not in
   `SequencerConfig` or share links; kept by kit changes
   and by Reset (no `reset()`). Each load/reset bumps a
@@ -146,6 +147,14 @@ from the URL.
   tracks stay editable and drags don't move rows; it
   minimizes the moment the pointer moves off. Pattern
   loads apply at once. Reset still opens every row
+- `useFileDrop.ts` — HTML drag-and-drop of files onto a
+  track row (full or minimized): only drags carrying
+  files react, a depth count keeps the dashed outline
+  steady, and the first file goes to `loadSample`, so
+  drops get the menu's checks. Separate from the pointer
+  events `useDragPaint` uses. `usePreventFileNavigation`
+  (mounted in `Sequencer`) cancels stray drops so the
+  browser doesn't open the file
 - `useInputModality.ts` — mounted once in `Sequencer`:
   sets `data-input="pointer"` on `<html>` after a
   click/tap and clears it on a navigation key (Tab,

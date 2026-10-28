@@ -170,6 +170,10 @@ const MOUSE_TAB: HelpTab = {
           gesture: 'click the amber dot',
           text: 'Switch between the loaded sample and the kit sample',
         },
+        {
+          gesture: 'drop a WAV on a track',
+          text: "Load it as the track's sample",
+        },
       ],
     },
     {
