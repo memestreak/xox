@@ -37,7 +37,7 @@ export function shouldIgnoreShortcut(
 }
 
 /**
- * True while a menu (track, grid, gear), an open
+ * True while a menu (track, grid, kit), an open
  * dropdown list (LcdSelect) or the step editor is open. These close on Esc themselves, so a
  * page-level Esc or shortcut should wait for them.
  */

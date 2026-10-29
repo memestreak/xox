@@ -187,6 +187,12 @@ const MOUSE_TAB: HelpTab = {
       ],
     },
     {
+      title: 'Kit',
+      rows: [
+        { gesture: 'right-click', text: 'Kit menu: Export kit…' },
+      ],
+    },
+    {
       title: 'Pattern chooser',
       rows: [
         {

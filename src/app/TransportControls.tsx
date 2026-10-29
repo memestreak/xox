@@ -3,9 +3,8 @@
 import { memo } from 'react';
 import type { ReactNode } from 'react';
 import type { PageNav } from './PageIndicator';
-import kitsData from './data/kits.json';
 import TempoController from './TempoController';
-import SettingsPopover from './SettingsPopover';
+import SettingsButton from './SettingsButton';
 import GlobalControls from './GlobalControls';
 import FillButton from './FillButton';
 import PatternModeSelector from './PatternModeSelector';
@@ -15,12 +14,7 @@ import PanelSection from './PanelSection';
 import { useHelp } from './HelpContext';
 import MasterVolume from './MasterVolume';
 import { useMasterVolume } from './hooks/useMasterVolume';
-import LcdSelect from './LcdSelect';
-
-const KIT_OPTIONS = kitsData.kits.map(k => ({
-  value: k.id,
-  label: k.name,
-}));
+import KitSelector from './KitSelector';
 
 interface TransportControlsProps {
   page: PageNav;
@@ -37,11 +31,10 @@ function TransportControlsInner({
 }: TransportControlsProps) {
   const { state, actions } = useSequencer();
   const {
-    isPlaying, bpm, currentKit,
-    isLoaded,
+    isPlaying, bpm, isLoaded,
   } = state;
   const {
-    togglePlay, setBpm, setKit,
+    togglePlay, setBpm,
   } = actions;
   // One state for both placements (header on desktop,
   // strip row below lg) so they never disagree.
@@ -118,9 +111,9 @@ function TransportControlsInner({
             onToggleMute={master.toggleMute}
             onGestureStart={master.beginGesture}
           />
-          <SettingsPopover />
+          <SettingsButton />
           {/* No room in row 1 on phones; there Help is
-              in the gear menu. */}
+              in the Settings dialog's header. */}
           <Tooltip tooltipKey="help" position="bottom" align="right">
             <button
               type="button"
@@ -138,33 +131,21 @@ function TransportControlsInner({
           overflow-hidden here: it would clip the tooltips.
           The corner cells round themselves instead.
           Desktop runs Kit, Pattern, Pattern change,
-          Steps, Swing. Below lg the rows are Steps +
-          Swing, Pattern, Kit + Pattern change, then
-          Volume (set by max-lg:order-* on the cells). */}
-      <div className="grid grid-cols-6 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+          Steps, Swing, Share. Below lg (12 columns) the
+          rows are Steps + Swing + Share, Pattern, Kit +
+          Pattern change, then Volume (set by
+          max-lg:order-* on the cells). */}
+      <div className="grid grid-cols-12 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
         <PanelSection
           label="Kit"
           labelFor="kit-select"
-          className="col-span-2 max-lg:order-4 lg:rounded-l-[11px]"
+          className="col-span-4 max-lg:order-4 lg:rounded-l-[11px]"
         >
-          <Tooltip tooltipKey="kit" position="bottom">
-            <LcdSelect
-              id="kit-select"
-              value={currentKit.id}
-              options={KIT_OPTIONS}
-              onChange={(id) => {
-                const kit = kitsData.kits.find(
-                  k => k.id === id
-                );
-                if (kit) setKit(kit);
-              }}
-              className="h-9 w-full lg:w-28"
-            />
-          </Tooltip>
+          <KitSelector />
         </PanelSection>
         <PanelSection
           label="Pattern"
-          className="col-span-6 lg:flex-1 max-lg:order-2"
+          className="col-span-12 lg:flex-1 max-lg:order-2"
         >
           {patternTrigger}
         </PanelSection>
