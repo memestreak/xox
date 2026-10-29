@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import {
+  act, fireEvent, render, screen,
+} from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import GridContextMenu from '../app/GridContextMenu';
 
@@ -16,6 +18,7 @@ function renderMenu(overrides = {}) {
     onClose: vi.fn(),
     hasCustomSamples: false,
     onResetAllSamples: vi.fn(),
+    onCopyPattern: vi.fn(() => Promise.resolve()),
     ...overrides,
   };
   render(<GridContextMenu {...props} />);
@@ -37,5 +40,42 @@ describe('GridContextMenu samples item', () => {
     }));
     expect(props.onResetAllSamples).toHaveBeenCalledTimes(1);
     expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('GridContextMenu Copy pattern', () => {
+  it('copies, shows Copied, then closes', async () => {
+    vi.useFakeTimers();
+    try {
+      const props = renderMenu();
+      await act(async () => {
+        fireEvent.click(screen.getByRole('menuitem', {
+          name: /Copy pattern/,
+        }));
+      });
+      expect(props.onCopyPattern).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('status'))
+        .toHaveTextContent('Copied');
+      expect(props.onClose).not.toHaveBeenCalled();
+      act(() => {
+        vi.runAllTimers();
+      });
+      expect(props.onClose).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows Failed when the clipboard refuses', async () => {
+    renderMenu({
+      onCopyPattern: vi.fn(() => Promise.reject(new Error())),
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', {
+        name: /Copy pattern/,
+      }));
+    });
+    expect(screen.getByRole('status'))
+      .toHaveTextContent('Failed');
   });
 });

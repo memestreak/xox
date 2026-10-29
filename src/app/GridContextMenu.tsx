@@ -1,7 +1,9 @@
 "use client";
 
+import { useCallback, useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import ContextMenu from './ContextMenu';
+import { MENU_COPIED_CLOSE_MS } from './constants';
 import { MENU_HINT, MENU_ITEM } from './menuStyles';
 
 interface GridContextMenuProps {
@@ -22,6 +24,11 @@ interface GridContextMenuProps {
   /** True when at least one track has a custom sample. */
   hasCustomSamples: boolean;
   onResetAllSamples: () => void;
+  /**
+   * Copies the pattern as a patterns.json entry.
+   * Rejects when the clipboard refuses.
+   */
+  onCopyPattern: () => Promise<void>;
   onClose: () => void;
   /**
    * The key that toggles the menu. A press on it is not
@@ -33,7 +40,8 @@ interface GridContextMenuProps {
 
 /**
  * Grid menu: minimize empty tracks, restore all tracks,
- * the auto-minimize setting, reset samples, reset.
+ * the auto-minimize setting, reset samples, copy
+ * pattern, reset.
  * Opens at the pointer on a right-click in a blank
  * part of the grid, or under the ⋯ key over the
  * track names; kept inside the viewport. Closes on a
@@ -52,9 +60,28 @@ export default function GridContextMenu({
   onReset,
   hasCustomSamples,
   onResetAllSamples,
+  onCopyPattern,
   onClose,
   anchorRef,
 }: GridContextMenuProps) {
+  const [copyResult, setCopyResult] =
+    useState<'copied' | 'failed' | null>(null);
+
+  // After Copy pattern, show the result briefly, then
+  // close.
+  useEffect(() => {
+    if (copyResult === null) return;
+    const timer = setTimeout(onClose, MENU_COPIED_CLOSE_MS);
+    return () => clearTimeout(timer);
+  }, [copyResult, onClose]);
+
+  const handleCopyPattern = useCallback(() => {
+    onCopyPattern().then(
+      () => setCopyResult('copied'),
+      () => setCopyResult('failed')
+    );
+  }, [onCopyPattern]);
+
   return (
     <ContextMenu
       x={x}
@@ -119,6 +146,18 @@ export default function GridContextMenu({
           <span>Reset all samples to kit</span>
         </button>
       )}
+      <button
+        role="menuitem"
+        onClick={handleCopyPattern}
+        className={MENU_ITEM}
+      >
+        <span>Copy pattern</span>
+        {copyResult && (
+          <span role="status" className={MENU_HINT}>
+            {copyResult === 'copied' ? 'Copied' : 'Failed'}
+          </span>
+        )}
+      </button>
       <button
         role="menuitem"
         onClick={() => {

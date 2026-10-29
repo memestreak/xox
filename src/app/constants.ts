@@ -76,6 +76,8 @@ export const METER_DECAY_DB_PER_S = 30;
 export const TRIGGER_FLASH_MS = 150;
 /** Duration of copy/export feedback messages (ms). */
 export const FEEDBACK_TIMEOUT_MS = 1500;
+/** How long a menu shows "Copied" before it closes (ms). */
+export const MENU_COPIED_CLOSE_MS = 700;
 /** Delay after the last edit before autosaving (ms). */
 export const AUTOSAVE_DEBOUNCE_MS = 300;
 

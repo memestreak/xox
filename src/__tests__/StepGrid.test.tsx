@@ -7,6 +7,7 @@ import {
 import StepGrid from '../app/StepGrid';
 import { TestWrapper } from './helpers/sequencer-wrapper';
 import React from 'react';
+import patternsData from '../app/data/patterns.json';
 
 vi.mock('../app/AudioEngine', () => ({
   audioEngine: {
@@ -307,6 +308,30 @@ describe('StepGrid', () => {
       expect(screen.queryByRole('menu', {
         name: 'Grid options',
       })).not.toBeInTheDocument();
+    });
+
+    it('Copy pattern copies the loaded preset as a'
+      + ' patterns.json entry', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText },
+        configurable: true,
+      });
+      renderGrid();
+      fireEvent.click(screen.getByRole('button', {
+        name: 'Grid options',
+      }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('menuitem', {
+          name: /Copy pattern/,
+        }));
+      });
+      expect(writeText).toHaveBeenCalledTimes(1);
+      const entry = JSON.parse(writeText.mock.calls[0][0]);
+      expect(entry.id).toBe(patternsData.patterns[0].id);
+      expect(entry.tracks).toEqual(
+        patternsData.patterns[0].tracks
+      );
     });
 
     it('Reset pattern clears every step', () => {

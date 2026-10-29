@@ -13,7 +13,7 @@ import GridContextMenu from './GridContextMenu';
 import Tooltip from './Tooltip';
 import { useDragPaint } from './hooks/useDragPaint';
 import { useSelection } from './hooks/useSelection';
-import type { TrackId, TrackPattern } from './types';
+import type { Pattern, TrackId, TrackPattern } from './types';
 import {
   TRACKS, cellKey, getPatternLength, parseCellKey,
 } from './types';
@@ -21,9 +21,14 @@ import { TRIGGER_FLASH_MS } from './constants';
 import { audioEngine } from './AudioEngine';
 import { drainDueSteps } from './stepQueue';
 import trackPatternData from './data/trackPatterns.json';
+import patternsData from './data/patterns.json';
+import {
+  buildPatternEntry, formatPatternEntry,
+} from './patternExport';
 
 const TRACK_PATTERNS: TrackPattern[] =
   trackPatternData.patterns;
+const PRESETS = patternsData.patterns as Pattern[];
 
 /**
  * Right-clicks on these keep their own behavior (or the
@@ -63,6 +68,7 @@ export default function StepGrid({
   const {
     trackStates, minimizedTracks, minimizableCount,
     autoMinimize, customSamples, disabledSamples,
+    selectedPatternId,
   } = state;
   const {
     toggleStep, setStep, setTrackSteps,
@@ -106,6 +112,17 @@ export default function StepGrid({
     () => setGridMenu(null), []
   );
   const menuKeyRef = useRef<HTMLButtonElement>(null);
+
+  // Grid menu > Copy pattern: the grid as a
+  // patterns.json entry (see patternExport.ts).
+  const copyPattern = useCallback(
+    () => navigator.clipboard.writeText(
+      formatPatternEntry(buildPatternEntry(
+        config, selectedPatternId, PRESETS
+      ))
+    ),
+    [config, selectedPatternId]
+  );
 
   // The ⋯ key over the track names opens the same menu
   // below itself (the only way in on phones), and
@@ -617,6 +634,7 @@ export default function StepGrid({
             Object.keys(customSamples).length > 0
           }
           onResetAllSamples={resetAllSamples}
+          onCopyPattern={copyPattern}
           onClose={closeGridMenu}
           anchorRef={menuKeyRef}
         />
