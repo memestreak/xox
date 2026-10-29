@@ -181,7 +181,7 @@ const MOUSE_TAB: HelpTab = {
       rows: [
         {
           gesture: 'right-click',
-          text: 'Grid menu: minimize, restore, auto-minimize, reset samples, reset',
+          text: 'Grid menu: minimize, restore, auto-minimize, reset samples, copy pattern, reset',
           note: '(also the ⋯ key over the track names)',
         },
       ],

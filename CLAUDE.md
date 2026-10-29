@@ -17,6 +17,7 @@ npm run lint     # ESLint
 npm run typecheck  # tsc --noEmit (app + tests)
 npm test         # Vitest (unit + integration)
 npm run test:watch  # Vitest in watch mode
+npm run save-pattern  # Grid menu > Copy pattern → patterns.json
 ```
 
 ## Architecture
@@ -177,7 +178,8 @@ all hook resets. Exceptions: `useMasterVolume` and
   `isMinimized` row renders caret + name + step line
 - `StepGrid.tsx` → `GridContextMenu.tsx` (grid menu:
   minimize empty / restore all tracks, Reset all samples
-  to kit (only when a track is custom), Reset pattern.
+  to kit (only when a track is custom), Copy pattern,
+  Reset pattern.
   Opens from the ⋯ key over the track names, the only
   way in on phones, or a right-click on a blank spot)
 - `CustomSampleDot.tsx` — amber dot button on a track
@@ -273,6 +275,14 @@ Supporting files:
   localStorage, on by default). Per-device on/off
   settings use `hooks/createDeviceSetting.ts`
 - `data/kits.json` — Kit definitions (id, name, folder path)
+- `patternExport.ts` — Copy pattern (grid menu): the
+  grid as a `patterns.json` entry (preset id without
+  `*`, name, category, tracks, non-default volume/pan;
+  no BPM, swing, kit, mute or solo).
+  `scripts/save_pattern.py` (`npm run save-pattern`,
+  reads a file, piped stdin or `pbpaste`) checks it and
+  replaces the preset with that id, or appends it. This
+  is how the developer updates a preset's default
 - `data/patterns.json` — preset patterns, one binary step
   string per track (`"1010101010101010"`), plus an
   optional `mixer` of per-track `gain`/`pan` (0-1)
