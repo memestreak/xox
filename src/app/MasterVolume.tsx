@@ -109,7 +109,7 @@ function MasterVolumeInner({
     <PanelSection
       label="Volume"
       labelFor={id}
-      className="col-span-6 max-lg:order-5 rounded-b-[11px] lg:hidden select-none"
+      className="col-span-12 max-lg:order-5 rounded-b-[11px] lg:hidden select-none"
       {...gestureProps}
     >
       {control}

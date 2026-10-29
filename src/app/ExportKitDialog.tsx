@@ -50,7 +50,8 @@ const FIELD =
   + ' focus-visible:outline-2 focus-visible:outline-accent';
 
 /**
- * Gear menu > Export kit...: names the kit and downloads
+ * Kit menu (right-click the Kit key) > Export kit...:
+ * names the kit and downloads
  * a zip for `scripts/kit_builder/import_kit.py`. Mount it
  * with a fresh `key` per open so fields start from the
  * defaults.

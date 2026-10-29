@@ -22,7 +22,8 @@ function makeMockTracks(len = 16) {
 vi.mock('../app/SequencerContext', () => ({
   useSequencer: () => ({
     state: {
-      swing: 0,
+      swing: 25,
+      customSamples: {},
     },
     actions: {
       setPatternLength: mockSetPatternLength,
@@ -63,6 +64,14 @@ describe('GlobalControls', () => {
     renderControls();
     const knob = screen.getByRole('slider');
     expect(knob).toBeDefined();
+  });
+
+  it('puts Copy share link beside the knob, with no % readout', () => {
+    renderControls();
+    expect(
+      screen.getByRole('button', { name: 'Copy share link' })
+    ).toBeInTheDocument();
+    expect(screen.queryByText('25%')).not.toBeInTheDocument();
   });
 
   it('has no Reset key (it is in the grid menu)', () => {

@@ -230,9 +230,19 @@ Supporting files:
   Each gesture passes the tracks
   from its start as `setPatternLength(n, base)`, so
   going down and back up within it keeps the steps
-- `SettingsPopover.tsx` — Gear icon settings menu with
-  Copy share link (notes that custom samples aren't
-  included) and Export kit...
+- `SettingsButton.tsx` — gear key; opens
+  `SettingsModal` directly (no menu). The dialog's
+  header has a `?` key that opens Help (the way in on
+  phones)
+- `ShareLinkButton.tsx` — Copy share link key in its
+  own Share cell after Swing (Swing has no % readout);
+  its note says custom samples aren't included. Below
+  `lg` the strip is a 12-column grid
+- `KitSelector.tsx` — Kit dropdown; right-click (or the
+  context-menu key) opens the kit menu: Export kit...
+- `ContextMenu.tsx` — floating menu shell (position,
+  focus, arrows, dismissal) used by the grid and kit
+  menus
 - `ExportKitDialog.tsx` — modal `<dialog>`: Name, ID
   (slug follows the name until edited) and the slots;
   downloads `<id>.zip` for
@@ -242,7 +252,8 @@ Supporting files:
   `buildKitZip`); `zipStore.ts` writes the stored zip
 - `HelpContext.tsx` / `HelpModal.tsx` — Help dialog
   (shortcuts and gestures), opened by the header
-  "?" key (hidden below `sm`), the gear menu's Help item,
+  "?" key (hidden below `sm`), the Settings dialog's
+  `?` key,
   or the `?` key. Its text lives in `helpContent.ts`:
   **update it whenever a shortcut or gesture changes**
 - `Tooltip.tsx` — hover tooltips (texts in

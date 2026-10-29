@@ -9,6 +9,7 @@ import { getPatternLength } from './types';
 import { FollowToggle, PageLights } from './PageIndicator';
 import type { PageNav } from './PageIndicator';
 import StepsEntry from './StepsEntry';
+import ShareLinkButton from './ShareLinkButton';
 
 interface GlobalControlsProps {
   page: PageNav;
@@ -16,9 +17,10 @@ interface GlobalControlsProps {
 
 /**
  * Global controls: pattern length with page lights
- * and Follow, and swing. Renders two cells of the
- * controls strip; the parent places them after
- * Pattern change on desktop (Swing last). Reset lives
+ * and Follow, swing, and the Copy share link key.
+ * Renders three cells of the controls strip; the
+ * parent places them after Pattern change on desktop
+ * (Share last). Reset lives
  * in the grid menu (GridContextMenu).
  */
 function GlobalControlsInner({ page }: GlobalControlsProps) {
@@ -34,11 +36,11 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
 
   return (
     <>
-      {/* Below lg: Steps and Swing share row 1. The
+      {/* Below lg: Steps, Swing and Share share row 1. The
           page lights sit on the label line, centered
           over Follow, so the cell never changes width
           as pages come and go. */}
-      <PanelSection className="col-span-4 max-lg:order-1 max-lg:rounded-tl-[11px]">
+      <PanelSection className="col-span-7 max-lg:order-1 max-lg:rounded-tl-[11px]">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[76px_auto] items-center gap-x-1.5 lg:gap-x-2 gap-y-2">
           <label htmlFor="global-steps" className="ss-label">
             Steps
@@ -63,7 +65,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
         </div>
       </PanelSection>
 
-      <PanelSection label="Swing" className="col-span-2 max-lg:order-1 max-lg:rounded-tr-[11px] lg:rounded-r-[11px]">
+      <PanelSection label="Swing" className="col-span-3 max-lg:order-1">
         <div className="flex items-center gap-2.5 h-9">
           <Tooltip tooltipKey="swing" position="bottom">
             <Knob
@@ -75,9 +77,14 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
               showHoverValue={false}
             />
           </Tooltip>
-          <span className="font-mono text-sm text-ink w-9 tabular-nums">
-            {state.swing}%
-          </span>
+        </div>
+      </PanelSection>
+
+      {/* Narrow on phones: less side padding so the key
+          fits in two of the twelve columns. */}
+      <PanelSection label="Share" className="col-span-2 max-lg:order-1 max-lg:px-2.5 max-lg:rounded-tr-[11px] lg:rounded-r-[11px]">
+        <div className="flex items-center h-9">
+          <ShareLinkButton />
         </div>
       </PanelSection>
 
