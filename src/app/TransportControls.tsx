@@ -3,9 +3,8 @@
 import { memo } from 'react';
 import type { ReactNode } from 'react';
 import type { PageNav } from './PageIndicator';
-import kitsData from './data/kits.json';
 import TempoController from './TempoController';
-import SettingsPopover from './SettingsPopover';
+import SettingsButton from './SettingsButton';
 import GlobalControls from './GlobalControls';
 import FillButton from './FillButton';
 import PatternModeSelector from './PatternModeSelector';
@@ -15,12 +14,7 @@ import PanelSection from './PanelSection';
 import { useHelp } from './HelpContext';
 import MasterVolume from './MasterVolume';
 import { useMasterVolume } from './hooks/useMasterVolume';
-import LcdSelect from './LcdSelect';
-
-const KIT_OPTIONS = kitsData.kits.map(k => ({
-  value: k.id,
-  label: k.name,
-}));
+import KitSelector from './KitSelector';
 
 interface TransportControlsProps {
   page: PageNav;
@@ -37,11 +31,10 @@ function TransportControlsInner({
 }: TransportControlsProps) {
   const { state, actions } = useSequencer();
   const {
-    isPlaying, bpm, currentKit,
-    isLoaded,
+    isPlaying, bpm, isLoaded,
   } = state;
   const {
-    togglePlay, setBpm, setKit,
+    togglePlay, setBpm,
   } = actions;
   // One state for both placements (header on desktop,
   // strip row below lg) so they never disagree.
@@ -118,9 +111,9 @@ function TransportControlsInner({
             onToggleMute={master.toggleMute}
             onGestureStart={master.beginGesture}
           />
-          <SettingsPopover />
+          <SettingsButton />
           {/* No room in row 1 on phones; there Help is
-              in the gear menu. */}
+              in the Settings dialog's header. */}
           <Tooltip tooltipKey="help" position="bottom" align="right">
             <button
               type="button"
@@ -147,20 +140,7 @@ function TransportControlsInner({
           labelFor="kit-select"
           className="col-span-2 max-lg:order-4 lg:rounded-l-[11px]"
         >
-          <Tooltip tooltipKey="kit" position="bottom">
-            <LcdSelect
-              id="kit-select"
-              value={currentKit.id}
-              options={KIT_OPTIONS}
-              onChange={(id) => {
-                const kit = kitsData.kits.find(
-                  k => k.id === id
-                );
-                if (kit) setKit(kit);
-              }}
-              className="h-9 w-full lg:w-28"
-            />
-          </Tooltip>
+          <KitSelector />
         </PanelSection>
         <PanelSection
           label="Pattern"

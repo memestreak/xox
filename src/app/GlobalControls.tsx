@@ -9,6 +9,7 @@ import { getPatternLength } from './types';
 import { FollowToggle, PageLights } from './PageIndicator';
 import type { PageNav } from './PageIndicator';
 import StepsEntry from './StepsEntry';
+import ShareLinkButton from './ShareLinkButton';
 
 interface GlobalControlsProps {
   page: PageNav;
@@ -16,7 +17,8 @@ interface GlobalControlsProps {
 
 /**
  * Global controls: pattern length with page lights
- * and Follow, and swing. Renders two cells of the
+ * and Follow, and swing with the Copy share link key
+ * beside the knob. Renders two cells of the
  * controls strip; the parent places them after
  * Pattern change on desktop (Swing last). Reset lives
  * in the grid menu (GridContextMenu).
@@ -75,9 +77,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
               showHoverValue={false}
             />
           </Tooltip>
-          <span className="font-mono text-sm text-ink w-9 tabular-nums">
-            {state.swing}%
-          </span>
+          <ShareLinkButton />
         </div>
       </PanelSection>
 

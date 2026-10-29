@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { useTooltips } from './TooltipContext';
+import { useHelp } from './HelpContext';
 import { useMidi } from './MidiContext';
 import { TRACKS } from './types';
 import type {
@@ -68,6 +69,7 @@ export default function SettingsModal({
   const {
     tooltipsEnabled, setTooltipsEnabled,
   } = useTooltips();
+  const help = useHelp();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [activeTab, setActiveTab] = useState<Tab>(
     'options'
@@ -107,13 +109,28 @@ export default function SettingsModal({
           <h2 className="ss-cap text-xl">
             Settings
           </h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="ss-key w-8 h-8 flex items-center justify-center text-muted hover:text-ink text-xl leading-none"
-          >
-            &times;
-          </button>
+          <div className="flex gap-2">
+            {/* The way into Help on phones, where the
+                header has no room for the ? key. */}
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                help.open();
+              }}
+              aria-label="Help and shortcuts"
+              className="ss-key w-8 h-8 flex items-center justify-center text-muted hover:text-ink font-display font-bold text-lg leading-none"
+            >
+              ?
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="ss-key w-8 h-8 flex items-center justify-center text-muted hover:text-ink text-xl leading-none"
+            >
+              &times;
+            </button>
+          </div>
         </div>
 
         {/* Tab bar */}
