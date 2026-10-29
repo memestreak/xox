@@ -5,7 +5,6 @@ import {
 import { audioEngine } from '../../app/AudioEngine';
 import { MASTER_VOLUME_DEFAULT } from '../../app/constants';
 import {
-  MASTER_VOLUME_STORAGE_KEY,
   formatDb,
   positionToGain,
   resetMasterVolumeForTests,
@@ -15,6 +14,14 @@ import {
 vi.mock('../../app/AudioEngine', () => ({
   audioEngine: { setOutputVolume: vi.fn() },
 }));
+
+const OUTPUT_KEY = 'xox.sequencer.output';
+
+function saveVolume(volume: unknown) {
+  window.localStorage.setItem(
+    OUTPUT_KEY, JSON.stringify({ volume })
+  );
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -53,17 +60,13 @@ describe('useMasterVolume', () => {
   });
 
   it('keeps a saved full-volume level', () => {
-    window.localStorage.setItem(
-      MASTER_VOLUME_STORAGE_KEY, '1'
-    );
+    saveVolume(1);
     const { result } = renderHook(() => useMasterVolume());
     expect(result.current.position).toBe(1);
   });
 
   it('restores the saved position', () => {
-    window.localStorage.setItem(
-      MASTER_VOLUME_STORAGE_KEY, '0.5'
-    );
+    saveVolume(0.5);
     const { result } = renderHook(() => useMasterVolume());
     expect(result.current.position).toBe(0.5);
     expect(audioEngine.setOutputVolume)
@@ -71,9 +74,7 @@ describe('useMasterVolume', () => {
   });
 
   it('ignores a corrupt saved value', () => {
-    window.localStorage.setItem(
-      MASTER_VOLUME_STORAGE_KEY, 'loud'
-    );
+    saveVolume('loud');
     const { result } = renderHook(() => useMasterVolume());
     expect(result.current.position).toBe(MASTER_VOLUME_DEFAULT);
   });
@@ -83,9 +84,9 @@ describe('useMasterVolume', () => {
     const b = renderHook(() => useMasterVolume());
     act(() => a.result.current.setPosition(0.8));
     expect(b.result.current.position).toBe(0.8);
-    expect(window.localStorage.getItem(
-      MASTER_VOLUME_STORAGE_KEY
-    )).toBe('0.8');
+    expect(JSON.parse(window.localStorage.getItem(
+      OUTPUT_KEY
+    )!)).toEqual({ volume: 0.8 });
     act(() => a.result.current.setPosition(3));
     expect(a.result.current.position).toBe(1);
   });
@@ -121,9 +122,7 @@ describe('useMasterVolume', () => {
   });
 
   it('unmutes a saved-muted fader to the default', () => {
-    window.localStorage.setItem(
-      MASTER_VOLUME_STORAGE_KEY, '0'
-    );
+    saveVolume(0);
     const { result } = renderHook(() => useMasterVolume());
     act(() => result.current.toggleMute());
     expect(result.current.position).toBe(MASTER_VOLUME_DEFAULT);

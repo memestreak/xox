@@ -3,24 +3,47 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from 'react';
-import { useTooltips } from './TooltipContext';
-import { useHelp } from './HelpContext';
+import type { ReactNode } from 'react';
+import { LongPressEventType, useLongPress } from 'use-long-press';
 import { useMidi } from './MidiContext';
-import { TRACKS } from './types';
-import type {
-  NoteLength, TrackId,
-} from './types';
-import { midiEngine } from './MidiEngine';
+import { TRACKS, defaultMidiConfig } from './types';
+import type { MidiConfig, NoteLength, TrackId } from './types';
 import LcdSelect from './LcdSelect';
-import {
-  setAutoMinimize, useAutoMinimizeSetting,
-} from './hooks/useAutoMinimizeSetting';
-import {
-  setChooserClickAway, useChooserClickAwaySetting,
-} from './hooks/useChooserClickAwaySetting';
+import Tooltip from './Tooltip';
+import tooltips from './data/tooltips.json';
+import { INTERFACE_DEFAULTS, interfacePrefs } from './preferences';
+import type { InterfacePrefs } from './preferences';
+import { LONG_PRESS_CANCEL_PX, LONG_PRESS_MS } from './constants';
+
+/* ── Sections ──────────────────────────────── */
+
+type SectionId = 'interface' | 'midi';
+
+/** The list on the left, in order; the gear opens the first. */
+const SECTIONS: { id: SectionId; label: string }[] = [
+  { id: 'interface', label: 'Interface' },
+  { id: 'midi', label: 'MIDI' },
+];
+
+/* ── Staged values ───────────────────────────── */
+
+/** Every section's values, as saved or as staged. */
+interface AllPrefs {
+  interface: InterfacePrefs;
+  midi: MidiConfig;
+}
+
+const SECTION_IDS = SECTIONS.map(s => s.id);
+
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/* ── MIDI choices ────────────────────────────── */
 
 const NOTE_LENGTH_OPTIONS: {
   label: string;
@@ -50,40 +73,71 @@ const NOTE_LENGTH_SELECT_OPTIONS = NOTE_LENGTH_OPTIONS.map(
   o => ({ value: noteLengthKey(o.value), label: o.label })
 );
 
-type Tab = 'options' | 'midi';
+type MidiTrackId = Exclude<TrackId, 'ac'>;
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'options', label: 'Options' },
-  { id: 'midi', label: 'MIDI' },
-];
+/** Full track name, e.g. "Bass Drum". */
+function trackLabel(id: TrackId): string {
+  return (tooltips as Record<string, string>)[`track-${id}`]
+    ?? id.toUpperCase();
+}
+
+const NUMBER_FIELD_CLASS =
+  'h-9 bg-well border border-line rounded-md px-3 font-mono'
+  + ' text-sm text-ink disabled:opacity-50'
+  + ' focus-visible:outline-2 focus-visible:outline-accent';
+
+const CHECKBOX_CLASS = 'accent-[#f0662a] w-4 h-4';
+
+/* ── Dialog ──────────────────────────────────── */
 
 interface SettingsModalProps {
-  isOpen: boolean;
+  /** Called when the dialog closes (OK, Cancel, Esc, ×). */
   onClose: () => void;
 }
 
-export default function SettingsModal({
-  isOpen,
-  onClose,
-}: SettingsModalProps) {
-  const {
-    tooltipsEnabled, setTooltipsEnabled,
-  } = useTooltips();
-  const help = useHelp();
+/**
+ * The Settings dialog: a list of sections on the left
+ * and the selected one's fields on the right
+ * (REAPER-style). Mounted open.
+ * Changes are staged: OK saves and closes, Apply saves
+ * and stays, Cancel / Esc / × discard them. Double-click
+ * (touch: long-press) a field's label to reset it to
+ * its default, staged like any other change.
+ */
+export default function SettingsModal({ onClose }: SettingsModalProps) {
+  const midi = useMidi();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [activeTab, setActiveTab] = useState<Tab>(
-    'options'
-  );
+  const headingId = useId();
+
+  // What is saved now. Settings is modal, so only Apply
+  // and OK change these while it is open.
+  const saved: AllPrefs = {
+    interface: interfacePrefs.useValue(),
+    midi: midi?.config ?? defaultMidiConfig(),
+  };
+  const [draft, setDraft] = useState<AllPrefs>(saved);
+
+  const [section, setSection] = useState<SectionId>(SECTIONS[0].id);
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (isOpen && !dialog.open) {
-      dialog.showModal();
-    } else if (!isOpen && dialog.open) {
-      dialog.close();
-    }
-  }, [isOpen]);
+    if (dialog && !dialog.open) dialog.showModal();
+  }, []);
+
+  const changed = (id: SectionId) => !sameValue(draft[id], saved[id]);
+  const dirty = SECTION_IDS.some(changed);
+
+  const apply = () => {
+    if (changed('interface')) interfacePrefs.set(draft.interface);
+    if (changed('midi')) midi?.applyConfig(draft.midi);
+  };
+
+  /** Stage new values for some fields of one section. */
+  const stage = <K extends SectionId>(
+    id: K, partial: Partial<AllPrefs[K]>,
+  ) => {
+    setDraft(d => ({ ...d, [id]: { ...d[id], ...partial } }));
+  };
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent<HTMLDialogElement>) => {
@@ -92,143 +146,254 @@ export default function SettingsModal({
     [onClose]
   );
 
+  const sectionLabel = SECTIONS.find(s => s.id === section)!.label;
+
   return (
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <dialog
       ref={dialogRef}
+      aria-label="Settings"
       onClose={onClose}
       onClick={handleBackdropClick}
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
       }}
-      className="ss-menu m-auto backdrop:bg-black/60 rounded-xl text-ink p-0 max-w-lg w-full"
+      className="ss-menu m-auto backdrop:bg-black/60 rounded-xl text-ink p-0 overflow-hidden max-w-2xl w-[calc(100%-32px)] h-[min(540px,calc(100dvh-32px))] max-h-none"
     >
-      <div className="p-6">
+      {/* A fixed size: the tree and the pane scroll inside it,
+          so switching sections never resizes the dialog. */}
+      <div className="h-full p-4 sm:p-6 flex flex-col gap-4">
         {/* Header */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center">
           <h2 className="ss-cap text-xl">
             Settings
           </h2>
-          <div className="flex gap-2">
-            {/* The way into Help on phones, where the
-                header has no room for the ? key. */}
             <button
               type="button"
-              onClick={() => {
-                onClose();
-                help.open();
-              }}
-              aria-label="Help and shortcuts"
-              className="ss-key w-8 h-8 flex items-center justify-center text-muted hover:text-ink font-display font-bold text-lg leading-none"
-            >
-              ?
-            </button>
-            <button
               onClick={onClose}
               aria-label="Close"
               className="ss-key w-8 h-8 flex items-center justify-center text-muted hover:text-ink text-xl leading-none"
             >
               &times;
             </button>
-          </div>
         </div>
 
-        {/* Tab bar */}
-        <div className="flex gap-4 border-b border-line mb-6">
-          {TABS.map((tab) => (
+        {/* Phones: the sections as a row of keys */}
+        <div
+          role="group"
+          aria-label="Settings sections"
+          className="sm:hidden ss-scroll flex gap-1.5 overflow-x-auto pb-1"
+        >
+          {SECTIONS.map(s => (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`ss-cap px-1 pb-2 text-sm border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-accent text-ink'
-                  : 'border-transparent text-muted hover:text-ink'
-              }`}
+              key={s.id}
+              type="button"
+              onClick={() => setSection(s.id)}
+              aria-current={s.id === section ? 'true' : undefined}
+              className={
+                'ss-cap shrink-0 h-8 px-3 rounded-md text-sm border '
+                + (s.id === section
+                  ? 'bg-accent border-accent text-[#1a0d05]'
+                  : 'border-line text-muted hover:text-ink')
+              }
             >
-              {tab.label}
+              {s.label}
             </button>
           ))}
         </div>
 
-        {/* Tab content */}
-        {activeTab === 'options' && (
-          <OptionsTab
-            tooltipsEnabled={tooltipsEnabled}
-            setTooltipsEnabled={setTooltipsEnabled}
-          />
-        )}
-        {activeTab === 'midi' && <MidiTab />}
+        <div className="flex-1 min-h-0 flex gap-4">
+          {/* Desktop: the tree */}
+          <nav
+            aria-label="Settings sections"
+            className="ss-scroll hidden sm:block w-36 shrink-0 overflow-y-auto"
+          >
+            <ul className="flex flex-col gap-0.5">
+              {SECTIONS.map(s => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSection(s.id)}
+                    aria-current={s.id === section ? 'true' : undefined}
+                    className={
+                      'w-full text-left text-sm px-2.5 py-1 rounded-md border '
+                      + (s.id === section
+                        ? 'bg-accent border-accent text-[#1a0d05] font-medium'
+                        : 'border-transparent text-muted hover:text-ink hover:bg-well')
+                    }
+                  >
+                    {s.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* The selected section */}
+          <section
+            aria-labelledby={headingId}
+            className="ss-panel rounded-lg flex-1 min-w-0 flex flex-col"
+          >
+            <h3 id={headingId} className="ss-label px-4 pt-4 pb-2 shrink-0">
+              {sectionLabel}
+            </h3>
+            <div className="ss-scroll flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+            {section === 'interface' && (
+              <>
+                <InterfaceToggle
+                  label="Show tooltips"
+                  field="showTooltips"
+                  draft={draft.interface}
+                  stage={partial => stage('interface', partial)}
+                />
+                <InterfaceToggle
+                  label="Auto-minimize empty tracks"
+                  field="autoMinimize"
+                  draft={draft.interface}
+                  stage={partial => stage('interface', partial)}
+                />
+                <InterfaceToggle
+                  label="Click beside the pattern chooser to close it"
+                  field="chooserClickAway"
+                  draft={draft.interface}
+                  stage={partial => stage('interface', partial)}
+                />
+              </>
+            )}
+            {section === 'midi' && (
+              <MidiFields
+                draft={draft.midi}
+                stage={partial => stage('midi', partial)}
+              />
+            )}
+            </div>
+          </section>
+        </div>
+
+        {/* OK / Cancel / Apply */}
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              apply();
+              onClose();
+            }}
+            className="ss-key ss-cap h-9 px-5 rounded-md text-sm"
+          >
+            OK
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ss-key ss-cap h-9 px-5 rounded-md text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={apply}
+            disabled={!dirty}
+            className="ss-key ss-cap h-9 px-5 rounded-md text-sm disabled:opacity-40"
+          >
+            Apply
+          </button>
+        </div>
       </div>
     </dialog>
   );
 }
 
-/* ── Options Tab ─────────────────────────────── */
+/* ── One field row ───────────────────────────── */
 
-function OptionsTab({
-  tooltipsEnabled,
-  setTooltipsEnabled,
+/**
+ * A row: label on the left, control on the right.
+ * Double-clicking the label (long-press on touch)
+ * resets the field. The control gets the label's id
+ * for aria-labelledby, so clicks on the label never
+ * reach it.
+ */
+function Field({
+  label,
+  onReset,
+  children,
 }: {
-  tooltipsEnabled: boolean;
-  setTooltipsEnabled: (v: boolean) => void;
+  label: string;
+  onReset: () => void;
+  children: (labelId: string) => ReactNode;
 }) {
-  const autoMinimize = useAutoMinimizeSetting();
-  const chooserClickAway = useChooserClickAwaySetting();
+  const labelId = useId();
+  const longPress = useLongPress(
+    () => {
+      navigator.vibrate?.(10);
+      onReset();
+    },
+    {
+      detect: LongPressEventType.Touch,
+      threshold: LONG_PRESS_MS,
+      cancelOnMovement: LONG_PRESS_CANCEL_PX,
+    }
+  );
   return (
-    <div className="flex flex-col gap-3">
-    <label className="flex items-center gap-3">
-      <input
-        type="checkbox"
-        checked={tooltipsEnabled}
-        onChange={(e) =>
-          setTooltipsEnabled(e.target.checked)
-        }
-        aria-label="Show tooltips"
-        className="accent-[#f0662a] w-4 h-4"
-      />
-      <span className="text-sm">Show tooltips</span>
-    </label>
-    <label className="flex items-center gap-3">
-      <input
-        type="checkbox"
-        checked={autoMinimize}
-        onChange={(e) =>
-          setAutoMinimize(e.target.checked)
-        }
-        aria-label="Auto-minimize empty tracks"
-        className="accent-[#f0662a] w-4 h-4"
-      />
-      <span className="text-sm">
-        Auto-minimize empty tracks
-      </span>
-    </label>
-    <label className="flex items-center gap-3">
-      <input
-        type="checkbox"
-        checked={chooserClickAway}
-        onChange={(e) =>
-          setChooserClickAway(e.target.checked)
-        }
-        aria-label="Click beside the pattern chooser to close it"
-        className="accent-[#f0662a] w-4 h-4"
-      />
-      <span className="text-sm">
-        Click beside the pattern chooser to close it
-      </span>
-    </label>
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-line last:border-b-0">
+      <Tooltip tooltipKey="settingReset" position="top">
+        {/* A pointer shortcut; the control itself stays
+            fully keyboard operable. */}
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+        <span
+          onDoubleClick={onReset}
+          {...longPress()}
+          className="text-sm select-none cursor-default [-webkit-touch-callout:none]"
+        >
+          <span id={labelId}>{label}</span>
+        </span>
+      </Tooltip>
+      <div className="shrink-0">{children(labelId)}</div>
     </div>
   );
 }
 
-/* ── MIDI Tab ────────────────────────────────── */
+/* ── Interface ───────────────────────────────── */
 
-function MidiTab() {
+/** An on/off Interface field; its label resets it. */
+function InterfaceToggle({
+  label, field, draft, stage,
+}: {
+  label: string;
+  field: keyof InterfacePrefs;
+  draft: InterfacePrefs;
+  stage: (partial: Partial<InterfacePrefs>) => void;
+}) {
+  return (
+    <Field
+      label={label}
+      onReset={() => stage({ [field]: INTERFACE_DEFAULTS[field] })}
+    >
+      {labelId => (
+        <input
+          type="checkbox"
+          aria-labelledby={labelId}
+          checked={draft[field]}
+          onChange={e => stage({ [field]: e.target.checked })}
+          className={CHECKBOX_CLASS}
+        />
+      )}
+    </Field>
+  );
+}
+
+/* ── MIDI ────────────────────────────────────── */
+
+function MidiFields({
+  draft,
+  stage,
+}: {
+  draft: MidiConfig;
+  stage: (partial: Partial<MidiConfig>) => void;
+}) {
   const midi = useMidi();
-
   if (!midi) return null;
-  const {
-    available, initialized, config, outputs, updateConfig,
-  } = midi;
+  const { available, initialized, outputs, requestAccess } = midi;
+  const defaults = defaultMidiConfig();
 
   const disabled = !available;
   const statusMsg = initialized && !available
@@ -237,162 +402,134 @@ function MidiTab() {
       ? 'No MIDI devices detected'
       : null;
 
+  const enable = async (on: boolean) => {
+    stage({ enabled: on });
+    // Turning it on asks for MIDI access, so the device
+    // list fills in before OK or Apply.
+    if (on && !(await requestAccess())) stage({ enabled: false });
+  };
+
   return (
     <>
       {statusMsg && (
-        <p className="text-sm text-lcd mb-4">
+        <p className="text-sm text-lcd mb-2">
           {statusMsg}
         </p>
       )}
-
-      {/* Enable toggle */}
-      <label className="flex items-center gap-3 mb-4">
-        <input
-          type="checkbox"
-          checked={config.enabled}
-          onChange={(e) =>
-            updateConfig({
-              enabled: e.target.checked,
-            })
-          }
-          aria-label="Enable MIDI output"
-          className="accent-[#f0662a] w-4 h-4"
-        />
-        <span className="text-sm">Enable MIDI output</span>
-      </label>
-
-      {/* Device picker */}
-      <div className="mb-4">
-        <span
-          id="midi-device-label"
-          className="ss-label block mb-1"
-        >
-          Output Device
-        </span>
-        <LcdSelect
-          aria-labelledby="midi-device-label"
-          value={config.deviceId ?? ''}
-          options={[
-            {
-              value: '',
-              label: outputs.length === 0
-                ? 'No devices'
-                : 'Select device…',
-            },
-            ...outputs.map(o => ({
-              value: o.id,
-              label: o.name || o.id,
-            })),
-          ]}
-          disabled={disabled || outputs.length === 0}
-          onChange={(deviceId) => {
-            midiEngine.setOutput(deviceId);
-            updateConfig({ deviceId });
-          }}
-          className="w-full h-9"
-        />
-      </div>
-
-      {/* Channel */}
-      <label className="block mb-4">
-        <span className="ss-label block mb-1">
-          Channel
-        </span>
-        <input
-          type="number"
-          min={1}
-          max={16}
-          value={config.channel}
-          disabled={disabled}
-          onChange={(e) =>
-            updateConfig({
+      <Field
+        label="MIDI output"
+        onReset={() => stage({ enabled: defaults.enabled })}
+      >
+        {labelId => (
+          <input
+            type="checkbox"
+            aria-labelledby={labelId}
+            checked={draft.enabled}
+            disabled={initialized && !available}
+            onChange={e => void enable(e.target.checked)}
+            className={CHECKBOX_CLASS}
+          />
+        )}
+      </Field>
+      <Field
+        label="Device"
+        onReset={() => stage({ deviceId: defaults.deviceId })}
+      >
+        {labelId => (
+          <LcdSelect
+            aria-labelledby={labelId}
+            value={draft.deviceId ?? ''}
+            options={[
+              {
+                value: '',
+                label: outputs.length === 0
+                  ? 'No devices'
+                  : 'Select device…',
+              },
+              ...outputs.map(o => ({
+                value: o.id,
+                label: o.name || o.id,
+              })),
+            ]}
+            disabled={disabled || outputs.length === 0}
+            onChange={deviceId => stage({ deviceId: deviceId || null })}
+            className="w-[200px] max-w-full h-9"
+          />
+        )}
+      </Field>
+      <Field
+        label="Channel"
+        onReset={() => stage({ channel: defaults.channel })}
+      >
+        {labelId => (
+          <input
+            type="number"
+            min={1}
+            max={16}
+            value={draft.channel}
+            disabled={disabled}
+            onChange={e => stage({
               channel: Math.max(
-                1, Math.min(16,
-                  parseInt(e.target.value) || 1)
+                1, Math.min(16, parseInt(e.target.value) || 1)
               ),
-            })
-          }
-          aria-label="MIDI channel"
-          className="w-20 h-9 bg-well border border-line rounded-md px-3 font-mono text-sm text-ink disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent"
-        />
-      </label>
-
-      {/* Note length */}
-      <div className="mb-6">
-        <span
-          id="midi-note-length-label"
-          className="ss-label block mb-1"
-        >
-          Note Length
-        </span>
-        <LcdSelect
-          aria-labelledby="midi-note-length-label"
-          value={noteLengthKey(config.noteLength)}
-          options={NOTE_LENGTH_SELECT_OPTIONS}
-          disabled={disabled}
-          onChange={(key) => {
-            const opt = NOTE_LENGTH_OPTIONS.find(
-              (o) => noteLengthKey(o.value) === key
-            );
-            if (opt) {
-              updateConfig({
-                noteLength: opt.value,
-              });
-            }
-          }}
-          className="w-full h-9"
-        />
-      </div>
-
-      {/* Track note mapping */}
-      <div>
-        <span className="ss-label block mb-2">
-          Track Notes (MIDI note 0-127)
-        </span>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-          {TRACKS.map((track) => (
-            <label
-              key={track.id}
-              className="flex items-center gap-2"
-            >
-              <span className="ss-cap text-sm w-12 text-muted">
-                {track.id.toUpperCase()}
-              </span>
+            })}
+            aria-labelledby={labelId}
+            className={`w-20 ${NUMBER_FIELD_CLASS}`}
+          />
+        )}
+      </Field>
+      <Field
+        label="Note length"
+        onReset={() => stage({ noteLength: defaults.noteLength })}
+      >
+        {labelId => (
+          <LcdSelect
+            aria-labelledby={labelId}
+            value={noteLengthKey(draft.noteLength)}
+            options={NOTE_LENGTH_SELECT_OPTIONS}
+            disabled={disabled}
+            onChange={key => {
+              const opt = NOTE_LENGTH_OPTIONS.find(
+                o => noteLengthKey(o.value) === key
+              );
+              if (opt) stage({ noteLength: opt.value });
+            }}
+            className="w-[200px] max-w-full h-9"
+          />
+        )}
+      </Field>
+      <h4 className="ss-label mt-4 mb-1">
+        Track notes (MIDI note 0-127)
+      </h4>
+      <div className="sm:grid sm:grid-cols-2 sm:gap-x-6">
+      {TRACKS.map(track => {
+        const id = track.id as MidiTrackId;
+        const setNote = (noteNumber: number) => stage({
+          tracks: { ...draft.tracks, [id]: { noteNumber } },
+        });
+        return (
+          <Field
+            key={id}
+            label={trackLabel(id)}
+            onReset={() => setNote(defaults.tracks[id].noteNumber)}
+          >
+            {labelId => (
               <input
                 type="number"
                 min={0}
                 max={127}
-                aria-label={`${track.id.toUpperCase()} MIDI note`}
-                value={
-                  config.tracks[
-                    track.id as Exclude<
-                      TrackId, 'ac'
-                    >
-                  ]?.noteNumber ?? 0
-                }
+                aria-labelledby={labelId}
+                value={draft.tracks[id]?.noteNumber ?? 0}
                 disabled={disabled}
-                onChange={(e) => {
-                  const note = Math.max(
-                    0,
-                    Math.min(
-                      127,
-                      parseInt(e.target.value) || 0
-                    )
-                  );
-                  updateConfig({
-                    tracks: {
-                      ...config.tracks,
-                      [track.id]: {
-                        noteNumber: note,
-                      },
-                    },
-                  });
-                }}
-                className="w-16 h-8 bg-well border border-line rounded-md px-2 font-mono text-sm text-center text-ink disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent"
+                onChange={e => setNote(Math.max(
+                  0, Math.min(127, parseInt(e.target.value) || 0)
+                ))}
+                className={`w-16 text-center ${NUMBER_FIELD_CLASS}`}
               />
-            </label>
-          ))}
-        </div>
+            )}
+          </Field>
+        );
+      })}
       </div>
     </>
   );

@@ -43,7 +43,7 @@ function TransportControlsInner({
 
   return (
     <header className="safe-area-top safe-area-x space-y-3 lg:space-y-[18px]">
-      {/* Row 1: logo, then play, tempo, fill, volume, settings */}
+      {/* Row 1: logo, then play, tempo, fill, volume, help, settings */}
       <div className="flex justify-between items-center gap-2">
         <div className="flex items-baseline gap-3 min-w-0">
           <h1 className="font-logo font-black text-2xl max-[380px]:text-xl lg:text-[32px] leading-none tracking-[0.02em] text-accent">
@@ -111,10 +111,8 @@ function TransportControlsInner({
             onToggleMute={master.toggleMute}
             onGestureStart={master.beginGesture}
           />
-          <SettingsButton />
-          {/* No room in row 1 on phones; there Help is
-              in the Settings dialog's header. */}
-          <Tooltip tooltipKey="help" position="bottom" align="right">
+          {/* No room in row 1 on phones. */}
+          <Tooltip tooltipKey="help" position="bottom">
             <button
               type="button"
               onClick={help.open}
@@ -125,6 +123,8 @@ function TransportControlsInner({
               ?
             </button>
           </Tooltip>
+          {/* The gear is the last page-level action. */}
+          <SettingsButton />
         </div>
       </div>
       {/* Row 2: one panel strip, hairline dividers. No

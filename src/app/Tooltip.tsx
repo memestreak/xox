@@ -5,7 +5,7 @@ import {
 } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import tooltips from './data/tooltips.json';
-import { useTooltips } from './TooltipContext';
+import { interfacePrefs } from './preferences';
 import { TOOLTIP_EDGE_MARGIN_PX } from './constants';
 import { tooltipShift, visibleBand } from './tooltipFit';
 
@@ -27,7 +27,7 @@ export default function Tooltip({
   children,
 }: TooltipProps) {
   const id = useId();
-  const { tooltipsEnabled } = useTooltips();
+  const tooltipsEnabled = interfacePrefs.useValue().showTooltips;
   const tipRef = useRef<HTMLSpanElement>(null);
 
   // On hover, nudge the tooltip sideways if it would

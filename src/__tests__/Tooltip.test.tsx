@@ -3,7 +3,7 @@ import {
 } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import Tooltip from '../app/Tooltip';
-import { TooltipProvider } from '../app/TooltipContext';
+import { interfacePrefs } from '../app/preferences';
 
 const store: Record<string, string> = {};
 
@@ -34,9 +34,7 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 function renderWithProvider(ui: React.ReactElement) {
-  return render(
-    <TooltipProvider>{ui}</TooltipProvider>
-  );
+  return render(ui);
 }
 
 describe('Tooltip', () => {
@@ -68,7 +66,9 @@ describe('Tooltip', () => {
   });
 
   it('renders no tooltip when disabled', () => {
-    store['xox-tooltips'] = 'false';
+    store['xox.general.interface'] =
+      JSON.stringify({ showTooltips: false });
+    interfacePrefs.resetForTests();
     renderWithProvider(
       <Tooltip tooltipKey="play">
         <button>Play</button>

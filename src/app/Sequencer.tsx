@@ -5,7 +5,6 @@ import {
 } from 'react';
 import { SequencerProvider, useSequencer }
   from './SequencerContext';
-import { TooltipProvider } from './TooltipContext';
 import { HelpProvider } from './HelpContext';
 import { MidiProvider } from './MidiContext';
 import TransportControls from './TransportControls';
@@ -175,11 +174,9 @@ export default function Sequencer() {
     <ErrorBoundary>
       <SequencerProvider>
         <MidiProvider>
-          <TooltipProvider>
-            <HelpProvider>
-              <SequencerInner />
-            </HelpProvider>
-          </TooltipProvider>
+          <HelpProvider>
+            <SequencerInner />
+          </HelpProvider>
         </MidiProvider>
       </SequencerProvider>
     </ErrorBoundary>

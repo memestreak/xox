@@ -140,7 +140,7 @@ describe('MidiEngine.init()', () => {
         cb: { noteNumber: 56 },
       },
     };
-    localStorage.setItem('xox-midi', JSON.stringify(saved));
+    localStorage.setItem('xox.sequencer.midi', JSON.stringify(saved));
 
     const output = createMockOutput('out1', 'Synth');
     const access = createMockAccess([output]);
@@ -338,7 +338,7 @@ describe('MidiEngine config changes', () => {
     engine.updateConfig({ channel: 7 });
 
     const stored = JSON.parse(
-      localStorage.getItem('xox-midi')!
+      localStorage.getItem('xox.sequencer.midi')!
     );
     expect(stored.channel).toBe(7);
   });
@@ -374,7 +374,7 @@ describe('validateMidiConfig (#124)', () => {
 
   it('an old saved config without noteLength can still'
     + ' send notes', async () => {
-    localStorage.setItem('xox-midi', JSON.stringify({
+    localStorage.setItem('xox.sequencer.midi', JSON.stringify({
       enabled: true, deviceId: 'out1', channel: 1,
     }));
     const output = createMockOutput('out1', 'Synth');

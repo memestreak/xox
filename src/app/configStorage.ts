@@ -4,8 +4,13 @@ import { validateConfig } from './configCodec';
 import type { SequencerConfig } from './types';
 import { CUSTOM_PATTERN_ID } from './patternUtils';
 
-/** localStorage key for the autosaved session. */
-export const CONFIG_STORAGE_KEY = 'xox-config';
+/**
+ * localStorage key for the autosaved session: the work,
+ * kept under `works` so it never mixes with the
+ * preferences (preferences.ts). xox has one work per
+ * device, so its id is fixed.
+ */
+export const CONFIG_STORAGE_KEY = 'xox.sequencer.works.session';
 
 /** What gets autosaved between visits. */
 export interface StoredSession {

@@ -4,7 +4,6 @@ import {
 } from 'vitest';
 import MasterVolume from '../app/MasterVolume';
 import { litSegments } from '../app/LevelMeter';
-import { TooltipProvider } from '../app/TooltipContext';
 import { METER_FLOOR_DB, METER_SEGMENTS } from '../app/constants';
 
 vi.mock('../app/AudioEngine', () => ({
@@ -21,15 +20,13 @@ function renderFader(
   const onToggleMute = vi.fn();
   const onGestureStart = vi.fn();
   render(
-    <TooltipProvider>
-      <MasterVolume
-        position={position}
-        onChange={onChange}
-        onToggleMute={onToggleMute}
-        onGestureStart={onGestureStart}
-        variant={variant}
-      />
-    </TooltipProvider>
+    <MasterVolume
+      position={position}
+      onChange={onChange}
+      onToggleMute={onToggleMute}
+      onGestureStart={onGestureStart}
+      variant={variant}
+    />
   );
   return Object.assign(onChange, { onToggleMute, onGestureStart });
 }

@@ -10,16 +10,20 @@ import {
 } from 'react';
 import { midiEngine } from './MidiEngine';
 import type { MidiConfig } from './types';
-import { defaultMidiConfig } from './types';
 
 interface MidiContextValue {
   available: boolean;
   initialized: boolean;
+  /** The saved MIDI settings (Settings › MIDI). */
   config: MidiConfig;
   outputs: MIDIOutput[];
-  updateConfig: (
-    partial: Partial<MidiConfig>
-  ) => void | Promise<void>;
+  /**
+   * Ask the browser for MIDI access, so the device list
+   * fills in. Resolves to whether MIDI is available.
+   */
+  requestAccess: () => Promise<boolean>;
+  /** Save new MIDI settings (Settings' OK / Apply). */
+  applyConfig: (next: MidiConfig) => void;
 }
 
 const MidiContext = createContext<
@@ -40,25 +44,31 @@ export function MidiProvider({
   const [available, setAvailable] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [config, setConfig] = useState<MidiConfig>(
-    defaultMidiConfig
+    () => midiEngine.getConfig()
   );
   const [outputs, setOutputs] = useState<MIDIOutput[]>(
     []
   );
 
-  const initMidi = useCallback(async () => {
-    if (initialized) return;
-    midiEngine.setOnDeviceChange((newOutputs) => {
-      setOutputs(newOutputs);
-    });
-    const ok = await midiEngine.init();
+  const finishInit = useCallback((ok: boolean) => {
     setAvailable(ok);
     setInitialized(true);
-    if (ok) {
-      setConfig(midiEngine.getConfig());
-      setOutputs(midiEngine.getOutputs());
-    }
-  }, [initialized]);
+    if (ok) setOutputs(midiEngine.getOutputs());
+    return ok;
+  }, []);
+
+  const requestAccess = useCallback(async () => {
+    midiEngine.setOnDeviceChange(setOutputs);
+    // init() runs once; later calls return its result.
+    return finishInit(await midiEngine.init());
+  }, [finishInit]);
+
+  // Saved as enabled: connect on load.
+  useEffect(() => {
+    if (!midiEngine.getConfig().enabled) return;
+    midiEngine.setOnDeviceChange(setOutputs);
+    void midiEngine.init().then(finishInit);
+  }, [finishInit]);
 
   useEffect(() => {
     return () => {
@@ -66,21 +76,11 @@ export function MidiProvider({
     };
   }, []);
 
-  const updateConfig = useCallback(
-    async (partial: Partial<MidiConfig>) => {
-      if (partial.enabled && !initialized) {
-        await initMidi();
-        // If MIDI isn't available after init, don't
-        // persist the enabled flag
-        if (!midiEngine.isAvailable()) {
-          return;
-        }
-      }
-      midiEngine.updateConfig(partial);
-      setConfig(midiEngine.getConfig());
-    },
-    [initialized, initMidi]
-  );
+  const applyConfig = useCallback((next: MidiConfig) => {
+    midiEngine.applyConfig(next);
+    setConfig(midiEngine.getConfig());
+    if (next.enabled) void requestAccess();
+  }, [requestAccess]);
 
   return (
     <MidiContext value={{
@@ -88,7 +88,8 @@ export function MidiProvider({
       initialized,
       config,
       outputs,
-      updateConfig,
+      requestAccess,
+      applyConfig,
     }}>
       {children}
     </MidiContext>

@@ -198,7 +198,17 @@ const MOUSE_TAB: HelpTab = {
         {
           gesture: 'click beside the chooser or grid',
           text: 'Close the chooser',
-          note: '(can be turned off in Settings > Options)',
+          note: '(can be turned off in Settings › Interface)',
+        },
+      ],
+    },
+    {
+      title: 'Settings',
+      rows: [
+        {
+          gesture: 'double-click a label',
+          text: 'Reset that setting to its default',
+          note: '(long-press on touch; saved on OK or Apply)',
         },
       ],
     },

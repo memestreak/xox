@@ -7,9 +7,7 @@ import PatternPicker from '../app/PatternPicker';
 import type { Pattern } from '../app/types';
 import { TRACK_IDS } from '../app/types';
 import type { PatternCategory } from '../app/patternUtils';
-import {
-  setChooserClickAway,
-} from '../app/hooks/useChooserClickAwaySetting';
+import { interfacePrefs } from '../app/preferences';
 
 // --------------- fixtures ---------------
 
@@ -686,7 +684,7 @@ describe('PatternPicker', () => {
     });
 
     it('stays open when the setting is off', async () => {
-      setChooserClickAway(false);
+      interfacePrefs.update({ chooserClickAway: false });
       const user = userEvent.setup();
       renderPicker();
       await openByMouse(user);

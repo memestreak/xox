@@ -10,6 +10,7 @@
   "kit": "Choose sample kit; right-click to export",
   "pattern": "Browse preset patterns (P)",
   "settings": "Settings",
+  "settingReset": "Double-click to reset",
   "share": "Copy share link",
   "gridMenu": "Track and pattern options",
   "help": "Help and shortcuts (?)",
