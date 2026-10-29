@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { LongPressEventType, useLongPress } from 'use-long-press';
 import { useHelp } from './HelpContext';
 import { useMidi } from './MidiContext';
@@ -19,22 +19,19 @@ import tooltips from './data/tooltips.json';
 import {
   GRID_DEFAULTS,
   INTERFACE_DEFAULTS,
-  OUTPUT_DEFAULTS,
   PATTERNS_DEFAULTS,
   gridPrefs,
   interfacePrefs,
-  outputPrefs,
   patternsPrefs,
 } from './preferences';
 import type {
-  GridPrefs, InterfacePrefs, OutputPrefs, PatternsPrefs,
+  GridPrefs, InterfacePrefs, PatternsPrefs,
 } from './preferences';
-import { formatDb, positionToGain } from './hooks/useMasterVolume';
 import { LONG_PRESS_CANCEL_PX, LONG_PRESS_MS } from './constants';
 
 /* ── The tree ────────────────────────────────── */
 
-type SectionId = 'interface' | 'grid' | 'patterns' | 'output' | 'midi';
+type SectionId = 'interface' | 'grid' | 'patterns' | 'midi';
 type GroupId = 'general' | 'sequencer';
 
 interface Group {
@@ -55,7 +52,6 @@ const GROUPS: Group[] = [
     sections: [
       { id: 'grid', label: 'Grid' },
       { id: 'patterns', label: 'Patterns' },
-      { id: 'output', label: 'Output' },
       { id: 'midi', label: 'MIDI' },
     ],
   },
@@ -79,12 +75,11 @@ interface AllPrefs {
   interface: InterfacePrefs;
   grid: GridPrefs;
   patterns: PatternsPrefs;
-  output: OutputPrefs;
   midi: MidiConfig;
 }
 
 const SECTION_IDS: SectionId[] = [
-  'interface', 'grid', 'patterns', 'output', 'midi',
+  'interface', 'grid', 'patterns', 'midi',
 ];
 
 function sameValue(a: unknown, b: unknown): boolean {
@@ -163,7 +158,6 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     interface: interfacePrefs.useValue(),
     grid: gridPrefs.useValue(),
     patterns: patternsPrefs.useValue(),
-    output: outputPrefs.useValue(),
     midi: midi?.config ?? defaultMidiConfig(),
   };
   const [draft, setDraft] = useState<AllPrefs>(saved);
@@ -187,7 +181,6 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     if (changed('interface')) interfacePrefs.set(draft.interface);
     if (changed('grid')) gridPrefs.set(draft.grid);
     if (changed('patterns')) patternsPrefs.set(draft.patterns);
-    if (changed('output')) outputPrefs.set(draft.output);
     if (changed('midi')) midi?.applyConfig(draft.midi);
   };
 
@@ -401,20 +394,6 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                 )}
               </Field>
             )}
-            {section === 'output' && (
-              <Field
-                label="Volume"
-                onReset={() => stage('output', OUTPUT_DEFAULTS)}
-              >
-                {labelId => (
-                  <VolumeControl
-                    labelId={labelId}
-                    position={draft.output.volume}
-                    onChange={volume => stage('output', { volume })}
-                  />
-                )}
-              </Field>
-            )}
             {section === 'midi' && (
               <MidiFields
                 draft={draft.midi}
@@ -503,38 +482,6 @@ function Field({
         </span>
       </Tooltip>
       <div className="shrink-0">{children(labelId)}</div>
-    </div>
-  );
-}
-
-/* ── Output › Volume ─────────────────────────── */
-
-/** The master fader, as in the header, with its readout. */
-function VolumeControl({
-  labelId, position, onChange,
-}: {
-  labelId: string;
-  position: number;
-  onChange: (position: number) => void;
-}) {
-  const readout = formatDb(positionToGain(position));
-  return (
-    <div className="flex items-center gap-2.5 w-[220px] max-w-full">
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.01}
-        value={position}
-        onChange={e => onChange(Number(e.target.value))}
-        aria-labelledby={labelId}
-        aria-valuetext={readout}
-        className="ss-fader flex-1 min-w-0"
-        style={{ '--fill': `${position * 100}%` } as CSSProperties}
-      />
-      <output className="font-mono text-[13px] text-ink tabular-nums w-[9ch] text-right whitespace-nowrap shrink-0">
-        {readout}
-      </output>
     </div>
   );
 }

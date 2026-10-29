@@ -68,7 +68,8 @@ master bus runs through a limiter (`AudioEngine.init`)
 so summed and accented hits don't clip. Master volume
 (`MasterVolume.tsx`, `hooks/useMasterVolume.ts`) is a
 gain after the limiter; it's a preference
-(Settings › Sequencer › Output), not in
+(`xox.sequencer.output`, deliberately not in the
+Settings dialog), not in
 `SequencerConfig`, so share links and Reset leave it
 alone. `LevelMeter.tsx`
 reads `audioEngine.getOutputPeaks()` each frame.
@@ -103,8 +104,9 @@ object checked field by field by the section's parser
 `useValue`); MIDI is saved by `MidiEngine` at
 `MIDI_PREFS_KEY` (parser in `midiConfig.ts`). Old
 `xox-*` keys are not read (dropped, not migrated). Every
-preference must appear in `SettingsModal`; controls
-elsewhere (header fader, grid menu toggle) are shortcuts
+preference must appear in `SettingsModal`, except the
+master volume (header fader only, by choice); controls
+elsewhere (the grid menu toggle) are shortcuts
 that apply at once to the same saved value. A failed
 save warns once in the console.
 
@@ -256,7 +258,7 @@ Supporting files:
 - `SettingsButton.tsx` — gear key, the last header
   key (after `?`); mounts `SettingsModal` while open.
   The dialog is REAPER-style: a tree (General ›
-  Interface; Sequencer › Grid, Patterns, Output, MIDI)
+  Interface; Sequencer › Grid, Patterns, MIDI)
   and a pane headed `Group › Section`, one row per
   field. It opens at Sequencer › Grid. Its size is
   fixed (`h-[min(540px,…)]`); the tree and the pane

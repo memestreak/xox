@@ -200,7 +200,12 @@ export const patternsPrefs = createPreferenceSection(
   },
 );
 
-/** Sequencer › Output (`xox.sequencer.output`). */
+/**
+ * The master fader (`xox.sequencer.output`). Saved like
+ * a section but not shown in Settings: the header fader
+ * is its only control (app volume doesn't belong in a
+ * settings dialog).
+ */
 export interface OutputPrefs {
   /** Master fader position, 0-1. */
   volume: number;

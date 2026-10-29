@@ -4,7 +4,7 @@ import {
   describe, expect, it, vi, beforeEach,
 } from 'vitest';
 import SettingsModal from '../app/SettingsModal';
-import { gridPrefs, outputPrefs } from '../app/preferences';
+import { gridPrefs } from '../app/preferences';
 import { midiEngine } from '../app/MidiEngine';
 import { MidiProvider } from '../app/MidiContext';
 
@@ -159,16 +159,10 @@ describe('SettingsModal', () => {
       .toBeGreaterThan(0);
   });
 
-  it('lists the master volume under Output', () => {
-    outputPrefs.set({ volume: 0.5 });
+  it('leaves the master volume out of Settings', () => {
     renderModal();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Output' })[0]);
-    const fader = screen.getByLabelText('Volume');
-    expect(fader).toHaveValue('0.5');
-    fireEvent.change(fader, { target: { value: '0.25' } });
-    expect(outputPrefs.get().volume).toBe(0.5);
-    fireEvent.click(button('Apply'));
-    expect(saved('xox.sequencer.output')).toEqual({ volume: 0.25 });
+    expect(screen.queryByRole('button', { name: 'Output' })).toBeNull();
+    expect(screen.queryByLabelText('Volume')).toBeNull();
   });
 
   it('MIDI: turning output on asks for access, and stays off without it', async () => {
