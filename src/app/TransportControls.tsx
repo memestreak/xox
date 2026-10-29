@@ -131,20 +131,21 @@ function TransportControlsInner({
           overflow-hidden here: it would clip the tooltips.
           The corner cells round themselves instead.
           Desktop runs Kit, Pattern, Pattern change,
-          Steps, Swing. Below lg the rows are Steps +
-          Swing, Pattern, Kit + Pattern change, then
-          Volume (set by max-lg:order-* on the cells). */}
-      <div className="grid grid-cols-6 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+          Steps, Swing, Share. Below lg (12 columns) the
+          rows are Steps + Swing + Share, Pattern, Kit +
+          Pattern change, then Volume (set by
+          max-lg:order-* on the cells). */}
+      <div className="grid grid-cols-12 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
         <PanelSection
           label="Kit"
           labelFor="kit-select"
-          className="col-span-2 max-lg:order-4 lg:rounded-l-[11px]"
+          className="col-span-4 max-lg:order-4 lg:rounded-l-[11px]"
         >
           <KitSelector />
         </PanelSection>
         <PanelSection
           label="Pattern"
-          className="col-span-6 lg:flex-1 max-lg:order-2"
+          className="col-span-12 lg:flex-1 max-lg:order-2"
         >
           {patternTrigger}
         </PanelSection>
