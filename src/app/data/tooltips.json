@@ -18,6 +18,7 @@
   "solo": "Solo this track",
   "step": "Click to toggle; long-press to edit",
   "trackName": "Click for track options",
+  "freeRun": "Enable to loop track pattern independent of global pattern length",
   "track-bd": "Bass Drum",
   "track-sd": "Snare Drum",
   "track-ch": "Closed Hi-Hat",
