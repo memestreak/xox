@@ -77,6 +77,7 @@ function GlobalControlsInner({ page }: GlobalControlsProps) {
               showHoverValue={false}
             />
           </Tooltip>
+          <span aria-hidden="true" className="w-px self-stretch bg-line" />
           <ShareLinkButton />
         </div>
       </PanelSection>
