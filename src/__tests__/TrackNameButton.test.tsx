@@ -134,8 +134,8 @@ describe('TrackNameButton', () => {
       name: 'Free-run',
     });
     expect(item).toHaveAccessibleDescription(
-      'Enable to loop track pattern independent'
-      + ' of global pattern length'
+      'Loop track pattern independent of global'
+      + ' pattern length'
     );
   });
 
