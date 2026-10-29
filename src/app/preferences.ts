@@ -134,13 +134,19 @@ function unit(value: unknown, fallback: number): number {
 
 /* ── Sections ────────────────────────────────── */
 
-/** General › Interface (`xox.general.interface`). */
+/** Settings › Interface (`xox.general.interface`). */
 export interface InterfacePrefs {
   showTooltips: boolean;
+  /** "Auto-minimize empty tracks" (also in the grid menu). */
+  autoMinimize: boolean;
+  /** Click beside the pattern chooser to close it. */
+  chooserClickAway: boolean;
 }
 
 export const INTERFACE_DEFAULTS: InterfacePrefs = {
   showTooltips: true,
+  autoMinimize: false,
+  chooserClickAway: true,
 };
 
 export const interfacePrefs = createPreferenceSection(
@@ -148,54 +154,11 @@ export const interfacePrefs = createPreferenceSection(
   INTERFACE_DEFAULTS,
   (raw): InterfacePrefs => {
     const f = fieldsOf(raw);
+    const d = INTERFACE_DEFAULTS;
     return {
-      showTooltips: bool(
-        f.showTooltips, INTERFACE_DEFAULTS.showTooltips
-      ),
-    };
-  },
-);
-
-/** Sequencer › Grid (`xox.sequencer.grid`). */
-export interface GridPrefs {
-  autoMinimize: boolean;
-}
-
-export const GRID_DEFAULTS: GridPrefs = {
-  autoMinimize: false,
-};
-
-export const gridPrefs = createPreferenceSection(
-  'xox.sequencer.grid',
-  GRID_DEFAULTS,
-  (raw): GridPrefs => {
-    const f = fieldsOf(raw);
-    return {
-      autoMinimize: bool(
-        f.autoMinimize, GRID_DEFAULTS.autoMinimize
-      ),
-    };
-  },
-);
-
-/** Sequencer › Patterns (`xox.sequencer.patterns`). */
-export interface PatternsPrefs {
-  chooserClickAway: boolean;
-}
-
-export const PATTERNS_DEFAULTS: PatternsPrefs = {
-  chooserClickAway: true,
-};
-
-export const patternsPrefs = createPreferenceSection(
-  'xox.sequencer.patterns',
-  PATTERNS_DEFAULTS,
-  (raw): PatternsPrefs => {
-    const f = fieldsOf(raw);
-    return {
-      chooserClickAway: bool(
-        f.chooserClickAway, PATTERNS_DEFAULTS.chooserClickAway
-      ),
+      showTooltips: bool(f.showTooltips, d.showTooltips),
+      autoMinimize: bool(f.autoMinimize, d.autoMinimize),
+      chooserClickAway: bool(f.chooserClickAway, d.chooserClickAway),
     };
   },
 );
@@ -225,7 +188,7 @@ export const outputPrefs = createPreferenceSection(
 );
 
 /**
- * Sequencer › MIDI is saved at this key by MidiEngine,
+ * Settings › MIDI is saved at this key by MidiEngine,
  * which owns the live MIDI config (see midiConfig.ts for
  * its parser).
  */
@@ -234,8 +197,6 @@ export const MIDI_PREFS_KEY = 'xox.sequencer.midi';
 /** Test helper: forget every section's in-memory copy. */
 export function resetPreferencesForTests() {
   interfacePrefs.resetForTests();
-  gridPrefs.resetForTests();
-  patternsPrefs.resetForTests();
   outputPrefs.resetForTests();
   saveFailureReported = false;
 }

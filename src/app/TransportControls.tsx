@@ -111,8 +111,7 @@ function TransportControlsInner({
             onToggleMute={master.toggleMute}
             onGestureStart={master.beginGesture}
           />
-          {/* No room in row 1 on phones; there Help is
-              in the Settings dialog's header. */}
+          {/* No room in row 1 on phones. */}
           <Tooltip tooltipKey="help" position="bottom">
             <button
               type="button"

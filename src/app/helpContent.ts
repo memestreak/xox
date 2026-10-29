@@ -198,7 +198,7 @@ const MOUSE_TAB: HelpTab = {
         {
           gesture: 'click beside the chooser or grid',
           text: 'Close the chooser',
-          note: '(can be turned off in Settings › Sequencer › Patterns)',
+          note: '(can be turned off in Settings › Interface)',
         },
       ],
     },

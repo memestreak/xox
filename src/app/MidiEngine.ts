@@ -21,7 +21,7 @@ export class MidiEngine {
     this.config = this.loadConfig();
   }
 
-  // Saved as the Settings section Sequencer › MIDI.
+  // Saved as the Settings section MIDI.
   private loadConfig(): MidiConfig {
     return readSection(MIDI_PREFS_KEY, validateMidiConfig);
   }

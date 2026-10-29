@@ -7,7 +7,6 @@ import {
 } from 'vitest';
 import SettingsButton from '../app/SettingsButton';
 import { TestWrapper } from './helpers/sequencer-wrapper';
-import { HelpProvider } from '../app/HelpContext';
 
 // jsdom doesn't implement HTMLDialogElement methods
 beforeAll(() => {
@@ -57,29 +56,5 @@ describe('SettingsButton', () => {
         name: 'Auto-minimize empty tracks',
       })
     ).toBeInTheDocument();
-  });
-
-  it('the dialog\'s ? key closes Settings and opens Help', async () => {
-    const user = userEvent.setup();
-    render(
-      <TestWrapper>
-        <HelpProvider>
-          <SettingsButton />
-        </HelpProvider>
-      </TestWrapper>
-    );
-    await user.click(
-      screen.getByRole('button', { name: 'Settings' })
-    );
-    await user.click(
-      screen.getByRole('button', { name: 'Help and shortcuts' })
-    );
-    expect(
-      screen.getByRole('heading', { name: 'Help' })
-    ).toBeInTheDocument();
-    expect(
-      // Level 2: Help has its own "Settings" section.
-      screen.queryByRole('heading', { name: 'Settings', level: 2 })
-    ).toBeNull();
   });
 });

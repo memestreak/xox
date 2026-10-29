@@ -14,7 +14,7 @@ import type { MidiConfig } from './types';
 interface MidiContextValue {
   available: boolean;
   initialized: boolean;
-  /** The saved MIDI settings (Sequencer › MIDI). */
+  /** The saved MIDI settings (Settings › MIDI). */
   config: MidiConfig;
   outputs: MIDIOutput[];
   /**

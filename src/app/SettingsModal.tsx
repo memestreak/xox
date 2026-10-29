@@ -9,78 +9,35 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import { LongPressEventType, useLongPress } from 'use-long-press';
-import { useHelp } from './HelpContext';
 import { useMidi } from './MidiContext';
 import { TRACKS, defaultMidiConfig } from './types';
 import type { MidiConfig, NoteLength, TrackId } from './types';
 import LcdSelect from './LcdSelect';
 import Tooltip from './Tooltip';
 import tooltips from './data/tooltips.json';
-import {
-  GRID_DEFAULTS,
-  INTERFACE_DEFAULTS,
-  PATTERNS_DEFAULTS,
-  gridPrefs,
-  interfacePrefs,
-  patternsPrefs,
-} from './preferences';
-import type {
-  GridPrefs, InterfacePrefs, PatternsPrefs,
-} from './preferences';
+import { INTERFACE_DEFAULTS, interfacePrefs } from './preferences';
+import type { InterfacePrefs } from './preferences';
 import { LONG_PRESS_CANCEL_PX, LONG_PRESS_MS } from './constants';
 
-/* ── The tree ────────────────────────────────── */
+/* ── Sections ──────────────────────────────── */
 
-type SectionId = 'interface' | 'grid' | 'patterns' | 'midi';
-type GroupId = 'general' | 'sequencer';
+type SectionId = 'interface' | 'midi';
 
-interface Group {
-  id: GroupId;
-  label: string;
-  sections: { id: SectionId; label: string }[];
-}
-
-const GROUPS: Group[] = [
-  {
-    id: 'general',
-    label: 'General',
-    sections: [{ id: 'interface', label: 'Interface' }],
-  },
-  {
-    id: 'sequencer',
-    label: 'Sequencer',
-    sections: [
-      { id: 'grid', label: 'Grid' },
-      { id: 'patterns', label: 'Patterns' },
-      { id: 'midi', label: 'MIDI' },
-    ],
-  },
+/** The list on the left, in order; the gear opens the first. */
+const SECTIONS: { id: SectionId; label: string }[] = [
+  { id: 'interface', label: 'Interface' },
+  { id: 'midi', label: 'MIDI' },
 ];
-
-/** The gear opens here: the page's group, first section. */
-const OPENING_GROUP: GroupId = 'sequencer';
-
-function groupOf(section: SectionId): Group {
-  return GROUPS.find(g => g.sections.some(s => s.id === section))!;
-}
-
-function sectionLabel(section: SectionId): string {
-  return groupOf(section).sections.find(s => s.id === section)!.label;
-}
 
 /* ── Staged values ───────────────────────────── */
 
 /** Every section's values, as saved or as staged. */
 interface AllPrefs {
   interface: InterfacePrefs;
-  grid: GridPrefs;
-  patterns: PatternsPrefs;
   midi: MidiConfig;
 }
 
-const SECTION_IDS: SectionId[] = [
-  'interface', 'grid', 'patterns', 'midi',
-];
+const SECTION_IDS = SECTIONS.map(s => s.id);
 
 function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -139,15 +96,15 @@ interface SettingsModalProps {
 }
 
 /**
- * The Settings dialog: every preference, in a tree of
- * groups and sections (REAPER-style). Mounted open.
+ * The Settings dialog: a list of sections on the left
+ * and the selected one's fields on the right
+ * (REAPER-style). Mounted open.
  * Changes are staged: OK saves and closes, Apply saves
  * and stays, Cancel / Esc / × discard them. Double-click
  * (touch: long-press) a field's label to reset it to
  * its default, staged like any other change.
  */
 export default function SettingsModal({ onClose }: SettingsModalProps) {
-  const help = useHelp();
   const midi = useMidi();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const headingId = useId();
@@ -156,18 +113,11 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   // and OK change these while it is open.
   const saved: AllPrefs = {
     interface: interfacePrefs.useValue(),
-    grid: gridPrefs.useValue(),
-    patterns: patternsPrefs.useValue(),
     midi: midi?.config ?? defaultMidiConfig(),
   };
   const [draft, setDraft] = useState<AllPrefs>(saved);
 
-  const [section, setSection] = useState<SectionId>(
-    GROUPS.find(g => g.id === OPENING_GROUP)!.sections[0].id
-  );
-  const [expanded, setExpanded] = useState<Record<GroupId, boolean>>(
-    { general: false, sequencer: false, [OPENING_GROUP]: true }
-  );
+  const [section, setSection] = useState<SectionId>(SECTIONS[0].id);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -179,8 +129,6 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
   const apply = () => {
     if (changed('interface')) interfacePrefs.set(draft.interface);
-    if (changed('grid')) gridPrefs.set(draft.grid);
-    if (changed('patterns')) patternsPrefs.set(draft.patterns);
     if (changed('midi')) midi?.applyConfig(draft.midi);
   };
 
@@ -198,12 +146,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     [onClose]
   );
 
-  const group = groupOf(section);
-
-  const selectGroup = (id: GroupId) => {
-    setExpanded(x => ({ ...x, [id]: true }));
-    setSection(GROUPS.find(g => g.id === id)!.sections[0].id);
-  };
+  const sectionLabel = SECTIONS.find(s => s.id === section)!.label;
 
   return (
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
@@ -225,20 +168,6 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
           <h2 className="ss-cap text-xl">
             Settings
           </h2>
-          <div className="flex gap-2">
-            {/* The way into Help on phones, where the
-                header has no room for the ? key. */}
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                help.open();
-              }}
-              aria-label="Help and shortcuts"
-              className="ss-key w-8 h-8 flex items-center justify-center text-muted hover:text-ink font-display font-bold text-lg leading-none"
-            >
-              ?
-            </button>
             <button
               type="button"
               onClick={onClose}
@@ -247,40 +176,30 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             >
               &times;
             </button>
-          </div>
         </div>
 
-        {/* Phones: group picker, then the group's sections */}
-        <div className="sm:hidden flex flex-col gap-2">
-          <LcdSelect
-            aria-label="Settings group"
-            value={group.id}
-            options={GROUPS.map(g => ({ value: g.id, label: g.label }))}
-            onChange={selectGroup}
-            className="w-full h-9"
-          />
-          <div
-            role="group"
-            aria-label={`${group.label} sections`}
-            className="ss-scroll flex gap-1.5 overflow-x-auto pb-1"
-          >
-            {group.sections.map(s => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSection(s.id)}
-                aria-current={s.id === section ? 'true' : undefined}
-                className={
-                  'ss-cap shrink-0 h-8 px-3 rounded-md text-sm border '
-                  + (s.id === section
-                    ? 'bg-accent border-accent text-[#1a0d05]'
-                    : 'border-line text-muted hover:text-ink')
-                }
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
+        {/* Phones: the sections as a row of keys */}
+        <div
+          role="group"
+          aria-label="Settings sections"
+          className="sm:hidden ss-scroll flex gap-1.5 overflow-x-auto pb-1"
+        >
+          {SECTIONS.map(s => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setSection(s.id)}
+              aria-current={s.id === section ? 'true' : undefined}
+              className={
+                'ss-cap shrink-0 h-8 px-3 rounded-md text-sm border '
+                + (s.id === section
+                  ? 'bg-accent border-accent text-[#1a0d05]'
+                  : 'border-line text-muted hover:text-ink')
+              }
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
 
         <div className="flex-1 min-h-0 flex gap-4">
@@ -289,43 +208,22 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             aria-label="Settings sections"
             className="ss-scroll hidden sm:block w-36 shrink-0 overflow-y-auto"
           >
-            <ul className="flex flex-col gap-1">
-              {GROUPS.map(g => (
-                <li key={g.id}>
+            <ul className="flex flex-col gap-0.5">
+              {SECTIONS.map(s => (
+                <li key={s.id}>
                   <button
                     type="button"
-                    aria-expanded={expanded[g.id]}
-                    onClick={() => setExpanded(
-                      x => ({ ...x, [g.id]: !x[g.id] })
-                    )}
-                    className="ss-cap w-full text-left text-sm px-1.5 py-1 rounded-md text-ink hover:bg-well"
+                    onClick={() => setSection(s.id)}
+                    aria-current={s.id === section ? 'true' : undefined}
+                    className={
+                      'w-full text-left text-sm px-2.5 py-1 rounded-md border '
+                      + (s.id === section
+                        ? 'bg-accent border-accent text-[#1a0d05] font-medium'
+                        : 'border-transparent text-muted hover:text-ink hover:bg-well')
+                    }
                   >
-                    <span aria-hidden="true" className="inline-block w-4 text-muted">
-                      {expanded[g.id] ? '▾' : '▸'}
-                    </span>
-                    {g.label}
+                    {s.label}
                   </button>
-                  {expanded[g.id] && (
-                    <ul className="flex flex-col gap-0.5 mt-0.5">
-                      {g.sections.map(s => (
-                        <li key={s.id}>
-                          <button
-                            type="button"
-                            onClick={() => setSection(s.id)}
-                            aria-current={s.id === section ? 'true' : undefined}
-                            className={
-                              'w-full text-left text-sm pl-6 pr-2 py-1 rounded-md border '
-                              + (s.id === section
-                                ? 'bg-accent border-accent text-[#1a0d05] font-medium'
-                                : 'border-transparent text-muted hover:text-ink hover:bg-well')
-                            }
-                          >
-                            {s.label}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </li>
               ))}
             </ul>
@@ -337,62 +235,30 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             className="ss-panel rounded-lg flex-1 min-w-0 flex flex-col"
           >
             <h3 id={headingId} className="ss-label px-4 pt-4 pb-2 shrink-0">
-              {group.label} › {sectionLabel(section)}
+              {sectionLabel}
             </h3>
             <div className="ss-scroll flex-1 min-h-0 overflow-y-auto px-4 pb-4">
             {section === 'interface' && (
-              <Field
-                label="Show tooltips"
-                onReset={() => stage('interface', INTERFACE_DEFAULTS)}
-              >
-                {labelId => (
-                  <input
-                    type="checkbox"
-                    aria-labelledby={labelId}
-                    checked={draft.interface.showTooltips}
-                    onChange={e => stage(
-                      'interface', { showTooltips: e.target.checked }
-                    )}
-                    className={CHECKBOX_CLASS}
-                  />
-                )}
-              </Field>
-            )}
-            {section === 'grid' && (
-              <Field
-                label="Auto-minimize empty tracks"
-                onReset={() => stage('grid', GRID_DEFAULTS)}
-              >
-                {labelId => (
-                  <input
-                    type="checkbox"
-                    aria-labelledby={labelId}
-                    checked={draft.grid.autoMinimize}
-                    onChange={e => stage(
-                      'grid', { autoMinimize: e.target.checked }
-                    )}
-                    className={CHECKBOX_CLASS}
-                  />
-                )}
-              </Field>
-            )}
-            {section === 'patterns' && (
-              <Field
-                label="Click beside the pattern chooser to close it"
-                onReset={() => stage('patterns', PATTERNS_DEFAULTS)}
-              >
-                {labelId => (
-                  <input
-                    type="checkbox"
-                    aria-labelledby={labelId}
-                    checked={draft.patterns.chooserClickAway}
-                    onChange={e => stage(
-                      'patterns', { chooserClickAway: e.target.checked }
-                    )}
-                    className={CHECKBOX_CLASS}
-                  />
-                )}
-              </Field>
+              <>
+                <InterfaceToggle
+                  label="Show tooltips"
+                  field="showTooltips"
+                  draft={draft.interface}
+                  stage={partial => stage('interface', partial)}
+                />
+                <InterfaceToggle
+                  label="Auto-minimize empty tracks"
+                  field="autoMinimize"
+                  draft={draft.interface}
+                  stage={partial => stage('interface', partial)}
+                />
+                <InterfaceToggle
+                  label="Click beside the pattern chooser to close it"
+                  field="chooserClickAway"
+                  draft={draft.interface}
+                  stage={partial => stage('interface', partial)}
+                />
+              </>
             )}
             {section === 'midi' && (
               <MidiFields
@@ -483,6 +349,35 @@ function Field({
       </Tooltip>
       <div className="shrink-0">{children(labelId)}</div>
     </div>
+  );
+}
+
+/* ── Interface ───────────────────────────────── */
+
+/** An on/off Interface field; its label resets it. */
+function InterfaceToggle({
+  label, field, draft, stage,
+}: {
+  label: string;
+  field: keyof InterfacePrefs;
+  draft: InterfacePrefs;
+  stage: (partial: Partial<InterfacePrefs>) => void;
+}) {
+  return (
+    <Field
+      label={label}
+      onReset={() => stage({ [field]: INTERFACE_DEFAULTS[field] })}
+    >
+      {labelId => (
+        <input
+          type="checkbox"
+          aria-labelledby={labelId}
+          checked={draft[field]}
+          onChange={e => stage({ [field]: e.target.checked })}
+          className={CHECKBOX_CLASS}
+        />
+      )}
+    </Field>
   );
 }
 

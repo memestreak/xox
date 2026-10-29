@@ -1,14 +1,14 @@
 "use client";
 
-import { gridPrefs } from '../preferences';
+import { interfacePrefs } from '../preferences';
 
 /**
  * Turn auto-minimize on or off and save it. The grid
  * menu's toggle is a shortcut to the same saved value
- * as Settings › Sequencer › Grid.
+ * as Settings › Interface.
  */
 export function setAutoMinimize(value: boolean) {
-  gridPrefs.update({ autoMinimize: value });
+  interfacePrefs.update({ autoMinimize: value });
 }
 
 /**
@@ -16,5 +16,5 @@ export function setAutoMinimize(value: boolean) {
  * preference for this device, like the master volume.
  */
 export function useAutoMinimizeSetting(): boolean {
-  return gridPrefs.useValue().autoMinimize;
+  return interfacePrefs.useValue().autoMinimize;
 }

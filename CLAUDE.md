@@ -97,7 +97,8 @@ per-device settings, never in `SequencerConfig` or share
 links. Follows the `settings-philosophy` skill: one
 localStorage key per Settings section,
 `xox.<page>.<section>` (`xox.general.interface`,
-`xox.sequencer.{grid,patterns,output,midi}`), a JSON
+`xox.sequencer.midi`, plus `xox.sequencer.output` for
+the fader), a JSON
 object checked field by field by the section's parser
 (bad or missing fields take defaults). Each section is a
 `createPreferenceSection` store (`get`/`set`/`update`/
@@ -157,9 +158,9 @@ save warns once in the console.
   minimizes. `StepGrid` passes the visible track order
   to `useDragPaint`/`useSelection` so drags skip
   minimized rows. "Auto-minimize empty tracks"
-  (`useAutoMinimizeSetting.ts`, `gridPrefs`, off by
-  default; toggled in the grid menu and Settings ›
-  Sequencer › Grid) also minimizes a track
+  (`useAutoMinimizeSetting.ts`, `interfacePrefs`, off
+  by default; toggled in the grid menu and Settings ›
+  Interface) also minimizes a track
   that loses its last step and every empty track on a
   pattern load (`loadSeq`, bumped by the setter that
   pattern loads use). A track that lost its last step
@@ -257,19 +258,18 @@ Supporting files:
   going down and back up within it keeps the steps
 - `SettingsButton.tsx` — gear key, the last header
   key (after `?`); mounts `SettingsModal` while open.
-  The dialog is REAPER-style: a tree (General ›
-  Interface; Sequencer › Grid, Patterns, MIDI)
-  and a pane headed `Group › Section`, one row per
-  field. It opens at Sequencer › Grid. Its size is
-  fixed (`h-[min(540px,…)]`); the tree and the pane
-  scroll inside it, so it never resizes. Below `sm` the
-  tree is a group `LcdSelect` plus a strip of section
-  keys. Changes are staged: OK saves and closes, Apply
-  saves (disabled until something differs), Cancel /
-  Esc / × discard. Double-click a field's label
-  (long-press on touch) stages its default; the
-  control itself never resets. The header `?` key opens
-  Help (the way in on phones)
+  The dialog is REAPER-style: a list of two sections
+  (Interface, MIDI; no groups, by choice) and a pane
+  headed with the section name, one row per field. It
+  opens at Interface. Its size is fixed
+  (`h-[min(540px,…)]`); the list and the pane scroll
+  inside it, so it never resizes. Below `sm` the list
+  is a strip of section keys. Changes are staged: OK
+  saves and closes, Apply saves (disabled until
+  something differs), Cancel / Esc / × discard.
+  Double-click a field's label (long-press on touch)
+  stages its default; the control itself never
+  resets. It has no Help key
 - `ShareLinkButton.tsx` — Copy share link key in its
   own Share cell after Swing (Swing has no % readout);
   its note says custom samples aren't included. Below
@@ -288,9 +288,7 @@ Supporting files:
   `buildKitZip`); `zipStore.ts` writes the stored zip
 - `HelpContext.tsx` / `HelpModal.tsx` — Help dialog
   (shortcuts and gestures), opened by the header
-  "?" key (hidden below `sm`), the Settings dialog's
-  `?` key,
-  or the `?` key. Its text lives in `helpContent.ts`:
+  "?" key (hidden below `sm`) or the `?` key. Its text lives in `helpContent.ts`:
   **update it whenever a shortcut or gesture changes**
 - `Tooltip.tsx` — hover tooltips (texts in
   `data/tooltips.json`). On hover a tooltip shifts
@@ -315,8 +313,8 @@ Supporting files:
   column (outside `data-chooser-area` in `Sequencer`)
   closes it like Esc and does nothing else (the step
   selection stays; `keyboardUtils.isChooserClickAway`).
-  Settings › Sequencer › Patterns turns that off
-  (`useChooserClickAwaySetting.ts`, `patternsPrefs`,
+  Settings › Interface turns that off
+  (`useChooserClickAwaySetting.ts`, `interfacePrefs`,
   on by default)
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `patternExport.ts` — Copy pattern (grid menu): the

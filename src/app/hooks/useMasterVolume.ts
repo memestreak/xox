@@ -38,10 +38,7 @@ function getSnapshot(): number {
   return outputPrefs.get().volume;
 }
 
-/**
- * Move the fader and save it. Settings › Sequencer ›
- * Output shows the same saved value.
- */
+/** Move the fader and save it. */
 function setPosition(next: number) {
   const position = clamp(next);
   if (position > 0) lastAudiblePosition = position;
@@ -93,7 +90,8 @@ export function resetMasterVolumeForTests() {
 /**
  * Master fader state. It is a listening setting for
  * this device, like the system volume, so it is a
- * preference (Settings › Sequencer › Output) rather
+ * preference (`xox.sequencer.output`, not shown in
+ * Settings) rather
  * than part of SequencerConfig: share links don't carry
  * it and Reset doesn't touch it (hence no reset()).
  */
