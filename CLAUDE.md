@@ -435,8 +435,11 @@ introduces race conditions.
   Orbitron). Shared classes: `ss-key` (raised button),
   `ss-lcd-select`/`ss-lcd-list` (LCD dropdown, see
   `LcdSelect.tsx`), `ss-label`, `ss-cap`,
-  `ss-panel`, `ss-menu`, `ss-led`. Use these instead
-  of raw `neutral-*`/`orange-*` colors
+  `ss-panel`, `ss-menu`, `ss-led`, `ss-scroll`. Use
+  these instead of raw `neutral-*`/`orange-*` colors.
+  Never show a browser-default scrollbar: every
+  scrolling element gets `ss-scroll` (or
+  `hide-scrollbar`)
 - Step keys are colored by group of four (808 style):
   `stepColors.ts` maps step index to group
 - TypeScript strict mode

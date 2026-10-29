@@ -269,7 +269,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
           <div
             role="group"
             aria-label={`${group.label} sections`}
-            className="flex gap-1.5 overflow-x-auto pb-1"
+            className="ss-scroll flex gap-1.5 overflow-x-auto pb-1"
           >
             {group.sections.map(s => (
               <button
@@ -294,7 +294,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
           {/* Desktop: the tree */}
           <nav
             aria-label="Settings sections"
-            className="hidden sm:block w-36 shrink-0 overflow-y-auto"
+            className="ss-scroll hidden sm:block w-36 shrink-0 overflow-y-auto"
           >
             <ul className="flex flex-col gap-1">
               {GROUPS.map(g => (
@@ -346,7 +346,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             <h3 id={headingId} className="ss-label px-4 pt-4 pb-2 shrink-0">
               {group.label} › {sectionLabel(section)}
             </h3>
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+            <div className="ss-scroll flex-1 min-h-0 overflow-y-auto px-4 pb-4">
             {section === 'interface' && (
               <Field
                 label="Show tooltips"
