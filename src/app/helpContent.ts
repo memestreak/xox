@@ -162,7 +162,7 @@ const MOUSE_TAB: HelpTab = {
         { gesture: 'click', text: 'Preview the sound' },
         {
           gesture: 'right-click',
-          text: 'Track menu: free-run, preview, load or reset a sample, clear',
+          text: 'Track menu: free-run, load or reset a sample, clear the pattern',
           note: '(also ⌘-click)',
         },
         { keys: ['shift'], gesture: 'click', text: 'Clear the track' },

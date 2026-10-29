@@ -144,86 +144,92 @@ function TrackNameButtonInner({
   );
 
   return (
-    <Tooltip tooltipKey={`track-${trackId}`}>
-      <div className="relative">
-        <button
-          ref={size === 'lg' ? nameRef : undefined}
-          aria-haspopup={
-            size === 'lg' ? 'menu' : undefined
-          }
-          aria-expanded={
-            size === 'lg' ? menuOpen : undefined
-          }
-          onMouseDown={(e: React.MouseEvent) => {
-            if (e.button !== 0) return;
-            if (e.shiftKey) {
-              onClearTrack();
-              return;
+    <div className="relative">
+      {/* The name's tooltip wraps only the name, not the
+          menu: hovering a tooltip host shows every
+          tooltip inside it. */}
+      <Tooltip tooltipKey={`track-${trackId}`}>
+        <div className="relative">
+          <button
+            ref={size === 'lg' ? nameRef : undefined}
+            aria-haspopup={
+              size === 'lg' ? 'menu' : undefined
             }
-            if (e.metaKey || e.ctrlKey) {
-              setMenuOpen(v => !v);
-              return;
+            aria-expanded={
+              size === 'lg' ? menuOpen : undefined
             }
-            onPlayPreview();
-          }}
-          onTouchStart={() => onPlayPreview()}
-          onContextMenu={(e: React.MouseEvent) => {
-            e.preventDefault();
-            setMenuOpen(v => !v);
-          }}
-          className={
-            (size === 'sm'
-              ? 'text-xl'
-              : 'w-14 truncate text-[22px] text-left')
-            + ' font-display font-bold uppercase'
-            + ' tracking-[0.08em] leading-none'
-            + ' rounded px-1 py-1 transition-colors'
-            + ' focus-visible:outline-2'
-            + ' focus-visible:outline-accent'
-            + (isTriggered
-              ? ' text-lcd bg-accent/20'
-              : ' text-ink hover:bg-raised')
-          }
-          aria-label={trackName}
-        >
-          {trackName}
-        </button>
-        {size === 'lg' && customSampleName !== undefined && (
-          // Lays an invisible copy of the name over the
-          // button so the dot lands just after the text.
-          // The dot is its own button (it toggles the
-          // sample); the rest of the overlay lets clicks
-          // through to the name.
-          <span className="absolute inset-0 px-1 py-1 pointer-events-none font-display font-bold uppercase tracking-[0.08em] leading-none text-[22px] whitespace-nowrap">
-            <span className="relative">
-              <span aria-hidden="true" className="invisible">
-                {trackName}
-              </span>
-              <CustomSampleDot
-                fileName={customSampleName}
-                isOn={isCustomSampleOn}
-                onToggle={onToggleSample}
-                className="absolute left-full top-0 pointer-events-auto"
-              />
-            </span>
-          </span>
-        )}
-        {size === 'lg' && (
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={SAMPLE_ACCEPT}
-            aria-label={`Load sample for ${trackName}`}
-            tabIndex={-1}
-            className="hidden"
-            onChange={e => {
-              const file = e.target.files?.[0];
-              // Clear so the same file can be picked again.
-              e.target.value = '';
-              if (file) onLoadSample?.(file);
+            onMouseDown={(e: React.MouseEvent) => {
+              if (e.button !== 0) return;
+              if (e.shiftKey) {
+                onClearTrack();
+                return;
+              }
+              if (e.metaKey || e.ctrlKey) {
+                setMenuOpen(v => !v);
+                return;
+              }
+              onPlayPreview();
             }}
-          />
-        )}
+            onTouchStart={() => onPlayPreview()}
+            onContextMenu={(e: React.MouseEvent) => {
+              e.preventDefault();
+              setMenuOpen(v => !v);
+            }}
+            className={
+              (size === 'sm'
+                ? 'text-xl'
+                : 'w-14 truncate text-[22px] text-left')
+              + ' font-display font-bold uppercase'
+              + ' tracking-[0.08em] leading-none'
+              + ' rounded px-1 py-1 transition-colors'
+              + ' focus-visible:outline-2'
+              + ' focus-visible:outline-accent'
+              + (isTriggered
+                ? ' text-lcd bg-accent/20'
+                : ' text-ink hover:bg-raised')
+            }
+            aria-label={trackName}
+          >
+            {trackName}
+          </button>
+          {size === 'lg' && customSampleName !== undefined && (
+            // Lays an invisible copy of the name over the
+            // button so the dot lands just after the text.
+            // The dot is its own button (it toggles the
+            // sample); the rest of the overlay lets clicks
+            // through to the name.
+            <span className="absolute inset-0 px-1 py-1 pointer-events-none font-display font-bold uppercase tracking-[0.08em] leading-none text-[22px] whitespace-nowrap">
+              <span className="relative">
+                <span aria-hidden="true" className="invisible">
+                  {trackName}
+                </span>
+                <CustomSampleDot
+                  fileName={customSampleName}
+                  isOn={isCustomSampleOn}
+                  onToggle={onToggleSample}
+                  className="absolute left-full top-0 pointer-events-auto"
+                />
+              </span>
+            </span>
+          )}
+        </div>
+      </Tooltip>
+      {size === 'lg' && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={SAMPLE_ACCEPT}
+          aria-label={`Load sample for ${trackName}`}
+          tabIndex={-1}
+          className="hidden"
+          onChange={e => {
+            const file = e.target.files?.[0];
+            // Clear so the same file can be picked again.
+            e.target.value = '';
+            if (file) onLoadSample?.(file);
+          }}
+        />
+      )}
       {menuOpen && size === 'lg' && (
         <div
           ref={menuRef}
@@ -231,45 +237,37 @@ function TrackNameButtonInner({
           aria-label={`${trackName} options`}
           tabIndex={-1}
           onKeyDown={handleMenuKeyDown}
-          className="ss-menu absolute left-0 top-full mt-1 w-56 p-1.5 z-30 flex flex-col"
+          className="ss-menu absolute left-0 top-full mt-1 w-64 p-1.5 z-30 flex flex-col"
         >
-          <button
-            role="menuitem"
-            onClick={() => {
-              onToggleFreeRun();
-              closeMenu();
-            }}
-            className={MENU_ITEM}
-          >
-            <span>Free-run</span>
-            <span
-              aria-hidden="true"
-              className={
-                'relative w-[30px] h-4 rounded-full'
-                + ' transition-colors '
-                + (isFreeRun ? 'bg-accent' : 'bg-edge')
-              }
+          <Tooltip tooltipKey="freeRun">
+            <button
+              role="menuitem"
+              aria-label="Free-run"
+              onClick={() => {
+                onToggleFreeRun();
+                closeMenu();
+              }}
+              className={MENU_ITEM}
             >
+              <span>Free-run</span>
               <span
+                aria-hidden="true"
                 className={
-                  'absolute top-0.5 w-3 h-3 rounded-full'
-                  + ' bg-ink transition-[left] '
-                  + (isFreeRun ? 'left-4' : 'left-0.5')
+                  'relative w-[30px] h-4 rounded-full'
+                  + ' transition-colors '
+                  + (isFreeRun ? 'bg-accent' : 'bg-edge')
                 }
-              />
-            </span>
-          </button>
-          <button
-            role="menuitem"
-            onClick={() => {
-              onPlayPreview();
-              closeMenu();
-            }}
-            className={MENU_ITEM}
-          >
-            <span>Preview sound</span>
-            <span className={MENU_HINT}>Click</span>
-          </button>
+              >
+                <span
+                  className={
+                    'absolute top-0.5 w-3 h-3 rounded-full'
+                    + ' bg-ink transition-[left] '
+                    + (isFreeRun ? 'left-4' : 'left-0.5')
+                  }
+                />
+              </span>
+            </button>
+          </Tooltip>
           <button
             role="menuitem"
             onClick={() => {
@@ -303,13 +301,12 @@ function TrackNameButtonInner({
             }}
             className={MENU_ITEM_BASE + ' text-[#ff8a62]'}
           >
-            <span>Clear track</span>
+            <span>Clear track pattern</span>
             <span className={MENU_HINT}>Shift-click</span>
           </button>
         </div>
       )}
-      </div>
-    </Tooltip>
+    </div>
   );
 }
 
