@@ -234,9 +234,10 @@ Supporting files:
   `SettingsModal` directly (no menu). The dialog's
   header has a `?` key that opens Help (the way in on
   phones)
-- `ShareLinkButton.tsx` — Copy share link key beside
-  the Swing knob (no % readout); its note says custom
-  samples aren't included
+- `ShareLinkButton.tsx` — Copy share link key in its
+  own Share cell after Swing (Swing has no % readout);
+  its note says custom samples aren't included. Below
+  `lg` the strip is a 12-column grid
 - `KitSelector.tsx` — Kit dropdown; right-click (or the
   context-menu key) opens the kit menu: Export kit...
 - `ContextMenu.tsx` — floating menu shell (position,
