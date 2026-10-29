@@ -62,6 +62,17 @@ describe('KitSelector', () => {
     ).toHaveFocus();
   });
 
+  it('hides the kit tooltip while the kit menu is open', async () => {
+    const user = userEvent.setup();
+    renderKit();
+    const tip = () => screen.getByRole('tooltip').className;
+    expect(tip()).toContain('group-hover/tooltip:opacity-100');
+    fireEvent.contextMenu(screen.getByRole('combobox'));
+    expect(tip()).not.toContain('group-hover');
+    await user.keyboard('{Escape}');
+    expect(tip()).toContain('group-hover/tooltip:opacity-100');
+  });
+
   it('Escape closes the kit menu', async () => {
     const user = userEvent.setup();
     renderKit();

@@ -54,6 +54,40 @@ describe('Tooltip', () => {
     ).toHaveTextContent('Start / stop playback');
   });
 
+  it('shows on hover unless hidden', () => {
+    const { rerender } = renderWithProvider(
+      <Tooltip tooltipKey="play">
+        <button>Play</button>
+      </Tooltip>
+    );
+    expect(screen.getByRole('tooltip').className)
+      .toContain('group-hover/tooltip:opacity-100');
+    rerender(
+      <Tooltip tooltipKey="play" hidden>
+        <button>Play</button>
+      </Tooltip>
+    );
+    const tip = screen.getByRole('tooltip');
+    expect(tip.className).not.toContain('group-hover');
+    expect(tip.className).toContain('opacity-0');
+  });
+
+  it('hides while its control is expanded', () => {
+    renderWithProvider(
+      <Tooltip tooltipKey="play">
+        <button>Play</button>
+      </Tooltip>
+    );
+    const tip = screen.getByRole('tooltip').className;
+    // The host itself, or a control inside it.
+    expect(tip).toContain(
+      'group-aria-expanded/tooltip:opacity-0!'
+    );
+    expect(tip).toContain(
+      'group-has-[[aria-expanded=true]]/tooltip:opacity-0!'
+    );
+  });
+
   it('renders no tooltip when key is absent', () => {
     renderWithProvider(
       <Tooltip tooltipKey="nonexistent">
