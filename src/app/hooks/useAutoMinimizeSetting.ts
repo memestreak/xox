@@ -1,22 +1,20 @@
 "use client";
 
-import { createDeviceSetting } from './createDeviceSetting';
+import { gridPrefs } from '../preferences';
 
-/** localStorage key for the auto-minimize setting. */
-export const AUTO_MINIMIZE_STORAGE_KEY = 'xox-auto-minimize';
-
-const setting = createDeviceSetting(
-  AUTO_MINIMIZE_STORAGE_KEY, false
-);
-
-/** Turn auto-minimize on or off and remember it. */
-export const setAutoMinimize = setting.set;
-
-/** Test helper: forget the in-memory value. */
-export const resetAutoMinimizeForTests = setting.resetForTests;
+/**
+ * Turn auto-minimize on or off and save it. The grid
+ * menu's toggle is a shortcut to the same saved value
+ * as Settings › Sequencer › Grid.
+ */
+export function setAutoMinimize(value: boolean) {
+  gridPrefs.update({ autoMinimize: value });
+}
 
 /**
  * "Auto-minimize empty tracks" (off by default). A view
  * preference for this device, like the master volume.
  */
-export const useAutoMinimizeSetting = setting.useValue;
+export function useAutoMinimizeSetting(): boolean {
+  return gridPrefs.useValue().autoMinimize;
+}

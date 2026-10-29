@@ -12,8 +12,9 @@ import kitsData from '../app/data/kits.json';
 import { TestWrapper } from './helpers/sequencer-wrapper';
 import { encodeRaw } from './helpers/encodeRaw';
 import {
-  resetAutoMinimizeForTests, setAutoMinimize,
+  setAutoMinimize,
 } from '../app/hooks/useAutoMinimizeSetting';
+import { gridPrefs } from '../app/preferences';
 
 // Mock the AudioEngine module
 vi.mock('../app/AudioEngine', () => ({
@@ -1709,7 +1710,7 @@ describe('minimized tracks', () => {
 describe('auto-minimize empty tracks', () => {
   beforeEach(() => {
     window.location.hash = '';
-    resetAutoMinimizeForTests();
+    gridPrefs.resetForTests();
   });
 
   /** A preset with some empty tracks, and its empty ids. */

@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
 import { audioEngine } from '../AudioEngine';
 import {
   GAIN_EXPONENT,
   MASTER_VOLUME_DEFAULT,
 } from '../constants';
-
-/** localStorage key for the master fader position. */
-export const MASTER_VOLUME_STORAGE_KEY = 'xox-master-volume';
+import { outputPrefs } from '../preferences';
 
 /**
  * Fader position (0-1) to linear gain. Uses the same
@@ -33,57 +31,21 @@ function clamp(position: number): number {
   return Math.max(0, Math.min(1, position));
 }
 
-function loadPosition(): number | null {
-  try {
-    const raw = window.localStorage.getItem(
-      MASTER_VOLUME_STORAGE_KEY
-    );
-    if (raw === null) return null;
-    const value = Number(raw);
-    return Number.isFinite(value) ? clamp(value) : null;
-  } catch {
-    return null;
-  }
-}
-
-function savePosition(position: number) {
-  try {
-    window.localStorage.setItem(
-      MASTER_VOLUME_STORAGE_KEY, String(position)
-    );
-  } catch {
-    // localStorage unavailable
-  }
-}
-
-// Last value set this session. Used when localStorage
-// is unavailable (some private modes), so the fader
-// still works there; it just isn't remembered.
-let sessionPosition = MASTER_VOLUME_DEFAULT;
 // Level to return to when unmuting.
 let lastAudiblePosition = MASTER_VOLUME_DEFAULT;
-const listeners = new Set<() => void>();
 
 function getSnapshot(): number {
-  return loadPosition() ?? sessionPosition;
+  return outputPrefs.get().volume;
 }
 
-function getServerSnapshot(): number {
-  return MASTER_VOLUME_DEFAULT;
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
+/**
+ * Move the fader and save it. Settings › Sequencer ›
+ * Output shows the same saved value.
+ */
 function setPosition(next: number) {
-  sessionPosition = clamp(next);
-  if (sessionPosition > 0) lastAudiblePosition = sessionPosition;
-  savePosition(sessionPosition);
-  listeners.forEach(listener => listener());
+  const position = clamp(next);
+  if (position > 0) lastAudiblePosition = position;
+  outputPrefs.update({ volume: position });
 }
 
 // Levels captured when a click on the widget began,
@@ -123,25 +85,23 @@ function toggleMute() {
 
 /** Test helper: forget the in-memory value. */
 export function resetMasterVolumeForTests() {
-  sessionPosition = MASTER_VOLUME_DEFAULT;
+  outputPrefs.resetForTests();
   lastAudiblePosition = MASTER_VOLUME_DEFAULT;
   gestureStart = null;
 }
 
 /**
  * Master fader state. It is a listening setting for
- * this device, like the system volume, so it lives in
- * its own localStorage entry rather than in
- * SequencerConfig: share links don't carry it and
- * Reset doesn't touch it (hence no reset()).
+ * this device, like the system volume, so it is a
+ * preference (Settings › Sequencer › Output) rather
+ * than part of SequencerConfig: share links don't carry
+ * it and Reset doesn't touch it (hence no reset()).
  */
 export function useMasterVolume() {
   // The server snapshot keeps the static HTML and the
   // first client render in agreement; the saved value
   // takes over right after hydration.
-  const position = useSyncExternalStore(
-    subscribe, getSnapshot, getServerSnapshot
-  );
+  const { volume: position } = outputPrefs.useValue();
 
   useEffect(() => {
     audioEngine.setOutputVolume(positionToGain(position));

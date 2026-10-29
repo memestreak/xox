@@ -21,7 +21,7 @@ vi.mock('../app/MidiEngine', () => ({
     }),
     getOutputs: vi.fn().mockReturnValue([]),
     setOnDeviceChange: vi.fn(),
-    updateConfig: vi.fn(),
+    applyConfig: vi.fn(),
     isAvailable: vi.fn().mockReturnValue(false),
   },
 }));
@@ -61,22 +61,36 @@ describe('MidiContext', () => {
     expect(result.current!.outputs).toEqual([]);
   });
 
-  it('updateConfig calls midiEngine.updateConfig', async () => {
+  it('applyConfig hands the whole config to the engine', () => {
     const { result } = renderHook(() => useMidi(), {
       wrapper: ({ children }) => (
         <MidiProvider>{children}</MidiProvider>
       ),
     });
+    const next = {
+      ...result.current!.config, channel: 5,
+    };
 
-    await act(async () => {
-      await result.current!.updateConfig({
-        channel: 5,
-      });
+    act(() => {
+      result.current!.applyConfig(next);
     });
 
-    expect(
-      mockedEngine.updateConfig
-    ).toHaveBeenCalledWith({ channel: 5 });
+    expect(mockedEngine.applyConfig).toHaveBeenCalledWith(next);
     expect(mockedEngine.getConfig).toHaveBeenCalled();
+  });
+
+  it('requestAccess asks the engine for MIDI access', async () => {
+    const { result } = renderHook(() => useMidi(), {
+      wrapper: ({ children }) => (
+        <MidiProvider>{children}</MidiProvider>
+      ),
+    });
+    let ok = true;
+    await act(async () => {
+      ok = await result.current!.requestAccess();
+    });
+    expect(ok).toBe(false);
+    expect(mockedEngine.init).toHaveBeenCalled();
+    expect(result.current!.initialized).toBe(true);
   });
 });

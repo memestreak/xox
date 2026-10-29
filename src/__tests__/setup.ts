@@ -1,8 +1,7 @@
 import './helpers/compression';
 import '@testing-library/jest-dom/vitest';
 import { beforeEach } from 'vitest';
-import { resetAutoMinimizeForTests } from '../app/hooks/useAutoMinimizeSetting';
-import { resetChooserClickAwayForTests } from '../app/hooks/useChooserClickAwaySetting';
+import { resetPreferencesForTests } from '../app/preferences';
 
 // The app autosaves to localStorage; start every test
 // from a clean slate so state can't leak between tests.
@@ -12,8 +11,6 @@ beforeEach(() => {
   } catch {
     // non-DOM environment
   }
-  // Device settings also remember the last value in
-  // memory, for when localStorage is unavailable.
-  resetAutoMinimizeForTests();
-  resetChooserClickAwayForTests();
+  // Preferences also keep the saved value in memory.
+  resetPreferencesForTests();
 });

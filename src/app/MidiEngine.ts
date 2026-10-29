@@ -1,11 +1,12 @@
 "use client";
 
-import type {
-  MidiConfig, NoteLength, TrackId,
-} from './types';
-import { defaultMidiConfig } from './types';
+import type { MidiConfig, TrackId } from './types';
+import { validateMidiConfig } from './midiConfig';
+import {
+  MIDI_PREFS_KEY, readSection, writeSection,
+} from './preferences';
 
-const STORAGE_KEY = 'xox-midi';
+export { validateMidiConfig };
 
 export class MidiEngine {
   private access: MIDIAccess | null = null;
@@ -20,21 +21,13 @@ export class MidiEngine {
     this.config = this.loadConfig();
   }
 
+  // Saved as the Settings section Sequencer › MIDI.
   private loadConfig(): MidiConfig {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return validateMidiConfig(JSON.parse(raw));
-    } catch { /* ignore */ }
-    return defaultMidiConfig();
+    return readSection(MIDI_PREFS_KEY, validateMidiConfig);
   }
 
   private saveConfig(): void {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(this.config)
-      );
-    } catch { /* ignore */ }
+    writeSection(MIDI_PREFS_KEY, this.config);
   }
 
   async init(): Promise<boolean> {
@@ -141,6 +134,20 @@ export class MidiEngine {
     this.saveConfig();
   }
 
+  /**
+   * Replace the whole config, as Settings' OK and Apply
+   * do, and connect the chosen device if it changed.
+   */
+  applyConfig(next: MidiConfig): void {
+    const deviceChanged = next.deviceId !== this.config.deviceId;
+    this.updateConfig({ ...next });
+    if (deviceChanged && this.access) {
+      this.output = next.deviceId
+        ? this.access.outputs.get(next.deviceId) ?? null
+        : null;
+    }
+  }
+
   setBpm(bpm: number): void {
     this.bpm = bpm;
   }
@@ -203,73 +210,6 @@ export class MidiEngine {
     const ch = this.config.channel - 1;
     this.output.send([0xB0 | ch, 123, 0]);
   }
-}
-
-function isInt(
-  v: unknown, min: number, max: number
-): v is number {
-  return Number.isInteger(v)
-    && (v as number) >= min && (v as number) <= max;
-}
-
-function validateNoteLength(
-  raw: unknown, fallback: NoteLength
-): NoteLength {
-  if (!raw || typeof raw !== 'object') return fallback;
-  const nl = raw as Record<string, unknown>;
-  if (
-    nl.type === 'fixed'
-    && typeof nl.ms === 'number'
-    && isFinite(nl.ms) && nl.ms > 0
-  ) {
-    return { type: 'fixed', ms: nl.ms };
-  }
-  if (
-    nl.type === 'percent'
-    && typeof nl.value === 'number'
-    && isFinite(nl.value) && nl.value > 0
-  ) {
-    return { type: 'percent', value: nl.value };
-  }
-  return fallback;
-}
-
-/**
- * Sanitize a MIDI config read from localStorage. Each
- * field falls back to its default when missing or
- * invalid, so a config saved by an older version can't
- * break note sending.
- */
-export function validateMidiConfig(raw: unknown): MidiConfig {
-  const defaults = defaultMidiConfig();
-  if (!raw || typeof raw !== 'object') return defaults;
-  const obj = raw as Record<string, unknown>;
-
-  const tracks = { ...defaults.tracks };
-  if (obj.tracks && typeof obj.tracks === 'object') {
-    const rawTracks = obj.tracks as Record<string, unknown>;
-    for (const id of Object.keys(tracks) as
-      (keyof MidiConfig['tracks'])[]) {
-      const t = rawTracks[id] as
-        { noteNumber?: unknown } | undefined;
-      if (t && isInt(t.noteNumber, 0, 127)) {
-        tracks[id] = { noteNumber: t.noteNumber };
-      }
-    }
-  }
-
-  return {
-    enabled: typeof obj.enabled === 'boolean'
-      ? obj.enabled : defaults.enabled,
-    deviceId: typeof obj.deviceId === 'string'
-      ? obj.deviceId : defaults.deviceId,
-    channel: isInt(obj.channel, 1, 16)
-      ? obj.channel : defaults.channel,
-    noteLength: validateNoteLength(
-      obj.noteLength, defaults.noteLength
-    ),
-    tracks,
-  };
 }
 
 export const midiEngine = new MidiEngine();

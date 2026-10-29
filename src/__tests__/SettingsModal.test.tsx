@@ -1,10 +1,11 @@
-import { render, screen, fireEvent, waitFor }
+import { render, screen, fireEvent, act }
   from '@testing-library/react';
 import {
   describe, expect, it, vi, beforeEach,
 } from 'vitest';
 import SettingsModal from '../app/SettingsModal';
-import { TooltipProvider } from '../app/TooltipContext';
+import { gridPrefs, outputPrefs } from '../app/preferences';
+import { midiEngine } from '../app/MidiEngine';
 import { MidiProvider } from '../app/MidiContext';
 
 vi.mock('../app/MidiEngine', () => ({
@@ -31,7 +32,7 @@ vi.mock('../app/MidiEngine', () => ({
     }),
     getOutputs: vi.fn().mockReturnValue([]),
     setOnDeviceChange: vi.fn(),
-    updateConfig: vi.fn(),
+    applyConfig: vi.fn(),
     isAvailable: vi.fn().mockReturnValue(false),
   },
 }));
@@ -47,101 +48,148 @@ beforeEach(() => {
     }) as never;
 });
 
-function renderModal(open = true) {
+function renderModal() {
   const onClose = vi.fn();
   const result = render(
-    <TooltipProvider>
-      <MidiProvider>
-        <SettingsModal
-          isOpen={open}
-          onClose={onClose}
-        />
-      </MidiProvider>
-    </TooltipProvider>
+    <MidiProvider>
+      <SettingsModal onClose={onClose} />
+    </MidiProvider>
   );
   return { ...result, onClose };
 }
 
+function saved(key: string): unknown {
+  const text = window.localStorage.getItem(key);
+  return text === null ? null : JSON.parse(text);
+}
+
+const button = (name: string) =>
+  screen.getByRole('button', { name });
+
 describe('SettingsModal', () => {
-  it('renders dialog element', () => {
+  it('opens at Sequencer › Grid, General collapsed', () => {
     renderModal();
-    const dialog = document.querySelector('dialog');
-    expect(dialog).toBeInTheDocument();
-  });
-
-  it('renders Settings heading', () => {
-    renderModal();
-    expect(screen.getByText('Settings'))
+    expect(screen.getByRole('heading', { name: 'Settings' }))
       .toBeInTheDocument();
-  });
-
-  it('renders Options tab label', () => {
-    renderModal();
-    expect(screen.getByText('Options'))
+    expect(screen.getByRole('heading', { name: 'Sequencer › Grid' }))
       .toBeInTheDocument();
+    expect(button('General')).toHaveAttribute('aria-expanded', 'false');
+    expect(button('Sequencer')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('Auto-minimize empty tracks'))
+      .not.toBeChecked();
   });
 
-  it('has tooltips checkbox', () => {
+  it('opens a group in the tree and shows its section', () => {
     renderModal();
-    const checkbox = screen.getByLabelText(
-      'Show tooltips'
-    );
-    expect(checkbox).toBeInTheDocument();
-    expect(checkbox).toBeChecked();
+    fireEvent.click(button('General'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Interface' })[0]);
+    expect(screen.getByRole('heading', { name: 'General › Interface' }))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText('Show tooltips')).toBeChecked();
   });
 
-  it('toggling tooltips checkbox works', () => {
+  it('stages changes until Apply, which then disables', () => {
     renderModal();
-    const checkbox = screen.getByLabelText(
-      'Show tooltips'
-    );
-    fireEvent.click(checkbox);
-    expect(checkbox).not.toBeChecked();
+    expect(button('Apply')).toBeDisabled();
+    fireEvent.click(screen.getByLabelText('Auto-minimize empty tracks'));
+    expect(screen.getByLabelText('Auto-minimize empty tracks')).toBeChecked();
+    expect(saved('xox.sequencer.grid')).toBeNull();
+    expect(gridPrefs.get().autoMinimize).toBe(false);
+    expect(button('Apply')).toBeEnabled();
+
+    fireEvent.click(button('Apply'));
+    expect(saved('xox.sequencer.grid')).toEqual({ autoMinimize: true });
+    expect(button('Apply')).toBeDisabled();
   });
 
-  it('has an auto-minimize checkbox, off by default', () => {
+  it('Apply goes back to disabled when a change is undone', () => {
     renderModal();
-    const checkbox = screen.getByLabelText(
-      'Auto-minimize empty tracks'
-    );
-    expect(checkbox).not.toBeChecked();
-    fireEvent.click(checkbox);
-    expect(checkbox).toBeChecked();
-    expect(
-      window.localStorage.getItem('xox-auto-minimize')
-    ).toBe('true');
-    fireEvent.click(checkbox);
-    expect(checkbox).not.toBeChecked();
+    const box = screen.getByLabelText('Auto-minimize empty tracks');
+    fireEvent.click(box);
+    fireEvent.click(box);
+    expect(button('Apply')).toBeDisabled();
   });
 
-  it('has a click-beside checkbox, on by default', () => {
-    renderModal();
-    const checkbox = screen.getByLabelText(
-      'Click beside the pattern chooser to close it'
-    );
-    expect(checkbox).toBeChecked();
-    fireEvent.click(checkbox);
-    expect(checkbox).not.toBeChecked();
-    expect(
-      window.localStorage.getItem('xox-chooser-click-away')
-    ).toBe('false');
-  });
-
-  it('switches to MIDI tab', async () => {
-    renderModal();
-    const midiTab = screen.getByText('MIDI');
-    fireEvent.click(midiTab);
-    await waitFor(() => {
-      expect(screen.getByLabelText(
-        'Enable MIDI output'
-      )).toBeInTheDocument();
-    });
-  });
-
-  it('close button calls onClose', () => {
+  it('OK saves and closes', () => {
     const { onClose } = renderModal();
-    const closeBtn = screen.getByLabelText('Close');
-    fireEvent.click(closeBtn);
+    fireEvent.click(screen.getByLabelText('Auto-minimize empty tracks'));
+    fireEvent.click(button('OK'));
+    expect(gridPrefs.get().autoMinimize).toBe(true);
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Cancel', () => fireEvent.click(button('Cancel'))],
+    ['the close button', () => fireEvent.click(button('Close'))],
+    ['Esc', () => fireEvent.keyDown(
+      document.querySelector('dialog')!, { key: 'Escape' }
+    )],
+  ])('%s discards staged changes', (_name, close) => {
+    const { onClose } = renderModal();
+    fireEvent.click(screen.getByLabelText('Auto-minimize empty tracks'));
+    close();
+    expect(onClose).toHaveBeenCalled();
+    expect(saved('xox.sequencer.grid')).toBeNull();
+    expect(gridPrefs.get().autoMinimize).toBe(false);
+  });
+
+  it('double-clicking a label stages its default', () => {
+    gridPrefs.set({ autoMinimize: true });
+    renderModal();
+    const box = screen.getByLabelText('Auto-minimize empty tracks');
+    expect(box).toBeChecked();
+    fireEvent.doubleClick(screen.getByText('Auto-minimize empty tracks'));
+    expect(box).not.toBeChecked();
+    expect(gridPrefs.get().autoMinimize).toBe(true);
+    fireEvent.click(button('Apply'));
+    expect(gridPrefs.get().autoMinimize).toBe(false);
+  });
+
+  it('double-clicking the control does not reset it', () => {
+    gridPrefs.set({ autoMinimize: true });
+    renderModal();
+    const box = screen.getByLabelText('Auto-minimize empty tracks');
+    fireEvent.doubleClick(box);
+    expect(box).toBeChecked();
+  });
+
+  it('a label tells how to reset', () => {
+    renderModal();
+    expect(screen.getAllByText('Double-click to reset').length)
+      .toBeGreaterThan(0);
+  });
+
+  it('lists the master volume under Output', () => {
+    outputPrefs.set({ volume: 0.5 });
+    renderModal();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Output' })[0]);
+    const fader = screen.getByLabelText('Volume');
+    expect(fader).toHaveValue('0.5');
+    fireEvent.change(fader, { target: { value: '0.25' } });
+    expect(outputPrefs.get().volume).toBe(0.5);
+    fireEvent.click(button('Apply'));
+    expect(saved('xox.sequencer.output')).toEqual({ volume: 0.25 });
+  });
+
+  it('MIDI: turning output on asks for access, and stays off without it', async () => {
+    renderModal();
+    fireEvent.click(screen.getAllByRole('button', { name: 'MIDI' })[0]);
+    const box = screen.getByLabelText('MIDI output');
+    await act(async () => {
+      fireEvent.click(box);
+    });
+    expect(midiEngine.init).toHaveBeenCalled();
+    expect(box).not.toBeChecked();
+    expect(screen.getByText('MIDI not available in this browser'))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText('Bass Drum')).toHaveValue(36);
+  });
+
+  it('has a group picker and section keys for phones', () => {
+    renderModal();
+    expect(screen.getByRole('combobox', { name: 'Settings group' }))
+      .toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Sequencer sections' }))
+      .toBeInTheDocument();
   });
 });

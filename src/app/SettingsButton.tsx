@@ -6,20 +6,16 @@ import SettingsModal from './SettingsModal';
 
 /** Gear key: opens the Settings dialog. */
 export default function SettingsButton() {
+  // Mounted only while open, so each open starts from
+  // the saved values on the opening section.
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Bumped on each open so the dialog starts on its
-  // first tab.
-  const [settingsKey, setSettingsKey] = useState(0);
 
   return (
     <>
-      <Tooltip tooltipKey="settings" position="bottom">
+      <Tooltip tooltipKey="settings" position="bottom" align="right">
         <button
           type="button"
-          onClick={() => {
-            setSettingsKey((k) => k + 1);
-            setSettingsOpen(true);
-          }}
+          onClick={() => setSettingsOpen(true)}
           aria-label="Settings"
           aria-haspopup="dialog"
           className="ss-key w-10 h-10 lg:w-11 lg:h-11 rounded-lg flex items-center justify-center text-muted hover:text-ink"
@@ -39,11 +35,9 @@ export default function SettingsButton() {
         </svg>
         </button>
       </Tooltip>
-      <SettingsModal
-        key={settingsKey}
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
+      {settingsOpen && (
+        <SettingsModal onClose={() => setSettingsOpen(false)} />
+      )}
     </>
   );
 }

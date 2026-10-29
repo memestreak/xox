@@ -4,9 +4,7 @@ import { describe, it, expect, vi, beforeEach }
 import { useSelection } from '../app/hooks/useSelection';
 import type { TrackConfig, TrackId } from '../app/types';
 import type { RefObject } from 'react';
-import {
-  setChooserClickAway,
-} from '../app/hooks/useChooserClickAwaySetting';
+import { patternsPrefs } from '../app/preferences';
 
 function makeTracks(
   len = 16
@@ -488,7 +486,7 @@ describe('useSelection', () => {
     });
 
     it('clears beside the chooser when the setting is off', () => {
-      setChooserClickAway(false);
+      patternsPrefs.update({ chooserClickAway: false });
       const r = makeRegion();
       const drawer = document.createElement('div');
       drawer.setAttribute('data-pattern-chooser-open', '');

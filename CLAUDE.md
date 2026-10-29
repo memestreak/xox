@@ -67,9 +67,10 @@ Accented steps multiply gain by `1 + accentLevel × 2`
 master bus runs through a limiter (`AudioEngine.init`)
 so summed and accented hits don't clip. Master volume
 (`MasterVolume.tsx`, `hooks/useMasterVolume.ts`) is a
-gain after the limiter; it's a per-device setting in
-its own localStorage key, not in `SequencerConfig`, so
-share links and Reset leave it alone. `LevelMeter.tsx`
+gain after the limiter; it's a preference
+(Settings › Sequencer › Output), not in
+`SequencerConfig`, so share links and Reset leave it
+alone. `LevelMeter.tsx`
 reads `audioEngine.getOutputPeaks()` each frame.
 
 **SequencerConfig (`src/app/types.ts`)** — Canonical type for
@@ -84,10 +85,28 @@ versions can't be loaded (the session is kept and a notice
 shown), newer versions load what validates, with a notice.
 
 **configStorage (`src/app/configStorage.ts`)** — Autosaves
-the session to localStorage (debounced, flushed on
+the session (the work) to localStorage at
+`xox.sequencer.works.session` (debounced, flushed on
 `pagehide`) and restores it on load. A share link in the
 URL hash wins over the saved session and is then removed
 from the URL.
+
+**Preferences (`src/app/preferences.ts`)** — Per-viewer,
+per-device settings, never in `SequencerConfig` or share
+links. Follows the `settings-philosophy` skill: one
+localStorage key per Settings section,
+`xox.<page>.<section>` (`xox.general.interface`,
+`xox.sequencer.{grid,patterns,output,midi}`), a JSON
+object checked field by field by the section's parser
+(bad or missing fields take defaults). Each section is a
+`createPreferenceSection` store (`get`/`set`/`update`/
+`useValue`); MIDI is saved by `MidiEngine` at
+`MIDI_PREFS_KEY` (parser in `midiConfig.ts`). Old
+`xox-*` keys are not read (dropped, not migrated). Every
+preference must appear in `SettingsModal`; controls
+elsewhere (header fader, grid menu toggle) are shortcuts
+that apply at once to the same saved value. A failed
+save warns once in the console.
 
 **Hooks (`src/app/hooks/`)** — All custom hooks live here:
 - `useFillMode.ts` — fill latch/momentary state, F-key
@@ -113,7 +132,7 @@ from the URL.
 - `usePlayback.ts` — audio engine, handleStep, spacebar
 - `useSelection.ts` — multi-step selection (Ctrl/Shift)
 - `useDragPaint.ts` — pointer drag gestures on the grid
-- `useMasterVolume.ts` — master fader (localStorage,
+- `useMasterVolume.ts` — master fader (`outputPrefs`,
   no `reset()`: Reset deliberately keeps it)
 - `useCustomSamples.ts` — samples loaded from WAV files
   onto tracks (track name menu: Load sample from
@@ -136,9 +155,9 @@ from the URL.
   minimizes. `StepGrid` passes the visible track order
   to `useDragPaint`/`useSelection` so drags skip
   minimized rows. "Auto-minimize empty tracks"
-  (`useAutoMinimizeSetting.ts`, per-device
-  localStorage, off by default; toggled in the grid
-  menu and Settings > Options) also minimizes a track
+  (`useAutoMinimizeSetting.ts`, `gridPrefs`, off by
+  default; toggled in the grid menu and Settings ›
+  Sequencer › Grid) also minimizes a track
   that loses its last step and every empty track on a
   pattern load (`loadSeq`, bumped by the setter that
   pattern loads use). A track that lost its last step
@@ -224,7 +243,9 @@ Supporting files:
 - `gridUtils.ts`, `patternUtils.ts` — grid geometry and
   pattern helpers
 - `MidiEngine.ts` / `MidiContext.tsx` — Web MIDI note
-  output; settings live in `SettingsModal.tsx`
+  output; settings live in `SettingsModal.tsx`.
+  `MidiContext` connects on load when saved as enabled;
+  `applyConfig` saves the whole config
 - `TempoController.tsx` — BPM input (clamped 20-300)
 - `StepsEntry.tsx` — pattern length (1-64): LCD field
   plus a split ▲/▼ key; drag, hold-to-repeat, ↑/↓
@@ -232,10 +253,19 @@ Supporting files:
   Each gesture passes the tracks
   from its start as `setPatternLength(n, base)`, so
   going down and back up within it keeps the steps
-- `SettingsButton.tsx` — gear key; opens
-  `SettingsModal` directly (no menu). The dialog's
-  header has a `?` key that opens Help (the way in on
-  phones)
+- `SettingsButton.tsx` — gear key, the last header
+  key (after `?`); mounts `SettingsModal` while open.
+  The dialog is REAPER-style: a tree (General ›
+  Interface; Sequencer › Grid, Patterns, Output, MIDI)
+  and a pane headed `Group › Section`, one row per
+  field. It opens at Sequencer › Grid. Below `sm` the
+  tree is a group `LcdSelect` plus a strip of section
+  keys. Changes are staged: OK saves and closes, Apply
+  saves (disabled until something differs), Cancel /
+  Esc / × discard. Double-click a field's label
+  (long-press on touch) stages its default; the
+  control itself never resets. The header `?` key opens
+  Help (the way in on phones)
 - `ShareLinkButton.tsx` — Copy share link key in its
   own Share cell after Swing (Swing has no % readout);
   its note says custom samples aren't included. Below
@@ -281,10 +311,9 @@ Supporting files:
   column (outside `data-chooser-area` in `Sequencer`)
   closes it like Esc and does nothing else (the step
   selection stays; `keyboardUtils.isChooserClickAway`).
-  Settings > Options turns that off
-  (`useChooserClickAwaySetting.ts`, per-device
-  localStorage, on by default). Per-device on/off
-  settings use `hooks/createDeviceSetting.ts`
+  Settings › Sequencer › Patterns turns that off
+  (`useChooserClickAwaySetting.ts`, `patternsPrefs`,
+  on by default)
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `patternExport.ts` — Copy pattern (grid menu): the
   grid as a `patterns.json` entry (preset id without

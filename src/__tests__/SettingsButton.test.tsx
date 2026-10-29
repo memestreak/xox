@@ -53,7 +53,9 @@ describe('SettingsButton', () => {
       screen.getByRole('heading', { name: 'Settings' })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('checkbox', { name: 'Show tooltips' })
+      screen.getByRole('checkbox', {
+        name: 'Auto-minimize empty tracks',
+      })
     ).toBeInTheDocument();
   });
 
@@ -76,7 +78,8 @@ describe('SettingsButton', () => {
       screen.getByRole('heading', { name: 'Help' })
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('heading', { name: 'Settings' })
+      // Level 2: Help has its own "Settings" section.
+      screen.queryByRole('heading', { name: 'Settings', level: 2 })
     ).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ import {
   useRef, useState,
 } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { useTooltips } from './TooltipContext';
+import { interfacePrefs } from './preferences';
 import {
   DROPDOWN_HINT_DELAY_MS,
   DROPDOWN_HINT_GAP_PX,
@@ -77,7 +77,7 @@ export default function LcdSelect<T extends string>({
     null
   );
   const typeahead = useRef({ text: '', time: 0 });
-  const { tooltipsEnabled } = useTooltips();
+  const tooltipsEnabled = interfacePrefs.useValue().showTooltips;
   // Row help: shown for the highlighted row once the
   // pointer or the arrow keys moved the highlight (not
   // just because the list opened), after a short rest.
