@@ -15,6 +15,13 @@ interface TooltipProps {
   tooltipKey: string;
   position?: 'top' | 'bottom';
   align?: 'center' | 'right';
+  /**
+   * Hides the tooltip, even under the pointer. For a
+   * menu the host opens that doesn't set aria-expanded
+   * on it (a right-click menu). A host whose control
+   * has aria-expanded="true" hides it on its own.
+   */
+  hidden?: boolean;
   children: ReactElement<
     Record<string, unknown>
   >;
@@ -24,6 +31,7 @@ export default function Tooltip({
   tooltipKey,
   position = 'top',
   align = 'center',
+  hidden = false,
   children,
 }: TooltipProps) {
   const id = useId();
@@ -89,10 +97,20 @@ export default function Tooltip({
         + ' bg-raised text-ink border border-edge'
         + ' shadow-lg rounded'
         + ' opacity-0'
-        + ' group-hover/tooltip:opacity-100'
         + ' transition-opacity'
         + ' delay-0'
-        + ' group-hover/tooltip:delay-1000'
+        + (hidden
+          ? ''
+          : ' group-hover/tooltip:opacity-100'
+            + ' group-hover/tooltip:delay-1000'
+            // While the host's menu or list is open
+            // (aria-expanded on the host or on a control
+            // inside it), stay hidden, and hide at once
+            // if already showing.
+            + ' group-aria-expanded/tooltip:opacity-0!'
+            + ' group-aria-expanded/tooltip:delay-0!'
+            + ' group-has-[[aria-expanded=true]]/tooltip:opacity-0!'
+            + ' group-has-[[aria-expanded=true]]/tooltip:delay-0!')
       }
     >
       {text}

@@ -239,6 +239,22 @@ describe('StepGrid', () => {
       })).not.toBeInTheDocument();
     });
 
+    it('right-click on the ⋯ key opens the menu', () => {
+      renderGrid();
+      const key = screen.getByRole('button', {
+        name: 'Grid options',
+      });
+      const event = fireEvent.contextMenu(key);
+      // false: the browser's own menu was prevented
+      expect(event).toBe(false);
+      expect(key).toHaveAttribute('aria-expanded', 'true');
+      // A second right-click keeps it open.
+      fireEvent.contextMenu(key);
+      expect(screen.getByRole('menu', {
+        name: 'Grid options',
+      })).toBeInTheDocument();
+    });
+
     it('Escape closes the menu', () => {
       renderGrid();
       openGridMenu();

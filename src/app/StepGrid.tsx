@@ -477,6 +477,14 @@ export default function StepGrid({
                 aria-haspopup="menu"
                 aria-expanded={gridMenu !== null}
                 onClick={toggleGridMenuFromKey}
+                onContextMenu={e => {
+                  // Right-click opens it too, rather than
+                  // the browser's menu.
+                  e.preventDefault();
+                  if (gridMenu === null) {
+                    toggleGridMenuFromKey(e);
+                  }
+                }}
                 className="ss-key h-7 px-2 rounded-md text-muted hover:text-ink text-base leading-none tracking-[0.1em]"
               >
                 <span aria-hidden="true">⋯</span>

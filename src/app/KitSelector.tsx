@@ -56,7 +56,11 @@ export default function KitSelector() {
     // is reachable by keyboard via the context-menu key.
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div ref={wrapperRef} onContextMenu={handleContextMenu}>
-      <Tooltip tooltipKey="kit" position="bottom">
+      <Tooltip
+        tooltipKey="kit"
+        position="bottom"
+        hidden={menu !== null}
+      >
         <LcdSelect
           id="kit-select"
           value={currentKit.id}
