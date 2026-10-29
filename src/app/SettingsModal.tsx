@@ -222,9 +222,11 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
       }}
-      className="ss-menu m-auto backdrop:bg-black/60 rounded-xl text-ink p-0 max-w-2xl w-[calc(100%-32px)]"
+      className="ss-menu m-auto backdrop:bg-black/60 rounded-xl text-ink p-0 overflow-hidden max-w-2xl w-[calc(100%-32px)] h-[min(540px,calc(100dvh-32px))] max-h-none"
     >
-      <div className="p-4 sm:p-6 flex flex-col gap-4">
+      {/* A fixed size: the tree and the pane scroll inside it,
+          so switching sections never resizes the dialog. */}
+      <div className="h-full p-4 sm:p-6 flex flex-col gap-4">
         {/* Header */}
         <div className="flex justify-between items-center">
           <h2 className="ss-cap text-xl">
@@ -288,11 +290,11 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
           </div>
         </div>
 
-        <div className="flex gap-4 items-start">
+        <div className="flex-1 min-h-0 flex gap-4">
           {/* Desktop: the tree */}
           <nav
             aria-label="Settings sections"
-            className="hidden sm:block w-36 shrink-0"
+            className="hidden sm:block w-36 shrink-0 overflow-y-auto"
           >
             <ul className="flex flex-col gap-1">
               {GROUPS.map(g => (
@@ -339,11 +341,12 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
           {/* The selected section */}
           <section
             aria-labelledby={headingId}
-            className="ss-panel rounded-lg flex-1 min-w-0 p-4"
+            className="ss-panel rounded-lg flex-1 min-w-0 flex flex-col"
           >
-            <h3 id={headingId} className="ss-label mb-2">
+            <h3 id={headingId} className="ss-label px-4 pt-4 pb-2 shrink-0">
               {group.label} › {sectionLabel(section)}
             </h3>
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
             {section === 'interface' && (
               <Field
                 label="Show tooltips"
@@ -418,6 +421,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                 stage={partial => stage('midi', partial)}
               />
             )}
+            </div>
           </section>
         </div>
 

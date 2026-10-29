@@ -258,7 +258,9 @@ Supporting files:
   The dialog is REAPER-style: a tree (General ›
   Interface; Sequencer › Grid, Patterns, Output, MIDI)
   and a pane headed `Group › Section`, one row per
-  field. It opens at Sequencer › Grid. Below `sm` the
+  field. It opens at Sequencer › Grid. Its size is
+  fixed (`h-[min(540px,…)]`); the tree and the pane
+  scroll inside it, so it never resizes. Below `sm` the
   tree is a group `LcdSelect` plus a strip of section
   keys. Changes are staged: OK saves and closes, Apply
   saves (disabled until something differs), Cancel /
