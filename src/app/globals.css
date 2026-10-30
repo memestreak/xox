@@ -19,7 +19,15 @@
   --color-accent: #f0662a;
   --color-accent-hi: #ff8a52;
   --color-lcd: #f5a03a;
-  --color-mute: #f2b23a;
+  /* Amber: a Fill/Temp key held down. */
+  --color-amber: #f2b23a;
+  /* Lit Mute is the step-1 red, lit Solo the step-3
+     yellow. Unlit, their letters are a 50/50 mix of
+     that color and muted. */
+  --color-mute: #e4502c;
+  --color-mute-dim: #c3755d;
+  --color-solo: #f0c43a;
+  --color-solo-dim: #c9af64;
   /* Red LED: a pattern cued for the next bar. */
   --color-cue: #ff3b30;
   /* Pattern chooser: an edited preset (where the cursor
