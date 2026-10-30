@@ -33,6 +33,12 @@ export interface StepConditions {
 export interface StepLocks {
   gain?: number; // 0.0–1.0
   pan?: number;  // 0.0–1.0 (0.5 = center)
+  /** MOCK: hits per step and their velocity ramp. */
+  retrig?: { count: number; ramp?: 'in' | 'out' };
+  /** MOCK (variant B extras, not played). */
+  chop?: number;     // 0-100 % of the sample kept
+  reverse?: boolean;
+  pitch?: number;    // semitones, -12..12
 }
 
 /**

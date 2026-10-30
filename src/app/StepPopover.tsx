@@ -16,6 +16,8 @@ import {
 import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
+import { useMockVariant } from './mockVariant';
+import { RetrigEditor, GlitchExtras } from './RetrigEditor';
 
 const POPOVER_WIDTH = 288;
 
@@ -59,6 +61,10 @@ export default function StepPopover({
   focusSection,
 }: StepPopoverProps) {
   const { actions } = useSequencer();
+  const mock = useMockVariant();
+  const [tab, setTab] = useState<'trig' | 'locks' | 'fx'>(
+    'trig'
+  );
   const popoverRef = useRef<HTMLDivElement>(null);
   const probRef = useRef<HTMLDivElement>(null);
   const cycleRef = useRef<HTMLDivElement>(null);
@@ -95,6 +101,12 @@ export default function StepPopover({
       : 50
   );
   const panTouched = useRef(false);
+
+  const setFx = useCallback((patch: StepLocks) => {
+    for (const t of targets) {
+      actions.setParameterLock(t.trackId, t.stepIndex, patch);
+    }
+  }, [actions, targets]);
 
   // ─── Condition sync ───────────────────────────
   const updateConditions = useCallback(
@@ -313,13 +325,14 @@ export default function StepPopover({
   useEffect(() => {
     const el = popoverRef.current;
     if (!el || !anchorRect) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.bottom > window.innerHeight - 8) {
-      const above =
-        anchorRect.top - 4 - 4 - rect.height;
-      setFlippedTop(Math.max(8, above));
-    }
-  }, [anchorRect]);
+    // MOCK: re-measure when the variant or tab changes
+    const h = el.getBoundingClientRect().height;
+    setFlippedTop(
+      anchorRect.top + h > window.innerHeight - 8
+        ? Math.max(8, anchorRect.top - 4 - 4 - h)
+        : null
+    );
+  }, [anchorRect, mock, tab]);
 
   // ─── Render ───────────────────────────────────
   return (
@@ -377,6 +390,38 @@ export default function StepPopover({
         </button>
       </div>
 
+      {mock === 'B' && (
+        <div
+          role="tablist"
+          aria-label="Step editor sections"
+          className="flex gap-0.5 p-0.5 rounded-md bg-well border border-line"
+        >
+          {([
+            ['trig', 'Trig'], ['locks', 'Locks'], ['fx', 'FX'],
+          ] as const).map(([id, text]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className={
+                'ss-cap flex-1 h-7 rounded text-xs tracking-[0.12em]'
+                + (tab === id
+                  ? ' bg-linear-to-b from-[#34302b] to-[#2a2723] text-ink'
+                    + ' shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]'
+                  : ' text-muted hover:text-ink')
+              }
+            >
+              {text}
+              {id === 'fx' && locks?.retrig && (
+                <span className="ml-1 text-accent">●</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+      {(mock !== 'B' || tab === 'trig') && (
+        <>
       <div ref={probRef}>
         <ProbabilityEditor
           value={probability}
@@ -394,9 +439,11 @@ export default function StepPopover({
         onChange={handleFillChange}
       />
 
-      {/* Divider */}
-      <div className="border-t border-line" />
-
+        </>
+      )}
+      {mock !== 'B' && <div className="border-t border-line" />}
+      {(mock !== 'B' || tab === 'locks') && (
+        <>
       {/* Locks header */}
       <div className={
         'flex items-center justify-between'
@@ -431,6 +478,27 @@ export default function StepPopover({
         value={panValue}
         onChange={handlePanChange}
       />
+        </>
+      )}
+      {(mock === 'A' || mock === 'C') && (
+        <>
+          <div className="border-t border-line" />
+          <RetrigEditor
+            value={locks?.retrig}
+            onChange={v => setFx({ retrig: v })}
+          />
+        </>
+      )}
+      {mock === 'B' && tab === 'fx' && (
+        <>
+          <RetrigEditor
+            value={locks?.retrig}
+            onChange={v => setFx({ retrig: v })}
+          />
+          <div className="border-t border-line" />
+          <GlitchExtras locks={locks} onChange={setFx} />
+        </>
+      )}
     </div>
   );
 }

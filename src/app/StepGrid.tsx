@@ -8,6 +8,10 @@ import { useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
 import AccentRow from './AccentRow';
 import StepPopover from './StepPopover';
+import {
+  useMockVariant, useRetrigMode, setRetrigMode,
+  registerRetrigSetter,
+} from './mockVariant';
 import ErrorBoundary from './ErrorBoundary';
 import GridContextMenu from './GridContextMenu';
 import Tooltip from './Tooltip';
@@ -164,6 +168,42 @@ export default function StepGrid({
     popoverOpenRef.current =
       openPopover !== null || gridMenu !== null;
   }, [openPopover, gridMenu]);
+
+  // ─── MOCK: retrig demo data and variant C mode ───
+  const mock = useMockVariant();
+  const retrigMode = useRetrigMode();
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!mock) return;
+    registerRetrigSetter((trackId, stepIndex, count) => {
+      actions.setParameterLock(trackId, stepIndex, {
+        retrig: count === 1 ? undefined : { count },
+      });
+    });
+    if (!seededRef.current) {
+      seededRef.current = true;
+      // Seed a few retrigs on the last hits of the bar
+      const filled = TRACKS.map(t => t.id).filter(
+        id => config.tracks[id].steps.slice(0, 16).includes('1')
+      );
+      const shapes: Array<[number, 'in' | 'out' | undefined]> = [
+        [2, 'out'], [3, 'in'], [4, undefined],
+      ];
+      const demo = filled.slice(0, 3).map(
+        (id, i) => [id, ...shapes[i]] as const
+      );
+      for (const [id, count, ramp] of demo) {
+        const steps = config.tracks[id].steps.slice(0, 16);
+        const last = steps.lastIndexOf('1');
+        if (last >= 0) {
+          actions.setParameterLock(id, last, {
+            retrig: { count, ...(ramp ? { ramp } : {}) },
+          });
+        }
+      }
+    }
+    return () => registerRetrigSetter(null);
+  }, [mock]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Stable so it doesn't defeat TrackRow's memo
   const openStepPopover = useCallback(
@@ -490,6 +530,26 @@ export default function StepGrid({
                 <span aria-hidden="true">⋯</span>
               </button>
             </Tooltip>
+            {mock === 'C' && (
+              <button
+                type="button"
+                aria-pressed={retrigMode}
+                aria-label="Retrig edit mode"
+                title="Retrig mode: tap a lit step to cycle its hits (R)"
+                onClick={() => setRetrigMode(!retrigMode)}
+                className={
+                  'ss-key h-7 ml-1.5 px-2 rounded-md flex items-center gap-1.5'
+                  + ' ss-cap text-xs tracking-[0.12em]'
+                  + (retrigMode ? ' text-ink' : ' text-muted hover:text-ink')
+                }
+              >
+                <span
+                  aria-hidden="true"
+                  className={'ss-led' + (retrigMode ? ' ss-led-on' : '')}
+                />
+                Retrig
+              </button>
+            )}
           </span>
           <span
             aria-hidden="true"

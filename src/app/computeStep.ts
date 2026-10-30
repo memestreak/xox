@@ -161,7 +161,23 @@ export function computeStep(
         : cubic;
       const pan = locks?.pan ?? st.pan;
 
-      sounds.push([track.id, scheduledTime, gain, pan]);
+      // MOCK: retrig repeats the hit inside the step.
+      const count = locks?.retrig?.count ?? 1;
+      const stepDur = (60 / config.bpm) * 0.25;
+      for (let k = 0; k < count; k++) {
+        const ramp = locks?.retrig?.ramp;
+        const scale = ramp === 'in'
+          ? (k + 1) / count
+          : ramp === 'out'
+            ? 1 - k / count
+            : 1;
+        sounds.push([
+          track.id,
+          scheduledTime + (k * stepDur) / count,
+          gain * scale,
+          pan,
+        ]);
+      }
       triggeredTracks.add(track.id);
     }
   });
