@@ -56,14 +56,14 @@ const SIZES = {
 // changes (see CLAUDE.md on conditional borders).
 const BORDER: Record<LatchKeyBody, string> = {
   off: '',
-  held: ' border-mute',
+  held: ' border-amber',
   armed: ' border-accent',
   active: ' border-accent-hi',
 };
 
 const BODY_LOOK: Record<LatchKeyBody, string> = {
   off: ' text-ink',
-  held: ' bg-mute text-[#1a1208]'
+  held: ' bg-amber text-[#1a1208]'
     + ' shadow-[0_0_18px_rgb(242_178_58/0.45)]',
   armed: ' text-accent-hi',
   active: ' bg-accent text-[#1a0d05]'
