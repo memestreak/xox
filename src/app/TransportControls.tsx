@@ -19,6 +19,8 @@ import KitSelector from './KitSelector';
 interface TransportControlsProps {
   page: PageNav;
   patternTrigger?: ReactNode;
+  /** MOCK ONLY: preset variant. */
+  mock?: string;
 }
 
 /**
@@ -28,6 +30,7 @@ interface TransportControlsProps {
 function TransportControlsInner({
   page,
   patternTrigger,
+  mock,
 }: TransportControlsProps) {
   const { state, actions } = useSequencer();
   const {
@@ -136,6 +139,7 @@ function TransportControlsInner({
           Pattern change, then Volume (set by
           max-lg:order-* on the cells). */}
       <div className="grid grid-cols-12 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+        {mock !== 'C' && (
         <PanelSection
           label="Kit"
           labelFor="kit-select"
@@ -143,13 +147,14 @@ function TransportControlsInner({
         >
           <KitSelector />
         </PanelSection>
+        )}
         <PanelSection
-          label="Pattern"
-          className="col-span-12 lg:flex-1 max-lg:order-2"
+          label={mock ? 'Preset' : 'Pattern'}
+          className={'col-span-12 lg:flex-1 max-lg:order-2' + (mock === 'C' ? ' lg:rounded-l-[11px]' : '')}
         >
           {patternTrigger}
         </PanelSection>
-        <PatternModeSelector />
+        <PatternModeSelector className={mock === 'C' ? 'col-span-12' : undefined} />
         <GlobalControls page={page} />
         <MasterVolume
           variant="strip"

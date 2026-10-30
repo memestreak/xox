@@ -20,6 +20,8 @@ import { getCategorizedPatterns } from './patternUtils';
 import { useInputModality } from './hooks/useInputModality';
 import { usePreventFileNavigation } from './hooks/useFileDrop';
 import type { Pattern } from './types';
+import { useMockVariant } from './mockVariant';
+import { PresetDrawer, PresetTrigger } from './PresetMock';
 
 const categories = getCategorizedPatterns(
   patternsData.patterns as Pattern[]
@@ -32,6 +34,8 @@ function SequencerInner() {
   const { setPattern } = actions;
   const patternLength = getPatternLength(meta.config.tracks);
   const status = pickStatus(state);
+  const mock = useMockVariant();
+  const [mockOpen, setMockOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(0);
   const [autoFollow, setAutoFollow] = useState(true);
@@ -100,7 +104,22 @@ function SequencerInner() {
           pendingPatternId={state.pendingPatternId}
           onSelect={setPattern}
         >
-          {({ trigger, drawer }) => (
+          {({ trigger, drawer }) => mock ? (
+            <>
+              <TransportControls
+                page={page}
+                mock={mock}
+                patternTrigger={
+                  <PresetTrigger
+                    variant={mock}
+                    open={mockOpen}
+                    onToggle={() => setMockOpen(o => !o)}
+                  />
+                }
+              />
+              <PresetDrawer variant={mock} open={mockOpen} />
+            </>
+          ) : (
             <>
               <TransportControls
                 page={page}
