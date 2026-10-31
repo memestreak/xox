@@ -9,6 +9,7 @@ import kitsData from '../data/kits.json';
 import { audioEngine } from '../AudioEngine';
 import { midiEngine } from '../MidiEngine';
 import { computeStep } from '../computeStep';
+import type { Rolls } from '../computeStep';
 import { withLevelsFrom } from '../mixerUtils';
 import { GAIN_EXPONENT } from '../constants';
 import { getPatternLength } from '../types';
@@ -161,6 +162,8 @@ export function usePlayback({
     useState<string | null>(null);
   const stepRef = useRef<number>(-1);
   const totalStepsRef = useRef<number>(0);
+  // Retrig rolls still playing (see computeStep)
+  const rollsRef = useRef<Rolls>({});
   const triggeredTracksRef = useRef<Set<TrackId>>(
     new Set()
   );
@@ -247,10 +250,12 @@ export function usePlayback({
         pendingPattern: pendingPatternRef.current,
         tempState: tempStateRef.current,
         homeSnapshot: homeSnapshotRef.current,
+        rolls: rollsRef.current,
       });
 
       totalStepsRef.current = result.totalSteps;
       cycleCountRef.current = result.cycleCounts;
+      rollsRef.current = result.rolls;
       triggeredTracksRef.current =
         result.triggeredTracks;
       enqueueStep(stepQueueRef.current, {
@@ -362,11 +367,13 @@ export function usePlayback({
       setIsPlaying(false);
       stepRef.current = -1;
       totalStepsRef.current = 0;
+      rollsRef.current = {};
       triggeredTracksRef.current = new Set();
       stepQueueRef.current = [];
       initCycleCounts();
     } else {
       totalStepsRef.current = 0;
+      rollsRef.current = {};
       stepQueueRef.current = [];
       initCycleCounts();
       const cfg = configRef.current;

@@ -4,6 +4,8 @@
  * indicator rendered inside the StepButton.
  */
 
+import { RETRIG_DOTS_MAX } from './constants';
+
 interface ProbabilityBarProps {
   probability: number;
 }
@@ -113,26 +115,35 @@ export function CycleBadge({
   );
 }
 
+interface RetrigDotsProps {
+  /** Retrig hits landing on this step. */
+  hits: number;
+}
+
 /**
- * MOCK ONLY: retrig hits that land on this step, as a
- * row of dots near the bottom of the key. On the lit
- * step they show the rate; on the unlit steps a roll
- * runs over they show where it keeps going.
+ * Retrig hits on a step, as a row of dots near the
+ * bottom of the key (at most 4). The lit step shows its
+ * rate; unlit steps a roll runs over show it going on.
  */
-export function RetrigDots({ hits }: { hits: number }) {
-  const shown = Math.min(hits, 4);
+export function RetrigDots({ hits }: RetrigDotsProps) {
   return (
     <span
       data-testid="retrig-dots"
-      className="absolute left-0 right-0 bottom-[5px] flex justify-center gap-[2px] pointer-events-none"
+      className={
+        'absolute left-0 right-0 bottom-[5px] flex'
+        + ' justify-center gap-[2px] pointer-events-none'
+      }
     >
-      {Array.from({ length: shown }, (_, i) => (
-        <span
-          key={i}
-          className="w-[3px] h-[3px] rounded-full"
-          style={{ background: 'currentColor' }}
-        />
-      ))}
+      {Array.from(
+        { length: Math.min(hits, RETRIG_DOTS_MAX) },
+        (_, i) => (
+          <span
+            key={i}
+            className="w-[3px] h-[3px] rounded-full"
+            style={{ background: 'currentColor' }}
+          />
+        )
+      )}
     </span>
   );
 }

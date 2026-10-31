@@ -313,7 +313,7 @@ function TrackRowInner({
     [onSetTrackLength, trackId]
   );
 
-  // MOCK: steps that retrig rolls land on.
+  // Retrig hits per step, for the dots on the keys
   const retrigCover = useMemo(
     () => retrigCoverage(steps, parameterLocks, patternLength),
     [steps, parameterLocks, patternLength],

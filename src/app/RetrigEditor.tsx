@@ -7,8 +7,9 @@ import {
 } from './retrig';
 
 /**
- * MOCK ONLY: the Retrig section of the step editor: an
- * Off/On switch, then Rate and Length as note values.
+ * The Retrig section of the step editor: an Off/On
+ * switch, then Rate and Length as note values. Turning
+ * it off keeps the rate and length.
  */
 
 const RATE_OPTIONS = RETRIG_RATES.map(r => ({
@@ -24,7 +25,7 @@ interface RetrigEditorProps {
   onChange: (v: Retrig) => void;
 }
 
-export function RetrigEditor({
+export default function RetrigEditor({
   value, onChange,
 }: RetrigEditorProps) {
   const r = value ?? { ...DEFAULT_RETRIG, enabled: false };

@@ -13,11 +13,11 @@ import {
   GainLockEditor,
   PanLockEditor,
 } from './StepLockEditors';
+import RetrigEditor from './RetrigEditor';
+import type { Retrig } from './retrig';
 import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
-import { useMockVariant } from './mockVariant';
-import { RetrigEditor } from './RetrigEditor';
 
 const POPOVER_WIDTH = 288;
 
@@ -61,7 +61,6 @@ export default function StepPopover({
   focusSection,
 }: StepPopoverProps) {
   const { actions } = useSequencer();
-  const mock = useMockVariant();
   const popoverRef = useRef<HTMLDivElement>(null);
   const probRef = useRef<HTMLDivElement>(null);
   const cycleRef = useRef<HTMLDivElement>(null);
@@ -98,12 +97,6 @@ export default function StepPopover({
       : 50
   );
   const panTouched = useRef(false);
-
-  const setFx = useCallback((patch: StepLocks) => {
-    for (const t of targets) {
-      actions.setParameterLock(t.trackId, t.stepIndex, patch);
-    }
-  }, [actions, targets]);
 
   // ─── Condition sync ───────────────────────────
   const updateConditions = useCallback(
@@ -186,6 +179,17 @@ export default function StepPopover({
       for (const t of targets) {
         actions.setParameterLock(
           t.trackId, t.stepIndex, { pan: v / 100 }
+        );
+      }
+    },
+    [actions, targets]
+  );
+
+  const handleRetrigChange = useCallback(
+    (retrig: Retrig) => {
+      for (const t of targets) {
+        actions.setParameterLock(
+          t.trackId, t.stepIndex, { retrig }
         );
       }
     },
@@ -322,14 +326,13 @@ export default function StepPopover({
   useEffect(() => {
     const el = popoverRef.current;
     if (!el || !anchorRect) return;
-    // MOCK: re-measure when the variant or tab changes
-    const h = el.getBoundingClientRect().height;
-    setFlippedTop(
-      anchorRect.top + h > window.innerHeight - 8
-        ? Math.max(8, anchorRect.top - 4 - 4 - h)
-        : null
-    );
-  }, [anchorRect, mock]);
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom > window.innerHeight - 8) {
+      const above =
+        anchorRect.top - 4 - 4 - rect.height;
+      setFlippedTop(Math.max(8, above));
+    }
+  }, [anchorRect]);
 
   // ─── Render ───────────────────────────────────
   return (
@@ -404,7 +407,9 @@ export default function StepPopover({
         onChange={handleFillChange}
       />
 
+      {/* Divider */}
       <div className="border-t border-line" />
+
       {/* Locks header */}
       <div className={
         'flex items-center justify-between'
@@ -439,15 +444,12 @@ export default function StepPopover({
         value={panValue}
         onChange={handlePanChange}
       />
-      {mock && (
-        <>
-          <div className="border-t border-line" />
-          <RetrigEditor
-            value={locks?.retrig}
-            onChange={v => setFx({ retrig: v })}
-          />
-        </>
-      )}
+
+      <div className="border-t border-line" />
+      <RetrigEditor
+        value={locks?.retrig}
+        onChange={handleRetrigChange}
+      />
     </div>
   );
 }

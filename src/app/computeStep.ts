@@ -1,5 +1,5 @@
 import { evaluateCondition } from './trigConditions';
-import { retrigHits } from './retrig';
+import { hitStep, retrigHits } from './retrig';
 import {
   ACCENT_GAIN_MULTIPLIER,
   GAIN_EXPONENT,
@@ -11,9 +11,30 @@ import type {
   Pattern,
   SequencerConfig,
   TempState,
+  TrackConfig,
   TrackId,
   TrackState,
 } from './types';
+
+/**
+ * A retrig roll still playing after its step. Its hits
+ * are scheduled one step at a time, so Stop, a pattern
+ * change or an edit to the track ends it.
+ */
+export interface Roll {
+  /** The track config the roll started from. */
+  track: TrackConfig;
+  /** Hit offsets in steps from the roll's step. */
+  hits: number[];
+  /** Steps played since the roll's step. */
+  elapsed: number;
+  /** When the roll's step played (swing included). */
+  startTime: number;
+  gain: number;
+  pan: number;
+}
+
+export type Rolls = Partial<Record<TrackId, Roll>>;
 
 /**
  * Dependencies injected into computeStep from refs
@@ -28,6 +49,8 @@ export interface ComputeStepDeps {
   pendingPattern: Pattern | null;
   tempState: TempState;
   homeSnapshot: HomeSnapshot | null;
+  /** Retrig rolls carried over from earlier steps. */
+  rolls?: Rolls;
 }
 
 /**
@@ -43,6 +66,8 @@ export interface ComputeStepResult {
   totalSteps: number;
   /** Sounds to play: [trackId, time, gain, pan]. */
   sounds: Array<[TrackId, number, number, number]>;
+  /** Retrig rolls that go on into the next step. */
+  rolls: Rolls;
   /** Pattern mode: apply pending pattern at boundary. */
   applyPending?: {
     config: SequencerConfig;
@@ -83,6 +108,8 @@ export function computeStep(
   const cycleCounts = { ...deps.cycleCounts };
   const triggeredTracks = new Set<TrackId>();
   const sounds: ComputeStepResult['sounds'] = [];
+  const rolls: Rolls = {};
+  const stepDur = (60 / config.bpm) * 0.25;
 
   // Swing: offset odd steps forward in time
   const halfStep = (60 / config.bpm) * 0.25 / 2;
@@ -129,6 +156,22 @@ export function computeStep(
     });
   }
 
+  const patLen = getPatternLength(config.tracks);
+
+  // Plays a roll's hits that fall on step `elapsed` of
+  // it, and keeps the roll if hits remain after that.
+  const playRoll = (id: TrackId, roll: Roll) => {
+    for (const t of roll.hits) {
+      if (hitStep(t) === roll.elapsed) {
+        sounds.push([
+          id, roll.startTime + t * stepDur, roll.gain, roll.pan,
+        ]);
+      }
+    }
+    const last = roll.hits[roll.hits.length - 1];
+    if (hitStep(last) > roll.elapsed) rolls[id] = roll;
+  };
+
   // Evaluate each audible track
   TRACKS.forEach(track => {
     const st = trackStates[track.id];
@@ -138,10 +181,18 @@ export function computeStep(
     if (!audible) return;
 
     const effectiveStep = trackStep(track.id);
-    if (
-      config.tracks[track.id]
-        .steps[effectiveStep] === '1'
-    ) {
+    const trackConfig = config.tracks[track.id];
+
+    // A roll from an earlier step goes on unless the
+    // track was edited or another pattern took over.
+    // Rolls stop before the next lit step, so they
+    // never overlap a new hit.
+    const prev = deps.rolls?.[track.id];
+    if (prev && prev.track === trackConfig) {
+      playRoll(track.id, { ...prev, elapsed: prev.elapsed + 1 });
+    }
+
+    if (trackConfig.steps[effectiveStep] === '1') {
       const cond =
         config.tracks[track.id]
           .trigConditions?.[effectiveStep];
@@ -162,20 +213,21 @@ export function computeStep(
         : cubic;
       const pan = locks?.pan ?? st.pan;
 
-      // MOCK: a retrig rolls the hit at its rate for
-      // its length (see retrig.ts).
-      const hits = retrigHits(
-        config.tracks[track.id].steps,
-        effectiveStep,
-        locks?.retrig,
-        getPatternLength(config.tracks),
-      );
-      const stepDur = (60 / config.bpm) * 0.25;
-      for (const t of hits) {
-        sounds.push([
-          track.id, scheduledTime + t * stepDur, gain, pan,
-        ]);
-      }
+      // A new hit always ends an older roll.
+      delete rolls[track.id];
+      playRoll(track.id, {
+        track: trackConfig,
+        hits: retrigHits(
+          trackConfig.steps,
+          effectiveStep,
+          locks?.retrig,
+          patLen - step,
+        ),
+        elapsed: 0,
+        startTime: scheduledTime,
+        gain,
+        pan,
+      });
       triggeredTracks.add(track.id);
     }
   });
@@ -186,9 +238,9 @@ export function computeStep(
     cycleCounts,
     totalSteps,
     sounds,
+    rolls,
   };
 
-  const patLen = getPatternLength(config.tracks);
   if (step === patLen - 1) {
     // Sequential: apply pending pattern
     if (pendingPattern) {

@@ -45,7 +45,7 @@ interface StepButtonProps {
   onPlainClick?: () => boolean;
   onClearSelection?: () => void;
   longPressActiveRef?: RefObject<boolean>;
-  /** MOCK: retrig hits landing on this step. */
+  /** Retrig hits that land on this step, if any. */
   retrigHits?: number;
 }
 
@@ -156,7 +156,6 @@ function StepButtonInner({
       <button
         ref={buttonRef}
         data-step={stepIndex}
-        data-retrig={retrigHits}
         {...longPressHandlers}
         onPointerUp={(e) => {
           if ('onPointerUp' in longPressHandlers) {
@@ -192,6 +191,8 @@ function StepButtonInner({
         }}
         aria-label={
           `${trackName} step ${stepIndex + 1}`
+          + (isActive && retrigHits !== undefined
+            ? ' (retrig)' : '')
         }
         aria-pressed={isActive}
         style={{
@@ -241,9 +242,9 @@ function StepButtonInner({
             a={conditions.cycle.a}
             b={conditions.cycle.b}
           />}
-        {!mini && retrigHits !== undefined && (
-          <RetrigDots hits={retrigHits} />
-        )}
+        {!mini
+          && retrigHits !== undefined
+          && <RetrigDots hits={retrigHits} />}
       </button>
     </Tooltip>
   );

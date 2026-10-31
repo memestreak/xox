@@ -1041,3 +1041,118 @@ describe('computeStep: free-run', () => {
     expect(result0.sounds).toHaveLength(0);
   });
 });
+
+// ── Retrig ──────────────────────────────────────────
+
+describe('computeStep: retrig', () => {
+  // 110 BPM: one step lasts 60 / 110 / 4 seconds
+  const STEP = 60 / 110 / 4;
+
+  /** BD lit on step 0 with a retrig lock. */
+  function rollConfig(
+    rate: number, length: number, steps = '1' + '0'.repeat(15),
+  ): SequencerConfig {
+    const config = makeConfig();
+    return {
+      ...config,
+      tracks: {
+        ...config.tracks,
+        bd: {
+          steps,
+          parameterLocks: {
+            0: { retrig: { enabled: true, rate, length } },
+          },
+        },
+      },
+    };
+  }
+
+  /** Run steps 0..n-1, threading rolls, and return BD hit times. */
+  function run(config: SequencerConfig, n: number): number[] {
+    let deps = makeDeps({
+      config, trackStates: trackStatesFrom(config),
+    });
+    const times: number[] = [];
+    for (let step = 0; step < n; step++) {
+      const r = computeStep(step, step * STEP, deps);
+      times.push(
+        ...r.sounds.filter(s => s[0] === 'bd').map(s => s[1])
+      );
+      deps = { ...deps, totalSteps: r.totalSteps, rolls: r.rolls };
+    }
+    return times;
+  }
+
+  it('plays a flam inside the step', () => {
+    const times = run(rollConfig(64, 0.5), 2);
+    expect(times).toHaveLength(2);
+    expect(times[1]).toBeCloseTo(STEP / 4);
+  });
+
+  it('schedules a long roll one step at a time', () => {
+    const config = rollConfig(32, 4);
+    const first = computeStep(0, 0, makeDeps({
+      config, trackStates: trackStatesFrom(config),
+    }));
+    // Only this step's two hits are scheduled now
+    expect(first.sounds).toHaveLength(2);
+    expect(first.rolls.bd).toBeDefined();
+    const times = run(config, 6);
+    expect(times).toHaveLength(8);
+    expect(times[7]).toBeCloseTo(3.5 * STEP);
+  });
+
+  it('stops at the next lit step', () => {
+    const times = run(rollConfig(16, 8, '1010000000000000'), 4);
+    // Step 0 rolls into step 1, then step 2 plays once
+    expect(times.map(t => t / STEP)).toEqual([0, 1, 2]);
+  });
+
+  it('stops at the pattern end', () => {
+    // BD lit on step 14 only, rolling 1/16 for a 1/2
+    const config = makeConfig();
+    config.tracks.bd = {
+      steps: '0'.repeat(14) + '10',
+      parameterLocks: {
+        14: { retrig: { enabled: true, rate: 16, length: 8 } },
+      },
+    };
+    let deps = makeDeps({
+      config, trackStates: trackStatesFrom(config),
+    });
+    const hitSteps: number[] = [];
+    for (let n = 14; n < 20; n++) {
+      const r = computeStep(n % 16, n * STEP, deps);
+      if (r.sounds.length > 0) hitSteps.push(n);
+      deps = { ...deps, totalSteps: r.totalSteps, rolls: r.rolls };
+    }
+    // Steps 14 and 15, nothing after the loop point
+    expect(hitSteps).toEqual([14, 15]);
+  });
+
+  it('ends when the track is edited', () => {
+    const config = rollConfig(16, 4);
+    const r0 = computeStep(0, 0, makeDeps({
+      config, trackStates: trackStatesFrom(config),
+    }));
+    const edited = setStep(config, 'bd', 9);
+    const r1 = computeStep(1, STEP, makeDeps({
+      config: edited,
+      trackStates: trackStatesFrom(edited),
+      totalSteps: r0.totalSteps,
+      rolls: r0.rolls,
+    }));
+    expect(r1.sounds).toHaveLength(0);
+    expect(r1.rolls.bd).toBeUndefined();
+  });
+
+  it('gives every hit the step gain and accent', () => {
+    const config = rollConfig(32, 1);
+    config.tracks.bd.parameterLocks![0].gain = 0.5;
+    const r = computeStep(0, 0, makeDeps({
+      config, trackStates: trackStatesFrom(config),
+    }));
+    expect(r.sounds).toHaveLength(2);
+    expect(r.sounds[0][2]).toBe(r.sounds[1][2]);
+  });
+});

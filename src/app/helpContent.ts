@@ -125,7 +125,7 @@ const MOUSE_TAB: HelpTab = {
         { gesture: 'swipe up / down', text: 'Scroll through the tracks' },
         {
           gesture: 'right-click', text: 'Step editor',
-          note: '(probability, cycle, fill, gain, pan)',
+          note: '(probability, cycle, fill, gain, pan, retrig)',
         },
         {
           keys: ['shift'], gesture: 'drag',

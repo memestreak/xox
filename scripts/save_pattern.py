@@ -46,7 +46,11 @@ TRACK_KEYS = (
   "steps", "freeRun", "trigConditions", "parameterLocks",
 )
 CONDITION_KEYS = {"probability", "cycle", "fill"}
-LOCK_KEYS = {"gain", "pan"}
+LOCK_KEYS = {"gain", "pan", "retrig"}
+# Retrig values the app offers (retrig.ts): rate is the
+# note value between hits (1/N), length is in steps.
+RETRIG_RATES = {5, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64, 80}
+RETRIG_LENGTHS = {0.125, 0.25, 0.5, 1, 2, 3, 4, 8, 16}
 LEVEL_KEYS = {"gain", "pan"}
 
 
@@ -62,6 +66,25 @@ def _check_level(value: Any, where: str) -> None:
     or not 0 <= value <= 1
   ):
     raise PatternError(f"{where} must be a number from 0 to 1")
+
+
+def _check_retrig(value: Any, where: str) -> None:
+  """A retrig lock: enabled, plus a rate and length the app offers."""
+  if not isinstance(value, dict) or set(value) != {
+    "enabled", "rate", "length",
+  }:
+    raise PatternError(f"{where} must have enabled, rate and length")
+  if not isinstance(value["enabled"], bool):
+    raise PatternError(f"{where}.enabled must be true or false")
+  for name, allowed in (
+    ("rate", RETRIG_RATES), ("length", RETRIG_LENGTHS),
+  ):
+    v = value[name]
+    if isinstance(v, bool) or not isinstance(v, (int, float)) \
+        or v not in allowed:
+      raise PatternError(
+        f"{where}.{name} must be one of {sorted(allowed)}"
+      )
 
 
 def _check_step_map(
@@ -108,7 +131,11 @@ def _check_track(track_id: str, track: Any) -> None:
     )
     for key, fields in locks.items():
       for name, value in fields.items():
-        _check_level(value, f"{where}.parameterLocks.{key}.{name}")
+        field = f"{where}.parameterLocks.{key}.{name}"
+        if name == "retrig":
+          _check_retrig(value, field)
+        else:
+          _check_level(value, field)
 
 
 def _check_mixer(mixer: Any) -> None:

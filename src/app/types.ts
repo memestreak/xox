@@ -34,9 +34,9 @@ export interface StepLocks {
   gain?: number; // 0.0–1.0
   pan?: number;  // 0.0–1.0 (0.5 = center)
   /**
-   * MOCK: retrig. rate = note value between hits (32 =
-   * 1/32), length = how long the roll lasts in steps
-   * (1/16 notes; 0.25 = a 1/64 note).
+   * Retrig: the hit repeats every 1/`rate` note for
+   * `length` steps (a step is a 1/16 note; 0.5 = 1/32).
+   * Off keeps rate and length. See retrig.ts.
    */
   retrig?: {
     enabled: boolean;

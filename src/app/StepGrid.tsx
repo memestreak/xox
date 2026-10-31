@@ -8,7 +8,6 @@ import { useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
 import AccentRow from './AccentRow';
 import StepPopover from './StepPopover';
-import { useMockVariant } from './mockVariant';
 import ErrorBoundary from './ErrorBoundary';
 import GridContextMenu from './GridContextMenu';
 import Tooltip from './Tooltip';
@@ -165,33 +164,6 @@ export default function StepGrid({
     popoverOpenRef.current =
       openPopover !== null || gridMenu !== null;
   }, [openPopover, gridMenu]);
-
-  // ─── MOCK: seed a few retrigs to show them off ───
-  const mock = useMockVariant();
-  const seededRef = useRef(false);
-  useEffect(() => {
-    if (!mock || seededRef.current) return;
-    seededRef.current = true;
-    const filled = TRACKS.map(t => t.id).filter(
-      id => config.tracks[id].steps.slice(0, 16).includes('1')
-    );
-    // rate, length (steps): a flam, a 3-step roll, a buzz
-    const shapes: Array<[number, number]> = [
-      [64, 0.5], [16, 3], [64, 4],
-    ];
-    filled.slice(0, 3).forEach((id, i) => {
-      const [rate, length] = shapes[i];
-      // First hit from step 9 on, else the last one
-      const st = config.tracks[id].steps.slice(0, 16);
-      const from9 = st.indexOf('1', 8);
-      const last = from9 >= 0 ? from9 : st.lastIndexOf('1');
-      actions.setParameterLock(id, last, {
-        retrig: {
-          enabled: true, rate, length,
-        },
-      });
-    });
-  }, [mock]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Stable so it doesn't defeat TrackRow's memo
   const openStepPopover = useCallback(

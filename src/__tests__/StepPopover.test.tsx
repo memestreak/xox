@@ -1,4 +1,4 @@
-import { render, screen, fireEvent }
+import { render, screen, fireEvent, within }
   from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach }
   from 'vitest';
@@ -58,14 +58,14 @@ describe('StepPopover', () => {
 
   it('cycle defaults to 1:1', () => {
     render(<StepPopover {...base} />);
-    expect(screen.getByRole('combobox'))
+    expect(screen.getByRole('combobox', { name: 'Cycle' }))
       .toHaveTextContent('1:1');
   });
 
   it('changing cycle calls setTrigCondition',
     () => {
       render(<StepPopover {...base} />);
-      fireEvent.click(screen.getByRole('combobox'));
+      fireEvent.click(screen.getByRole('combobox', { name: 'Cycle' }));
       fireEvent.click(
         screen.getByRole('option', { name: '2:4' })
       );
@@ -123,7 +123,9 @@ describe('StepPopover', () => {
 
   it('fill section renders three options', () => {
     render(<StepPopover {...base} />);
-    const radios = screen.getAllByRole('radio');
+    const radios = within(
+      screen.getByRole('radiogroup', { name: 'Fill condition' })
+    ).getAllByRole('radio');
     expect(radios).toHaveLength(3);
     expect(radios[0].textContent).toBe('Any');
     expect(radios[1].textContent).toBe('Fill');
@@ -198,7 +200,7 @@ describe('StepPopover', () => {
         screen.getByRole('slider', { name: 'Probability' })
           .getAttribute('aria-valuenow')
       ).toBe('75');
-      expect(screen.getByRole('combobox'))
+      expect(screen.getByRole('combobox', { name: 'Cycle' }))
         .toHaveTextContent('1:3');
     }
   );
@@ -286,5 +288,61 @@ describe('StepPopover scroll close', () => {
     );
     fireEvent.scroll(scrollEl);
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('StepPopover retrig', () => {
+  beforeEach(() => {
+    mockSetLock.mockClear();
+  });
+
+  it('starts off, with rate and length disabled', () => {
+    render(<StepPopover {...base} />);
+    expect(
+      screen.getByRole('radio', { name: 'Off' })
+        .getAttribute('aria-checked')
+    ).toBe('true');
+    expect(
+      screen.getByRole('combobox', { name: 'Retrig rate' })
+        .hasAttribute('disabled')
+    ).toBe(true);
+  });
+
+  it('turning it on sets a 1/32 for a 1/16', () => {
+    render(<StepPopover {...base} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'On' }));
+    expect(mockSetLock).toHaveBeenCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 32, length: 1 },
+    });
+  });
+
+  it('shows the step rate and length as note values', () => {
+    render(
+      <StepPopover
+        {...base}
+        locks={{ retrig: { enabled: true, rate: 64, length: 0.5 } }}
+      />
+    );
+    expect(
+      screen.getByRole('combobox', { name: 'Retrig rate' })
+        .textContent
+    ).toContain('1/64');
+    expect(
+      screen.getByRole('combobox', { name: 'Retrig length' })
+        .textContent
+    ).toContain('1/32');
+  });
+
+  it('turning it off keeps rate and length', () => {
+    render(
+      <StepPopover
+        {...base}
+        locks={{ retrig: { enabled: true, rate: 64, length: 0.5 } }}
+      />
+    );
+    fireEvent.click(screen.getByRole('radio', { name: 'Off' }));
+    expect(mockSetLock).toHaveBeenCalledWith('bd', 3, {
+      retrig: { enabled: false, rate: 64, length: 0.5 },
+    });
   });
 });
