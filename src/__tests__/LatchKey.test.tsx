@@ -59,7 +59,7 @@ describe('LatchKey', () => {
   });
 
   it.each<[LatchKeyBody, string]>([
-    ['held', 'bg-mute'],
+    ['held', 'bg-amber'],
     ['armed', 'animate-temp-blink'],
     ['active', 'bg-accent'],
   ])('shows the %s state on the body', (state, cls) => {
