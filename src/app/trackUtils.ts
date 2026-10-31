@@ -26,3 +26,13 @@ export function formatPan(v: number): string {
   if (pct === 0) return 'C';
   return pct < 0 ? `L${-pct}` : `R${pct}`;
 }
+
+/**
+ * True when a track's per-step map (trig conditions or
+ * parameter locks) has at least one step in it.
+ */
+export function hasStepData(
+  map: Record<number, unknown> | undefined
+): boolean {
+  return map !== undefined && Object.keys(map).length > 0;
+}

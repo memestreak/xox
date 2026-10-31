@@ -15,8 +15,10 @@ import { useDragPaint } from './hooks/useDragPaint';
 import { useSelection } from './hooks/useSelection';
 import type { Pattern, TrackId, TrackPattern } from './types';
 import {
-  TRACKS, cellKey, getPatternLength, parseCellKey,
+  TRACKS, TRACK_IDS, cellKey, getPatternLength,
+  parseCellKey,
 } from './types';
+import { hasStepData } from './trackUtils';
 import { TRIGGER_FLASH_MS } from './constants';
 import { audioEngine } from './AudioEngine';
 import { drainDueSteps } from './stepQueue';
@@ -80,7 +82,8 @@ export default function StepGrid({
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
     setAutoMinimize, holdAutoMinimize,
     clearAll, loadSample, resetSample, resetAllSamples,
-    toggleSample,
+    toggleSample, clearTrackConditions, clearTrackLocks,
+    clearAllConditions, clearAllLocks,
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
@@ -560,6 +563,8 @@ export default function StepGrid({
             onSetTrackLength={setTrackLength}
             onToggleFreeRun={toggleFreeRun}
             onClearTrack={clearTrack}
+            onResetConditions={clearTrackConditions}
+            onClearLocks={clearTrackLocks}
             onPlayPreview={handlePlayPreview}
             isTriggered={
               triggeredTracks.has(track.id)
@@ -643,6 +648,14 @@ export default function StepGrid({
           }
           onResetAllSamples={resetAllSamples}
           onCopyPattern={copyPattern}
+          hasConditions={TRACK_IDS.some(id =>
+            hasStepData(config.tracks[id].trigConditions)
+          )}
+          onResetConditions={clearAllConditions}
+          hasLocks={TRACK_IDS.some(id =>
+            hasStepData(config.tracks[id].parameterLocks)
+          )}
+          onClearLocks={clearAllLocks}
           onClose={closeGridMenu}
           anchorRef={menuKeyRef}
         />

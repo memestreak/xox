@@ -126,7 +126,10 @@ save warns once in the console.
   a step turned on while Fill is active gets the Fill
   condition (reads `fillActiveRef`); turning a step
   off clears its Fill condition (probability and
-  cycle stay). Step edits and track volume/pan
+  cycle stay). `clearTrackConditions`/`clearTrackLocks`
+  and `clearAllConditions`/`clearAllLocks` (accent
+  too) drop every condition or lock in one go; steps
+  stay. Step edits and track volume/pan
   changes mark the preset modified (its id gets a
   `*`, shown as "NAME*"; helpers in `patternUtils`);
   mute, solo and the accent level don't. `custom`
@@ -195,13 +198,18 @@ all hook resets. Exceptions: `useMasterVolume` and
 `useCustomSamples`, which Reset deliberately keeps.
 
 **Component decomposition:**
-- `TrackRow.tsx` → `TrackNameButton.tsx`,
+- `TrackRow.tsx` → `TrackNameButton.tsx` (track menu,
+  desktop only: Free-run, Load sample, Reset to kit
+  sample, Reset trig conditions, Clear parameter
+  locks (disabled when the track has none), Clear
+  track pattern),
   `TrackMixer.tsx`, `TrackEndBar.tsx`; an
   `isMinimized` row renders caret + name + step line
 - `StepGrid.tsx` → `GridContextMenu.tsx` (grid menu:
   minimize empty / restore all tracks, Reset all samples
   to kit (only when a track is custom), Copy pattern,
-  Reset pattern.
+  Reset trig conditions, Clear parameter locks
+  (disabled when nothing to clear), Reset pattern.
   Opens from the ⋯ key over the track names, the only
   way in on phones, or a right-click on a blank spot)
 - `CustomSampleDot.tsx` — amber dot button on a track
