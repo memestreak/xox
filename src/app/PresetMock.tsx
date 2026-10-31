@@ -7,7 +7,7 @@
  * few get sample substitutions and FX. Not for main.
  */
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import patternsData from './data/patterns.json';
 import kitsData from './data/kits.json';
@@ -85,18 +85,47 @@ const hasFx = (p: MockPreset) =>
 const slotCode = (p: MockPreset) =>
   `${p.bank}${String(p.slot).padStart(2, '0')}`;
 
-/** Picks a preset: loads its kit and its pattern. */
-function usePresetMock() {
+/** B and C: the chosen preset, apart from the pattern. */
+let presetId = 'house-1';
+const listeners = new Set<() => void>();
+const presetStore = {
+  subscribe: (l: () => void) => {
+    listeners.add(l);
+    return () => { listeners.delete(l); };
+  },
+  get: () => presetId,
+  set: (id: string) => { presetId = id; listeners.forEach(l => l()); },
+};
+
+/** B and C: a preset's name puts its kit first. */
+export const presetTitle = (p: MockPreset) =>
+  `${kitName(p.kit)} ${p.name}`;
+
+/**
+ * Picks a preset: loads its kit and its pattern.
+ * A: the preset IS the pattern (it links a kit), as on
+ * the Analog Rhythm. B, C: the preset is its own thing;
+ * picking a pattern alone marks it modified.
+ */
+function usePresetMock(variant = 'A') {
   const { state, actions } = useSequencer();
-  const currentId = basePatternId(state.selectedPatternId);
-  const current = PRESETS.find(p => p.id === currentId);
+  const storedId = useSyncExternalStore(
+    presetStore.subscribe, presetStore.get, presetStore.get,
+  );
+  const patternId = basePatternId(state.selectedPatternId);
+  const linked = variant === 'A';
+  const current = PRESETS.find(p =>
+    p.id === (linked ? patternId : storedId));
   const load = (p: MockPreset) => {
+    presetStore.set(p.id);
     const kit = KITS.find(k => k.id === p.kit);
     if (kit && kit.id !== state.currentKit.id) actions.setKit(kit);
     actions.setPattern(p.pattern);
   };
   const kitDiffers = !!current && current.kit !== state.currentKit.id;
-  return { current, load, kitDiffers, state };
+  const modified = kitDiffers
+    || (!linked && !!current && current.id !== patternId);
+  return { current, load, modified, state };
 }
 
 // ── Header key ──────────────────────────────────────
@@ -104,15 +133,17 @@ function usePresetMock() {
 export function PresetTrigger({
   variant, open, onToggle,
 }: { variant: string; open: boolean; onToggle: () => void }) {
-  const { current, kitDiffers } = usePresetMock();
-  const name = current?.name ?? 'Custom';
-  const modified = kitDiffers ? '*' : '';
+  const { current, modified: isModified } = usePresetMock(variant);
+  const name = current
+    ? (variant === 'A' ? current.name : presetTitle(current))
+    : 'Custom';
+  const modified = isModified ? '*' : '';
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      aria-label="Preset"
+      aria-label={variant === 'A' ? 'Pattern' : 'Preset'}
       data-open={open || undefined}
       className="ss-lcd-select h-9 w-full"
     >
@@ -124,17 +155,6 @@ export function PresetTrigger({
         )}
         <span className="truncate">{name}{modified}</span>
       </span>
-      {current && variant === 'C' && (
-        <span className="ml-auto mr-2 flex shrink-0 items-center gap-1.5 text-[10.5px] text-lcd/55">
-          <span>KIT {kitName(current.kit)}</span>
-          {variant === 'C' && current.subs.length > 0 && (
-            <span className="max-sm:hidden">· {current.subs.length} SUB</span>
-          )}
-          {variant === 'C' && hasFx(current) && (
-            <span className="max-sm:hidden">· FX</span>
-          )}
-        </span>
-      )}
       <LcdCaret open={open} />
     </button>
   );
@@ -215,7 +235,7 @@ function Drawer({ open, children, tall }: {
 // ── A: today's chooser, kit tag per row ─────────────
 
 function DrawerA({ open }: { open: boolean }) {
-  const { current, load, state } = usePresetMock();
+  const { current, load, state } = usePresetMock('A');
   const [cat, setCat] = useState(current?.category ?? 'House');
   const [loadKit, setLoadKit] = useState(true);
   const [loadFx, setLoadFx] = useState(true);
@@ -264,7 +284,7 @@ function DrawerA({ open }: { open: boolean }) {
         })}
       </div>
       <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-t border-line rounded-b-[11px]">
-        <span className="ss-label mr-1">Load with preset</span>
+        <span className="ss-label mr-1">Load with pattern</span>
         <Toggle label="Kit" on={loadKit} onClick={() => setLoadKit(v => !v)} />
         <Toggle label="FX" on={loadFx} onClick={() => setLoadFx(v => !v)} />
         <span className="ml-auto font-mono text-[11px] uppercase text-faint max-sm:w-full">
@@ -281,7 +301,7 @@ const GROUP_ON = ['bg-step1', 'bg-step2', 'bg-step3', 'bg-step4'];
 const GROUP_OFF = ['bg-step1-off', 'bg-step2-off', 'bg-step3-off', 'bg-step4-off'];
 
 function DrawerB({ open }: { open: boolean }) {
-  const { current, load } = usePresetMock();
+  const { current, load } = usePresetMock('B');
   const [bank, setBank] = useState(current?.bank ?? 'A');
   const [hover, setHover] = useState<MockPreset | null>(null);
   const pads = PRESETS.filter(p => p.bank === bank);
@@ -323,7 +343,7 @@ function DrawerB({ open }: { open: boolean }) {
               onClick={() => load(p)}
               onMouseEnter={() => setHover(p)}
               onMouseLeave={() => setHover(null)}
-              aria-label={`${slotCode(p)} ${p.name}`}
+              aria-label={`${slotCode(p)} ${presetTitle(p)}`}
               className={'relative h-[60px] rounded-[5px] border border-black/40 flex flex-col items-start justify-between p-1.5 text-left'
                 + ' shadow-[inset_0_1px_0_rgb(255_255_255/0.08)] '
                 + (active ? GROUP_ON[g] + ' text-[#1a0d05]' : GROUP_OFF[g] + ' text-ink/80')}
@@ -332,7 +352,7 @@ function DrawerB({ open }: { open: boolean }) {
                 {String(p.slot).padStart(2, '0')}
               </span>
               <span className="w-full line-clamp-2 font-display text-[11px] uppercase leading-[1.05] tracking-[0.03em]">
-                {p.name.replace(/\s0?(\d+)$/, ' $1')}
+                {presetTitle(p).replace(/\s0?(\d+)$/, ' $1')}
               </span>
             </button>
           );
@@ -351,7 +371,7 @@ function DrawerB({ open }: { open: boolean }) {
 // ── C: list + preset sheet (sounds and FX) ──────────
 
 function DrawerC({ open }: { open: boolean }) {
-  const { current, load, state } = usePresetMock();
+  const { current, load, state } = usePresetMock('C');
   const [cat, setCat] = useState(current?.category ?? 'House');
   const list = PRESETS.filter(p => p.category === cat);
   const p = current ?? PRESETS[0];
@@ -380,9 +400,10 @@ function DrawerC({ open }: { open: boolean }) {
                   className={'w-full text-left px-2 py-1 rounded-[3px] font-mono text-[12px] uppercase flex'
                     + (active ? ' bg-lcd text-[#1a0f03] font-semibold' : ' text-lcd hover:bg-lcd/10')}
                 >
-                  <span className="truncate">{x.name}</span>
+                  <span className="truncate">{presetTitle(x)}</span>
                   <span className={'ml-auto text-[10px] ' + (active ? 'text-[#1a0f03]/70' : 'text-lcd/50')}>
-                    {kitName(x.kit)}
+                    {x.subs.length > 0 && `+${x.subs.length}`}
+                    {hasFx(x) && ' FX'}
                   </span>
                 </button>
               );

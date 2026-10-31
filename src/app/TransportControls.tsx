@@ -21,6 +21,8 @@ interface TransportControlsProps {
   patternTrigger?: ReactNode;
   /** MOCK ONLY: preset variant. */
   mock?: string;
+  /** MOCK ONLY: the Preset key (B, C). */
+  presetTrigger?: ReactNode;
 }
 
 /**
@@ -31,6 +33,7 @@ function TransportControlsInner({
   page,
   patternTrigger,
   mock,
+  presetTrigger,
 }: TransportControlsProps) {
   const { state, actions } = useSequencer();
   const {
@@ -139,22 +142,32 @@ function TransportControlsInner({
           Pattern change, then Volume (set by
           max-lg:order-* on the cells). */}
       <div className="grid grid-cols-12 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
-        {mock !== 'C' && (
-        <PanelSection
-          label="Kit"
-          labelFor="kit-select"
-          className="col-span-4 max-lg:order-4 lg:rounded-l-[11px]"
-        >
-          <KitSelector />
-        </PanelSection>
+        {/* MOCK: B and C put a Preset key where Kit was;
+            the Pattern key stays. A keeps Kit, and the
+            Pattern key opens patterns with linked kits. */}
+        {mock === 'B' || mock === 'C' ? (
+          <PanelSection
+            label="Preset"
+            className="col-span-12 lg:flex-1 max-lg:order-2 lg:rounded-l-[11px]"
+          >
+            {presetTrigger}
+          </PanelSection>
+        ) : (
+          <PanelSection
+            label="Kit"
+            labelFor="kit-select"
+            className="col-span-4 max-lg:order-4 lg:rounded-l-[11px]"
+          >
+            <KitSelector />
+          </PanelSection>
         )}
         <PanelSection
-          label={mock ? 'Preset' : 'Pattern'}
-          className={'col-span-12 lg:flex-1 max-lg:order-2' + (mock === 'C' ? ' lg:rounded-l-[11px]' : '')}
+          label="Pattern"
+          className="col-span-12 lg:flex-1 max-lg:order-2"
         >
           {patternTrigger}
         </PanelSection>
-        <PatternModeSelector className={mock === 'C' ? 'col-span-12' : undefined} />
+        <PatternModeSelector className={mock === 'B' || mock === 'C' ? 'col-span-12' : undefined} />
         <GlobalControls page={page} />
         <MasterVolume
           variant="strip"

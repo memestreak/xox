@@ -104,7 +104,7 @@ function SequencerInner() {
           pendingPatternId={state.pendingPatternId}
           onSelect={setPattern}
         >
-          {({ trigger, drawer }) => mock ? (
+          {({ trigger, drawer }) => mock === 'A' ? (
             <>
               <TransportControls
                 page={page}
@@ -118,6 +118,23 @@ function SequencerInner() {
                 }
               />
               <PresetDrawer variant={mock} open={mockOpen} />
+            </>
+          ) : mock ? (
+            <>
+              <TransportControls
+                page={page}
+                mock={mock}
+                patternTrigger={trigger}
+                presetTrigger={
+                  <PresetTrigger
+                    variant={mock}
+                    open={mockOpen}
+                    onToggle={() => setMockOpen(o => !o)}
+                  />
+                }
+              />
+              <PresetDrawer variant={mock} open={mockOpen} />
+              {drawer}
             </>
           ) : (
             <>
