@@ -13,12 +13,8 @@ import {
   PanIndicator,
   FillBadge,
   CycleBadge,
-  RetrigBadge,
+  RetrigDots,
 } from './StepBadges';
-import {
-  useMockVariant, useRetrigMode, nextRetrigCount,
-  applyRetrigCount,
-} from './mockVariant';
 import Tooltip from './Tooltip';
 
 interface StepButtonProps {
@@ -49,6 +45,8 @@ interface StepButtonProps {
   onPlainClick?: () => boolean;
   onClearSelection?: () => void;
   longPressActiveRef?: RefObject<boolean>;
+  /** MOCK: retrig hits landing on this step. */
+  retrigHits?: number;
 }
 
 /**
@@ -73,13 +71,11 @@ function StepButtonInner({
   onPlainClick,
   onClearSelection,
   longPressActiveRef,
+  retrigHits,
 }: StepButtonProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const gainLock = locks?.gain;
   const panLock = locks?.pan;
-  const mock = useMockVariant();
-  const retrigMode = useRetrigMode() && mock === 'C';
-  const retrigCount = locks?.retrig?.count ?? 1;
 
   const openPopover = useCallback(
     (clientY?: number, clientX?: number) => {
@@ -160,7 +156,7 @@ function StepButtonInner({
       <button
         ref={buttonRef}
         data-step={stepIndex}
-        data-retrig={retrigCount > 1 ? retrigCount : undefined}
+        data-retrig={retrigHits}
         {...longPressHandlers}
         onPointerUp={(e) => {
           if ('onPointerUp' in longPressHandlers) {
@@ -181,13 +177,6 @@ function StepButtonInner({
           ) {
             e.preventDefault();
             onCtrlClick(trackId, stepIndex);
-            return;
-          }
-          if (retrigMode && isActive) {
-            // MOCK C: a tap cycles the retrig count.
-            applyRetrigCount(
-              trackId, stepIndex, nextRetrigCount(retrigCount)
-            );
             return;
           }
           if (isSelected) {
@@ -246,19 +235,14 @@ function StepButtonInner({
           && conditions?.fill
           && <FillBadge fill={conditions.fill} />}
         {showBadges
-          && !retrigMode
           && conditions?.cycle != null
           && conditions.cycle.b >= 2
           && <CycleBadge
             a={conditions.cycle.a}
             b={conditions.cycle.b}
           />}
-        {showBadges && mock && (
-          <RetrigBadge
-            count={retrigCount}
-            variant={mock}
-            editing={retrigMode}
-          />
+        {!mini && retrigHits !== undefined && (
+          <RetrigDots hits={retrigHits} />
         )}
       </button>
     </Tooltip>

@@ -8,10 +8,7 @@ import { useSequencer } from './SequencerContext';
 import TrackRow from './TrackRow';
 import AccentRow from './AccentRow';
 import StepPopover from './StepPopover';
-import {
-  useMockVariant, useRetrigMode, setRetrigMode,
-  registerRetrigSetter,
-} from './mockVariant';
+import { useMockVariant } from './mockVariant';
 import ErrorBoundary from './ErrorBoundary';
 import GridContextMenu from './GridContextMenu';
 import Tooltip from './Tooltip';
@@ -169,40 +166,31 @@ export default function StepGrid({
       openPopover !== null || gridMenu !== null;
   }, [openPopover, gridMenu]);
 
-  // ─── MOCK: retrig demo data and variant C mode ───
+  // ─── MOCK: seed a few retrigs to show them off ───
   const mock = useMockVariant();
-  const retrigMode = useRetrigMode();
   const seededRef = useRef(false);
   useEffect(() => {
-    if (!mock) return;
-    registerRetrigSetter((trackId, stepIndex, count) => {
-      actions.setParameterLock(trackId, stepIndex, {
-        retrig: count === 1 ? undefined : { count },
+    if (!mock || seededRef.current) return;
+    seededRef.current = true;
+    const filled = TRACKS.map(t => t.id).filter(
+      id => config.tracks[id].steps.slice(0, 16).includes('1')
+    );
+    // rate, length (steps), ramp
+    const shapes: Array<[number, number, 'in' | 'out' | undefined]> = [
+      [32, 1, undefined], [16, 3, 'out'], [64, 4, 'in'],
+    ];
+    filled.slice(0, 3).forEach((id, i) => {
+      const [rate, length, ramp] = shapes[i];
+      // First hit from step 9 on, else the last one
+      const st = config.tracks[id].steps.slice(0, 16);
+      const from9 = st.indexOf('1', 8);
+      const last = from9 >= 0 ? from9 : st.lastIndexOf('1');
+      actions.setParameterLock(id, last, {
+        retrig: {
+          enabled: true, rate, length, ...(ramp ? { ramp } : {}),
+        },
       });
     });
-    if (!seededRef.current) {
-      seededRef.current = true;
-      // Seed a few retrigs on the last hits of the bar
-      const filled = TRACKS.map(t => t.id).filter(
-        id => config.tracks[id].steps.slice(0, 16).includes('1')
-      );
-      const shapes: Array<[number, 'in' | 'out' | undefined]> = [
-        [2, 'out'], [3, 'in'], [4, undefined],
-      ];
-      const demo = filled.slice(0, 3).map(
-        (id, i) => [id, ...shapes[i]] as const
-      );
-      for (const [id, count, ramp] of demo) {
-        const steps = config.tracks[id].steps.slice(0, 16);
-        const last = steps.lastIndexOf('1');
-        if (last >= 0) {
-          actions.setParameterLock(id, last, {
-            retrig: { count, ...(ramp ? { ramp } : {}) },
-          });
-        }
-      }
-    }
-    return () => registerRetrigSetter(null);
   }, [mock]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Stable so it doesn't defeat TrackRow's memo
@@ -530,26 +518,6 @@ export default function StepGrid({
                 <span aria-hidden="true">⋯</span>
               </button>
             </Tooltip>
-            {mock === 'C' && (
-              <button
-                type="button"
-                aria-pressed={retrigMode}
-                aria-label="Retrig edit mode"
-                title="Retrig mode: tap a lit step to cycle its hits (R)"
-                onClick={() => setRetrigMode(!retrigMode)}
-                className={
-                  'ss-key h-7 ml-1.5 px-2 rounded-md flex items-center gap-1.5'
-                  + ' ss-cap text-xs tracking-[0.12em]'
-                  + (retrigMode ? ' text-ink' : ' text-muted hover:text-ink')
-                }
-              >
-                <span
-                  aria-hidden="true"
-                  className={'ss-led' + (retrigMode ? ' ss-led-on' : '')}
-                />
-                Retrig
-              </button>
-            )}
           </span>
           <span
             aria-hidden="true"

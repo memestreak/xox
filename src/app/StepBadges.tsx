@@ -113,79 +113,26 @@ export function CycleBadge({
   );
 }
 
-interface RetrigBadgeProps {
-  count: number;
-  variant: string | null;
-  /** Variant C with Retrig mode on: big count. */
-  editing?: boolean;
-}
-
 /**
- * MOCK ONLY: shows a step's retrig count.
- * A: a row of N dots near the bottom.
- * B: the key split into N slices.
- * C: a small ×N in the corner; big N in Retrig mode.
+ * MOCK ONLY: retrig hits that land on this step, as a
+ * row of dots near the bottom of the key. On the lit
+ * step they show the rate; on the unlit steps a roll
+ * runs over they show where it keeps going.
  */
-export function RetrigBadge({
-  count, variant, editing,
-}: RetrigBadgeProps) {
-  if (variant === 'C' && editing) {
-    return (
-      <span
-        className={
-          'absolute inset-0 flex items-center justify-center'
-          + ' text-[17px] font-bold leading-none pointer-events-none'
-          + (count === 1 ? ' opacity-35' : '')
-        }
-        style={{ fontFamily: 'var(--font-barlow-condensed)' }}
-      >
-        {count === 1 ? '·' : `×${count}`}
-      </span>
-    );
-  }
-  if (count < 2) return null;
-  if (variant === 'A') {
-    return (
-      <span
-        data-testid="retrig-dots"
-        className="absolute left-0 right-0 bottom-[5px] flex justify-center gap-[2px] pointer-events-none"
-      >
-        {Array.from({ length: count }, (_, i) => (
-          <span
-            key={i}
-            className="w-[3px] h-[3px] rounded-full"
-            style={{ background: 'currentColor' }}
-          />
-        ))}
-      </span>
-    );
-  }
-  if (variant === 'B') {
-    return (
-      <span className="absolute inset-0 pointer-events-none">
-        {Array.from({ length: count - 1 }, (_, i) => (
-          <span
-            key={i}
-            className="absolute top-[11px] bottom-[4px] w-px"
-            style={{
-              left: `${((i + 1) / count) * 100}%`,
-              background: 'currentColor',
-              opacity: 0.45,
-            }}
-          />
-        ))}
-      </span>
-    );
-  }
-  if (variant === 'C') {
-    return (
-      <span
-        className="absolute bottom-[3px] left-1 text-[10px] font-bold leading-none pointer-events-none"
-        style={{ fontFamily: 'var(--font-barlow-condensed)' }}
-      >
-        ×{count}
-      </span>
-    );
-  }
-  return null;
+export function RetrigDots({ hits }: { hits: number }) {
+  const shown = Math.min(hits, 4);
+  return (
+    <span
+      data-testid="retrig-dots"
+      className="absolute left-0 right-0 bottom-[5px] flex justify-center gap-[2px] pointer-events-none"
+    >
+      {Array.from({ length: shown }, (_, i) => (
+        <span
+          key={i}
+          className="w-[3px] h-[3px] rounded-full"
+          style={{ background: 'currentColor' }}
+        />
+      ))}
+    </span>
+  );
 }

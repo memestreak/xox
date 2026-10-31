@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useRef } from 'react';
+import { memo, useCallback, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
 import type {
   StepConditions, StepLocks, TrackId,
@@ -10,6 +10,7 @@ import TrackNameButton from './TrackNameButton';
 import TrackMixer from './TrackMixer';
 import TrackEndBar from './TrackEndBar';
 import StepButton from './StepButton';
+import { retrigCoverage } from './retrig';
 import CustomSampleDot from './CustomSampleDot';
 import { useFileDrop } from './hooks/useFileDrop';
 import type { FileDropHandlers } from './hooks/useFileDrop';
@@ -312,6 +313,12 @@ function TrackRowInner({
     [onSetTrackLength, trackId]
   );
 
+  // MOCK: steps that retrig rolls land on.
+  const retrigCover = useMemo(
+    () => retrigCoverage(steps, parameterLocks, patternLength),
+    [steps, parameterLocks, patternLength],
+  );
+
   const effectiveStep = computeEffectiveStep(
     currentStep, totalSteps, isFreeRun, trackLength
   );
@@ -498,6 +505,11 @@ function TrackRowInner({
                     }
                     longPressActiveRef={
                       longPressActiveRef
+                    }
+                    retrigHits={
+                      disabled
+                        ? undefined
+                        : retrigCover.get(globalIdx)
                     }
                   />
                 );
