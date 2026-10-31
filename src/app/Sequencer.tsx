@@ -21,7 +21,7 @@ import { useInputModality } from './hooks/useInputModality';
 import { usePreventFileNavigation } from './hooks/useFileDrop';
 import type { Pattern } from './types';
 import { useMockVariant } from './mockVariant';
-import { PresetDrawer, PresetTrigger } from './PresetMock';
+import { PresetDrawer, PresetTrigger, SplitKey } from './PresetMock';
 
 const categories = getCategorizedPatterns(
   patternsData.patterns as Pattern[]
@@ -104,7 +104,18 @@ function SequencerInner() {
           pendingPatternId={state.pendingPatternId}
           onSelect={setPattern}
         >
-          {({ trigger, drawer }) => mock === 'A' ? (
+          {({ trigger, drawer }) => mock === 'D' ? (
+            <>
+              <TransportControls
+                page={page}
+                mock={mock}
+                patternTrigger={
+                  <SplitKey open={mockOpen} onOpen={setMockOpen} />
+                }
+              />
+              <PresetDrawer variant={mock} open={mockOpen} />
+            </>
+          ) : mock === 'A' ? (
             <>
               <TransportControls
                 page={page}

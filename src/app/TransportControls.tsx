@@ -155,6 +155,11 @@ function TransportControlsInner({
             {presetTrigger}
           </PanelSection>
         )}
+        {mock === 'D' ? (
+          <PanelSection className="col-span-12 lg:flex-1 max-lg:order-2 lg:rounded-l-[11px]">
+            {patternTrigger}
+          </PanelSection>
+        ) : (<>
         <PanelSection
           label="Kit"
           labelFor="kit-select"
@@ -168,8 +173,9 @@ function TransportControlsInner({
         >
           {patternTrigger}
         </PanelSection>
+        </>)}
         </div>
-        <PatternModeSelector className={(mock === 'B' || mock === 'C') ? 'col-span-8 lg:flex-1 lg:rounded-bl-[11px]' : undefined} />
+        <PatternModeSelector className={(mock === 'B' || mock === 'C') ? 'col-span-8 lg:flex-1 lg:rounded-bl-[11px]' : mock === 'D' ? 'col-span-12' : undefined} />
         <GlobalControls page={page} />
         <MasterVolume
           variant="strip"

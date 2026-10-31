@@ -300,14 +300,14 @@ function DrawerA({ open }: { open: boolean }) {
 const GROUP_ON = ['bg-step1', 'bg-step2', 'bg-step3', 'bg-step4'];
 const GROUP_OFF = ['bg-step1-off', 'bg-step2-off', 'bg-step3-off', 'bg-step4-off'];
 
-function DrawerB({ open }: { open: boolean }) {
+function DrawerB({ open, bare }: { open: boolean; bare?: boolean }) {
   const { current, load } = usePresetMock('B');
   const [bank, setBank] = useState(current?.bank ?? 'A');
   const [hover, setHover] = useState<MockPreset | null>(null);
   const pads = PRESETS.filter(p => p.bank === bank);
   const shown = hover ?? current;
-  return (
-    <Drawer open={open} tall="max-h-[640px] lg:max-h-[320px]">
+  const body = (
+    <>
       <div className="flex flex-wrap items-center gap-1.5 p-3 pb-2.5">
         <span className="ss-label mr-1 max-sm:w-full">Bank</span>
         {'ABCDEFGH'.split('').map(b => {
@@ -364,6 +364,12 @@ function DrawerB({ open }: { open: boolean }) {
           <div className="lg:hidden"><PresetFacts p={shown} compact /></div>
         </div>
       )}
+    </>
+  );
+  if (bare) return body;
+  return (
+    <Drawer open={open} tall="max-h-[640px] lg:max-h-[320px]">
+      {body}
     </Drawer>
   );
 }
@@ -484,7 +490,183 @@ function DrawerC({ open }: { open: boolean }) {
 export function PresetDrawer({ variant, open }: {
   variant: string; open: boolean;
 }) {
+  if (variant === 'D') return <DrawerD open={open} />;
   if (variant === 'B') return <DrawerB open={open} />;
   if (variant === 'C') return <DrawerC open={open} />;
   return <DrawerA open={open} />;
+}
+
+// ── D: one split key, one browser with tabs ─────────
+
+type Tab = 'presets' | 'kits' | 'patterns';
+let tab: Tab = 'patterns';
+const tabListeners = new Set<() => void>();
+const tabStore = {
+  subscribe: (l: () => void) => {
+    tabListeners.add(l);
+    return () => { tabListeners.delete(l); };
+  },
+  get: () => tab,
+  set: (t: Tab) => { tab = t; tabListeners.forEach(l => l()); },
+};
+const useTab = () =>
+  useSyncExternalStore(tabStore.subscribe, tabStore.get, tabStore.get);
+
+/**
+ * The one header cell: kit and pattern as two halves of
+ * one LCD key, the preset as a small line above.
+ */
+export function SplitKey({ open, onOpen }: {
+  open: boolean;
+  onOpen: (open: boolean) => void;
+}) {
+  const { current, modified, state } = usePresetMock('D');
+  const shownTab = useTab();
+  const patternId = basePatternId(state.selectedPatternId);
+  const pattern = PATTERNS.find(p => p.id === patternId);
+  const half = (t: Tab) => () => {
+    if (open && shownTab === t) onOpen(false);
+    else { tabStore.set(t); onOpen(true); }
+  };
+  const halfClass = (t: Tab) =>
+    'flex items-center gap-2 h-full px-2.5 min-w-0 rounded-[5px] uppercase'
+    + ' hover:bg-lcd/10 transition-colors'
+    + (open && shownTab === t ? ' bg-lcd/12 text-lcd' : '');
+  return (
+    <div className="flex flex-col gap-2 min-w-0">
+      <div className="flex items-baseline gap-3 min-w-0">
+        <span className="ss-label">Kit · Pattern</span>
+        <button
+          type="button"
+          onClick={half('presets')}
+          aria-label="Presets"
+          className="ml-auto min-w-0 truncate font-mono text-[10.5px] uppercase tracking-[0.04em] text-faint hover:text-accent"
+        >
+          Preset{' '}
+          <span className="text-lcd/70">
+            {current ? presetTitle(current) : 'none'}{modified ? '*' : ''}
+          </span>
+        </button>
+      </div>
+      <div
+        data-open={open || undefined}
+        className="ss-lcd-select h-9 w-full !p-0.5 !gap-0"
+      >
+        <button
+          type="button"
+          onClick={half('kits')}
+          aria-label="Kit"
+          className={halfClass('kits') + ' shrink-0'}
+        >
+          {state.currentKit.name}
+          <LcdCaret open={open && shownTab === 'kits'} />
+        </button>
+        <span aria-hidden="true" className="w-px self-stretch my-1.5 bg-lcd/25" />
+        <button
+          type="button"
+          onClick={half('patterns')}
+          aria-label="Pattern"
+          className={halfClass('patterns') + ' flex-1 justify-between'}
+        >
+          <span className="truncate">
+            {pattern?.name ?? 'Custom'}
+            {state.selectedPatternId.endsWith('*') ? '*' : ''}
+          </span>
+          <LcdCaret open={open && shownTab === 'patterns'} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const PATTERN_CATEGORIES = [
+  ...new Set(PATTERNS.map(p => p.category ?? 'Other')),
+].sort();
+
+function DrawerD({ open }: { open: boolean }) {
+  const shownTab = useTab();
+  const { state, actions } = useSequencer();
+  const patternId = basePatternId(state.selectedPatternId);
+  const playing = PATTERNS.find(p => p.id === patternId);
+  const [cat, setCat] = useState(playing?.category ?? 'House');
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'presets', label: 'Presets' },
+    { id: 'kits', label: 'Kits' },
+    { id: 'patterns', label: 'Patterns' },
+  ];
+  const lcdRow = (active: boolean) =>
+    'text-left px-2 py-1.5 rounded-[3px] font-mono text-[12px] uppercase flex items-center gap-2'
+    + (active
+      ? ' bg-lcd text-[#1a0f03] font-semibold shadow-[0_0_8px_rgb(245_160_58/0.35)]'
+      : ' text-lcd hover:bg-lcd/10');
+  return (
+    <Drawer open={open} tall="max-h-[700px] lg:max-h-[330px]">
+      <div role="tablist" className="flex gap-1.5 px-3 pt-3">
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={shownTab === t.id}
+            onClick={() => tabStore.set(t.id)}
+            className={'ss-key h-8 px-3.5 font-display text-[13px] font-semibold uppercase tracking-[0.1em] max-sm:flex-1'
+              + (shownTab === t.id
+                ? ' bg-none bg-accent border-accent-hi text-[#1a0d05]'
+                : ' border-edge text-ink')}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="border-t border-line mt-3" />
+      {shownTab === 'presets' && <DrawerB open bare />}
+      {shownTab === 'kits' && (
+        <div className="p-3 bg-well rounded-b-[11px] shadow-[inset_0_1px_3px_rgb(0_0_0/0.6)] grid grid-cols-2 lg:grid-cols-4 gap-px">
+          {KITS.map(k => (
+            <button
+              key={k.id}
+              type="button"
+              onClick={() => actions.setKit(k)}
+              className={lcdRow(k.id === state.currentKit.id)}
+            >
+              {k.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {shownTab === 'patterns' && (
+        <>
+          <div className="p-3 pb-2.5 flex flex-wrap gap-1.5 max-lg:max-h-[124px] max-lg:overflow-hidden">
+            {PATTERN_CATEGORIES.map(c => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCat(c)}
+                className={'ss-key h-8 px-3 text-sm font-medium'
+                  + (c === cat
+                    ? ' bg-none bg-accent border-accent-hi text-[#1a0d05]'
+                    : c === playing?.category
+                      ? ' border-accent/60 text-accent-hi'
+                      : ' border-edge text-ink')}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <div className="p-3 bg-well rounded-b-[11px] shadow-[inset_0_1px_3px_rgb(0_0_0/0.6)] grid grid-cols-2 lg:grid-cols-4 gap-px min-h-[80px] content-start">
+            {PATTERNS.filter(p => p.category === cat).map(p => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => actions.setPattern(p)}
+                className={lcdRow(p.id === state.selectedPatternId)}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </Drawer>
+  );
 }
