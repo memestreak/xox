@@ -7,11 +7,18 @@ import type { StepLocks } from './types';
 export type Retrig = NonNullable<StepLocks['retrig']>;
 
 /** Rate options: the note value between hits (1/N). */
-export const RETRIG_RATES = [8, 12, 16, 24, 32, 48, 64];
+export const RETRIG_RATES = [
+  5, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64, 80,
+];
 
-/** Length options in steps (1/16 notes), with labels. */
+/**
+ * Length options in steps (a step is a 1/16 note), with
+ * labels. Under a step makes flams.
+ */
 export const RETRIG_LENGTHS: ReadonlyArray<readonly [number, string]> = [
-  [1, '1/16'], [2, '1/8'], [3, '3/16'], [4, '1/4'], [8, '1/2'], [16, '1/1'],
+  [0.125, '1/128'], [0.25, '1/64'], [0.5, '1/32'],
+  [1, '1/16'], [2, '1/8'], [3, '3/16'], [4, '1/4'],
+  [8, '1/2'], [16, '1/1'],
 ];
 
 export const DEFAULT_RETRIG: Retrig = {
@@ -31,7 +38,8 @@ export function retrigHits(
   patternLength: number,
 ): number[] {
   if (!retrig?.enabled) return [0];
-  let span = 1;
+  // Under one step the roll ends inside the step.
+  let span = Math.min(1, retrig.length);
   while (span < retrig.length) {
     const next = stepIndex + span;
     if (next >= patternLength) break;
@@ -44,16 +52,6 @@ export function retrigHits(
     hits.push(t);
   }
   return hits;
-}
-
-/** Ramp gain for hit k of n. */
-export function rampScale(
-  ramp: Retrig['ramp'], k: number, n: number,
-): number {
-  if (n < 2) return 1;
-  if (ramp === 'in') return (k + 1) / n;
-  if (ramp === 'out') return 1 - k / n;
-  return 1;
 }
 
 /**

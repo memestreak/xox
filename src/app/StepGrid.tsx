@@ -175,19 +175,19 @@ export default function StepGrid({
     const filled = TRACKS.map(t => t.id).filter(
       id => config.tracks[id].steps.slice(0, 16).includes('1')
     );
-    // rate, length (steps), ramp
-    const shapes: Array<[number, number, 'in' | 'out' | undefined]> = [
-      [32, 1, undefined], [16, 3, 'out'], [64, 4, 'in'],
+    // rate, length (steps): a flam, a 3-step roll, a buzz
+    const shapes: Array<[number, number]> = [
+      [64, 0.5], [16, 3], [64, 4],
     ];
     filled.slice(0, 3).forEach((id, i) => {
-      const [rate, length, ramp] = shapes[i];
+      const [rate, length] = shapes[i];
       // First hit from step 9 on, else the last one
       const st = config.tracks[id].steps.slice(0, 16);
       const from9 = st.indexOf('1', 8);
       const last = from9 >= 0 ? from9 : st.lastIndexOf('1');
       actions.setParameterLock(id, last, {
         retrig: {
-          enabled: true, rate, length, ...(ramp ? { ramp } : {}),
+          enabled: true, rate, length,
         },
       });
     });

@@ -36,13 +36,12 @@ export interface StepLocks {
   /**
    * MOCK: retrig. rate = note value between hits (32 =
    * 1/32), length = how long the roll lasts in steps
-   * (1/16 notes), ramp = velocity curve.
+   * (1/16 notes; 0.25 = a 1/64 note).
    */
   retrig?: {
     enabled: boolean;
     rate: number;
     length: number;
-    ramp?: 'in' | 'out';
   };
 }
 

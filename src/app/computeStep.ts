@@ -1,5 +1,5 @@
 import { evaluateCondition } from './trigConditions';
-import { retrigHits, rampScale } from './retrig';
+import { retrigHits } from './retrig';
 import {
   ACCENT_GAIN_MULTIPLIER,
   GAIN_EXPONENT,
@@ -171,14 +171,11 @@ export function computeStep(
         getPatternLength(config.tracks),
       );
       const stepDur = (60 / config.bpm) * 0.25;
-      hits.forEach((t, k) => {
+      for (const t of hits) {
         sounds.push([
-          track.id,
-          scheduledTime + t * stepDur,
-          gain * rampScale(locks?.retrig?.ramp, k, hits.length),
-          pan,
+          track.id, scheduledTime + t * stepDur, gain, pan,
         ]);
-      });
+      }
       triggeredTracks.add(track.id);
     }
   });
