@@ -296,16 +296,17 @@ describe('StepPopover retrig', () => {
     mockSetLock.mockClear();
   });
 
-  it('starts off, with rate and length disabled', () => {
+  const dial = (name: string) =>
+    screen.getByRole('slider', { name: `Retrig ${name}` });
+  const lit = { retrig: { enabled: true, rate: 64, length: 0.5 } };
+
+  it('starts off, with the dials out of reach', () => {
     render(<StepPopover {...base} />);
     expect(
       screen.getByRole('radio', { name: 'Off' })
         .getAttribute('aria-checked')
     ).toBe('true');
-    expect(
-      screen.getByRole('combobox', { name: 'Retrig rate' })
-        .hasAttribute('disabled')
-    ).toBe(true);
+    expect(dial('rate').closest('[inert]')).toBeTruthy();
   });
 
   it('turning it on sets a 1/32 for a 1/16', () => {
@@ -316,30 +317,40 @@ describe('StepPopover retrig', () => {
     });
   });
 
-  it('shows the step rate and length as note values', () => {
-    render(
-      <StepPopover
-        {...base}
-        locks={{ retrig: { enabled: true, rate: 64, length: 0.5 } }}
-      />
+  it('shows rate and length as note values', () => {
+    render(<StepPopover {...base} locks={lit} />);
+    expect(dial('rate').getAttribute('aria-valuetext')).toBe('1/64');
+    expect(dial('length').getAttribute('aria-valuetext')).toBe('1/32');
+  });
+
+  it('arrow keys move a dial one value', () => {
+    render(<StepPopover {...base} locks={lit} />);
+    fireEvent.keyDown(dial('rate'), { key: 'ArrowUp' });
+    expect(mockSetLock).toHaveBeenLastCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 80, length: 0.5 },
+    });
+    fireEvent.keyDown(dial('length'), { key: 'ArrowDown' });
+    expect(mockSetLock).toHaveBeenLastCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 64, length: 0.25 },
+    });
+  });
+
+  it('double-clicking a dial or its value resets it', () => {
+    render(<StepPopover {...base} locks={lit} />);
+    fireEvent.click(dial('rate'), { detail: 2 });
+    expect(mockSetLock).toHaveBeenLastCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 32, length: 0.5 },
+    });
+    fireEvent.doubleClick(
+      screen.getByRole('button', { name: /^Length 1\/32/ })
     );
-    expect(
-      screen.getByRole('combobox', { name: 'Retrig rate' })
-        .textContent
-    ).toContain('1/64');
-    expect(
-      screen.getByRole('combobox', { name: 'Retrig length' })
-        .textContent
-    ).toContain('1/32');
+    expect(mockSetLock).toHaveBeenLastCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 64, length: 1 },
+    });
   });
 
   it('turning it off keeps rate and length', () => {
-    render(
-      <StepPopover
-        {...base}
-        locks={{ retrig: { enabled: true, rate: 64, length: 0.5 } }}
-      />
-    );
+    render(<StepPopover {...base} locks={lit} />);
     fireEvent.click(screen.getByRole('radio', { name: 'Off' }));
     expect(mockSetLock).toHaveBeenCalledWith('bd', 3, {
       retrig: { enabled: false, rate: 64, length: 0.5 },

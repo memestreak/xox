@@ -1,6 +1,6 @@
 "use client";
 
-import LcdSelect from './LcdSelect';
+import Knob from './Knob';
 import {
   DEFAULT_RETRIG, RETRIG_LENGTHS, RETRIG_RATES,
   type Retrig,
@@ -8,17 +8,60 @@ import {
 
 /**
  * The Retrig section of the step editor: an Off/On
- * switch, then Rate and Length as note values. Turning
- * it off keeps the rate and length.
+ * switch, then Rate and Length dials in note values.
+ * Double-click a dial or its value to reset it. Turning
+ * retrig off keeps the rate and length.
  */
 
-const RATE_OPTIONS = RETRIG_RATES.map(r => ({
-  value: String(r), label: `1/${r}`,
-}));
+const RATE_LABELS = RETRIG_RATES.map(r => `1/${r}`);
+const LENGTH_LABELS = RETRIG_LENGTHS.map(([, label]) => label);
+const LENGTH_STEPS = RETRIG_LENGTHS.map(([steps]) => steps);
 
-const LENGTH_OPTIONS = RETRIG_LENGTHS.map(([v, label]) => ({
-  value: String(v), label,
-}));
+interface DialProps {
+  label: string;
+  /** Option labels, slowest/shortest first. */
+  labels: readonly string[];
+  index: number;
+  defaultIndex: number;
+  onChange: (index: number) => void;
+}
+
+/** A stepped knob over a list of options, with its value. */
+function Dial({
+  label, labels, index, defaultIndex, onChange,
+}: DialProps) {
+  const last = labels.length - 1;
+  const toIndex = (v: number) =>
+    Math.max(0, Math.min(last, Math.round(v * last)));
+  return (
+    <div className="flex items-center gap-2.5">
+      <Knob
+        value={index / last}
+        onChange={v => onChange(toIndex(v))}
+        steps={labels.length}
+        size={40}
+        defaultValue={defaultIndex / last}
+        formatValue={v => labels[toIndex(v)]}
+        ariaPrefix={`Retrig ${label.toLowerCase()}`}
+        showHoverValue={false}
+      />
+      <div className="flex flex-col items-start gap-0.5">
+        <span className="ss-label">{label}</span>
+        <button
+          type="button"
+          aria-label={
+            `${label} ${labels[index]}. Double-click to reset`
+            + ` to ${labels[defaultIndex]}`
+          }
+          onDoubleClick={() => onChange(defaultIndex)}
+          className="font-mono text-sm leading-none text-ink cursor-default select-none"
+        >
+          {labels[index]}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 interface RetrigEditorProps {
   value: Retrig | undefined;
@@ -65,34 +108,28 @@ export default function RetrigEditor({
           })}
         </div>
       </div>
+      {/* Off: the dials keep their values but can't be used */}
       <div
+        inert={!r.enabled}
         className={
           'grid grid-cols-2 gap-3'
           + (r.enabled ? '' : ' opacity-40')
         }
       >
-        <div className="space-y-1.5 min-w-0">
-          <div className="ss-label">Rate</div>
-          <LcdSelect
-            aria-label="Retrig rate"
-            value={String(r.rate)}
-            options={RATE_OPTIONS}
-            disabled={!r.enabled}
-            onChange={v => set({ rate: Number(v) })}
-            className="w-full h-8"
-          />
-        </div>
-        <div className="space-y-1.5 min-w-0">
-          <div className="ss-label">Length</div>
-          <LcdSelect
-            aria-label="Retrig length"
-            value={String(r.length)}
-            options={LENGTH_OPTIONS}
-            disabled={!r.enabled}
-            onChange={v => set({ length: Number(v) })}
-            className="w-full h-8"
-          />
-        </div>
+        <Dial
+          label="Rate"
+          labels={RATE_LABELS}
+          index={RETRIG_RATES.indexOf(r.rate)}
+          defaultIndex={RETRIG_RATES.indexOf(DEFAULT_RETRIG.rate)}
+          onChange={i => set({ rate: RETRIG_RATES[i] })}
+        />
+        <Dial
+          label="Length"
+          labels={LENGTH_LABELS}
+          index={LENGTH_STEPS.indexOf(r.length)}
+          defaultIndex={LENGTH_STEPS.indexOf(DEFAULT_RETRIG.length)}
+          onChange={i => set({ length: LENGTH_STEPS[i] })}
+        />
       </div>
     </>
   );
