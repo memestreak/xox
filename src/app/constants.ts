@@ -128,3 +128,7 @@ export const MAX_SAMPLE_FILE_BYTES = 20 * 1024 * 1024;
 // ── Tooltips ────────────────────────────────────────
 /** Keeps a tooltip this far inside the edge that would clip it. */
 export const TOOLTIP_EDGE_MARGIN_PX = 4;
+
+// ── Step keys ───────────────────────────────────────
+/** Most retrig dots drawn on one step key. */
+export const RETRIG_DOTS_MAX = 4;

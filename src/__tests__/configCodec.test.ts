@@ -125,6 +125,36 @@ describe('round-trip fidelity', () => {
   });
 });
 
+describe('retrig locks', () => {
+  it('round-trip in share links', async () => {
+    const config = defaultConfig();
+    config.tracks.bd.parameterLocks = {
+      0: { gain: 0.5, retrig: { enabled: true, rate: 64, length: 0.5 } },
+      4: { retrig: { enabled: false, rate: 12, length: 16 } },
+    };
+    const decoded = await decodeConfig(await encodeConfig(config));
+    expect(decoded.tracks.bd.parameterLocks).toEqual(
+      config.tracks.bd.parameterLocks
+    );
+  });
+
+  it('drop a retrig with a rate or length not offered',
+    async () => {
+      const config = defaultConfig();
+      config.tracks.bd.parameterLocks = {
+        0: { gain: 0.5, retrig: { enabled: true, rate: 7, length: 1 } },
+        1: { retrig: { enabled: true, rate: 32, length: 5 } },
+        2: { retrig: { enabled: 'yes', rate: 32, length: 1 } as never },
+      };
+      const decoded = await decodeConfig(await encodeConfig(config));
+      // Gain stays; the bad retrigs go
+      expect(decoded.tracks.bd.parameterLocks).toEqual({
+        0: { gain: 0.5 },
+      });
+    }
+  );
+});
+
 // -------------------------------------------------------
 // B. Defensive decoding
 // -------------------------------------------------------

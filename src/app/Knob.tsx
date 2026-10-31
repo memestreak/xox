@@ -18,6 +18,12 @@ interface KnobProps {
   showHoverValue?: boolean;
   /** Extra description ids (e.g. from a wrapping Tooltip). */
   'aria-describedby'?: string;
+  /**
+   * Snap to this many evenly spaced positions (0 to 1):
+   * drags land on the nearest one and each arrow key
+   * moves one position. Leave out for a smooth knob.
+   */
+  steps?: number;
 }
 
 function describeArc(
@@ -70,7 +76,12 @@ function KnobInner({
   ariaPrefix = 'Volume',
   showHoverValue = true,
   'aria-describedby': extraDescribedBy,
+  steps,
 }: KnobProps) {
+  // One position on a stepped knob, else 1% (10% with Shift)
+  const stepSize = steps && steps > 1 ? 1 / (steps - 1) : 0;
+  const snap = (v: number) =>
+    stepSize ? Math.round(v / stepSize) * stepSize : v;
   const descriptionId = useId();
   const dragRef = useRef<{
     startY: number;
@@ -120,13 +131,13 @@ function KnobInner({
       if (!dragRef.current) return;
       const delta =
         (dragRef.current.startY - e.clientY) / 200;
-      const next = Math.max(
+      const next = snap(Math.max(
         0,
         Math.min(1, dragRef.current.startValue + delta)
-      );
-      onChange(next);
+      ));
+      if (next !== valueRef.current) onChange(next);
     },
-    [onChange]
+    [onChange, stepSize] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const release = useCallback(() => {
@@ -143,7 +154,9 @@ function KnobInner({
       ) {
         next = Math.min(
           1,
-          v + (e.shiftKey ? 0.1 : 0.01)
+          stepSize
+            ? snap(v) + stepSize
+            : v + (e.shiftKey ? 0.1 : 0.01)
         );
       } else if (
         e.key === 'ArrowDown'
@@ -151,7 +164,9 @@ function KnobInner({
       ) {
         next = Math.max(
           0,
-          v - (e.shiftKey ? 0.1 : 0.01)
+          stepSize
+            ? snap(v) - stepSize
+            : v - (e.shiftKey ? 0.1 : 0.01)
         );
       } else if (e.key === 'Home') {
         next = 0;
@@ -163,7 +178,7 @@ function KnobInner({
       e.preventDefault();
       onChange(next);
     },
-    [onChange]
+    [onChange, stepSize] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const resetToDefault = useCallback(

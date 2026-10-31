@@ -166,4 +166,32 @@ describe('Knob', () => {
       screen.getByRole('slider')
     ).toHaveAttribute('aria-valuetext', 'L25');
   });
+
+  describe('with steps', () => {
+    it('arrow keys move one position', () => {
+      const onChange = vi.fn();
+      render(<Knob value={0.5} onChange={onChange} steps={5} />);
+      const slider = screen.getByRole('slider');
+      fireEvent.keyDown(slider, { key: 'ArrowUp', shiftKey: true });
+      expect(onChange.mock.calls[0][0]).toBeCloseTo(0.75);
+      fireEvent.keyDown(slider, { key: 'ArrowDown' });
+      expect(onChange.mock.calls[1][0]).toBeCloseTo(0.25);
+    });
+
+    it('drags snap to the nearest position', () => {
+      const onChange = vi.fn();
+      const { rerender } = render(
+        <Knob value={0} onChange={onChange} steps={5} />
+      );
+      const slider = screen.getByRole('slider');
+      fireEvent.pointerDown(slider, { clientY: 100, pointerId: 1 });
+      // 60 px up = +0.3, which snaps to 0.25
+      fireEvent.pointerMove(slider, { clientY: 40, pointerId: 1 });
+      expect(onChange).toHaveBeenLastCalledWith(0.25);
+      rerender(<Knob value={0.25} onChange={onChange} steps={5} />);
+      // A move that stays on the same position sends nothing
+      fireEvent.pointerMove(slider, { clientY: 38, pointerId: 1 });
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+  });
 });

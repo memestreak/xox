@@ -1,8 +1,11 @@
-import { render, screen, fireEvent }
+import { render, screen, fireEvent, within }
   from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach }
   from 'vitest';
 import StepPopover from '../app/StepPopover';
+import {
+  getEditorPosition, setEditorPosition,
+} from '../app/stepEditorPosition';
 
 const mockSet = vi.fn();
 const mockClear = vi.fn();
@@ -58,14 +61,14 @@ describe('StepPopover', () => {
 
   it('cycle defaults to 1:1', () => {
     render(<StepPopover {...base} />);
-    expect(screen.getByRole('combobox'))
+    expect(screen.getByRole('combobox', { name: 'Cycle' }))
       .toHaveTextContent('1:1');
   });
 
   it('changing cycle calls setTrigCondition',
     () => {
       render(<StepPopover {...base} />);
-      fireEvent.click(screen.getByRole('combobox'));
+      fireEvent.click(screen.getByRole('combobox', { name: 'Cycle' }));
       fireEvent.click(
         screen.getByRole('option', { name: '2:4' })
       );
@@ -123,7 +126,9 @@ describe('StepPopover', () => {
 
   it('fill section renders three options', () => {
     render(<StepPopover {...base} />);
-    const radios = screen.getAllByRole('radio');
+    const radios = within(
+      screen.getByRole('radiogroup', { name: 'Fill condition' })
+    ).getAllByRole('radio');
     expect(radios).toHaveLength(3);
     expect(radios[0].textContent).toBe('Any');
     expect(radios[1].textContent).toBe('Fill');
@@ -198,7 +203,7 @@ describe('StepPopover', () => {
         screen.getByRole('slider', { name: 'Probability' })
           .getAttribute('aria-valuenow')
       ).toBe('75');
-      expect(screen.getByRole('combobox'))
+      expect(screen.getByRole('combobox', { name: 'Cycle' }))
         .toHaveTextContent('1:3');
     }
   );
@@ -286,5 +291,126 @@ describe('StepPopover scroll close', () => {
     );
     fireEvent.scroll(scrollEl);
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('StepPopover retrig', () => {
+  beforeEach(() => {
+    mockSetLock.mockClear();
+  });
+
+  const dial = (name: string) =>
+    screen.getByRole('slider', { name: `Retrig ${name}` });
+  const lit = { retrig: { enabled: true, rate: 64, length: 0.5 } };
+
+  it('starts off, with the dials out of reach', () => {
+    render(<StepPopover {...base} />);
+    expect(
+      screen.getByRole('radio', { name: 'Off' })
+        .getAttribute('aria-checked')
+    ).toBe('true');
+    expect(dial('rate').closest('[inert]')).toBeTruthy();
+  });
+
+  it('turning it on sets a 1/32 for a 1/16', () => {
+    render(<StepPopover {...base} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'On' }));
+    expect(mockSetLock).toHaveBeenCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 32, length: 1 },
+    });
+  });
+
+  it('shows rate and length as note values', () => {
+    render(<StepPopover {...base} locks={lit} />);
+    expect(dial('rate').getAttribute('aria-valuetext')).toBe('1/64');
+    expect(dial('length').getAttribute('aria-valuetext')).toBe('1/32');
+  });
+
+  it('arrow keys move a dial one value', () => {
+    render(<StepPopover {...base} locks={lit} />);
+    fireEvent.keyDown(dial('rate'), { key: 'ArrowUp' });
+    expect(mockSetLock).toHaveBeenLastCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 80, length: 0.5 },
+    });
+    fireEvent.keyDown(dial('length'), { key: 'ArrowDown' });
+    expect(mockSetLock).toHaveBeenLastCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 64, length: 0.25 },
+    });
+  });
+
+  it('double-clicking a dial or its value resets it', () => {
+    render(<StepPopover {...base} locks={lit} />);
+    fireEvent.click(dial('rate'), { detail: 2 });
+    expect(mockSetLock).toHaveBeenLastCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 32, length: 0.5 },
+    });
+    fireEvent.doubleClick(
+      screen.getByRole('button', { name: /^Length 1\/32/ })
+    );
+    expect(mockSetLock).toHaveBeenLastCalledWith('bd', 3, {
+      retrig: { enabled: true, rate: 64, length: 1 },
+    });
+  });
+
+  it('turning it off keeps rate and length', () => {
+    render(<StepPopover {...base} locks={lit} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Off' }));
+    expect(mockSetLock).toHaveBeenCalledWith('bd', 3, {
+      retrig: { enabled: false, rate: 64, length: 0.5 },
+    });
+  });
+});
+
+describe('StepPopover moving', () => {
+  beforeEach(() => {
+    setEditorPosition(null);
+    Element.prototype.setPointerCapture = vi.fn();
+  });
+
+  const anchored = { ...base, anchorRect: { top: 100, left: 50 } };
+  const dialog = () => screen.getByRole('dialog');
+  const header = () =>
+    screen.getByText('Step 4').closest('.cursor-move')!;
+
+  it('dragging the header moves it and remembers where', () => {
+    const { unmount } = render(<StepPopover {...anchored} />);
+    // jsdom has no layout: the editor sits at 0,0
+    fireEvent.pointerDown(header(), { clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(header(), { clientX: 210, clientY: 60, pointerId: 1 });
+    fireEvent.pointerUp(header(), { pointerId: 1 });
+    expect(dialog().style.left).toBe('200px');
+    expect(dialog().style.top).toBe('50px');
+    expect(getEditorPosition()).toEqual({ left: 200, top: 50 });
+    unmount();
+    // The next editor opens there, not by its step
+    render(<StepPopover {...anchored} stepIndex={7} />);
+    expect(dialog().style.left).toBe('200px');
+  });
+
+  it('double-clicking the header puts it back by the step', () => {
+    setEditorPosition({ left: 200, top: 50 });
+    render(<StepPopover {...anchored} />);
+    fireEvent.doubleClick(header());
+    expect(getEditorPosition()).toBeNull();
+    expect(dialog().style.top).toBe('100px');
+  });
+
+  it('the grip moves it with arrow keys', () => {
+    render(<StepPopover {...anchored} />);
+    const grip = screen.getByRole('button', { name: /Move step editor/ });
+    fireEvent.keyDown(grip, { key: 'ArrowRight', shiftKey: true });
+    fireEvent.keyDown(grip, { key: 'ArrowDown' });
+    // From 0,0 (no layout in jsdom); the first press keeps it 8 px in
+    expect(getEditorPosition()).toEqual({ left: 40, top: 18 });
+  });
+
+  it('pressing Reset in the header does not start a drag', () => {
+    render(
+      <StepPopover {...anchored} conditions={{ probability: 50 }} />
+    );
+    const reset = screen.getByRole('button', { name: 'Reset trig cond.' });
+    fireEvent.pointerDown(reset, { clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(header(), { clientX: 210, clientY: 60, pointerId: 1 });
+    expect(getEditorPosition()).toBeNull();
   });
 });

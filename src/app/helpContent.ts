@@ -125,7 +125,11 @@ const MOUSE_TAB: HelpTab = {
         { gesture: 'swipe up / down', text: 'Scroll through the tracks' },
         {
           gesture: 'right-click', text: 'Step editor',
-          note: '(probability, cycle, fill, gain, pan)',
+          note: '(probability, cycle, fill, gain, pan, retrig)',
+        },
+        {
+          gesture: 'drag its header', text: 'Move the step editor',
+          note: '(double-click the header to put it back)',
         },
         {
           keys: ['shift'], gesture: 'drag',
@@ -298,6 +302,7 @@ const TOUCH_TAB: HelpTab = {
         { gesture: 'drag sideways', text: 'Paint steps along a row' },
         { gesture: 'swipe up / down', text: 'Scroll through the tracks' },
         { gesture: 'long-press', text: 'Step editor' },
+        { gesture: 'drag its header', text: 'Move the step editor' },
         {
           gesture: 'long-press, then drag',
           text: 'Flip through presets for that track',

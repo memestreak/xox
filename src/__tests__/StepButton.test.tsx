@@ -461,3 +461,37 @@ describe('StepButton locks prop', () => {
     expect(screen.queryByTestId('pan-bar')).toBeNull();
   });
 });
+
+describe('StepButton retrig dots', () => {
+  const dots = (container: HTMLElement) => container.querySelector(
+    '[data-testid="retrig-dots"]'
+  );
+
+  it('shows one dot per hit, at most four', () => {
+    const { container, rerender } = render(
+      <StepButton {...base} retrigHits={2} />
+    );
+    expect(dots(container)?.children).toHaveLength(2);
+    rerender(<StepButton {...base} retrigHits={8} />);
+    expect(dots(container)?.children).toHaveLength(4);
+  });
+
+  it('shows on an unlit step a roll runs over', () => {
+    const { container } = render(
+      <StepButton {...base} isActive={false} retrigHits={1} />
+    );
+    expect(dots(container)).toBeTruthy();
+  });
+
+  it('has no dots without retrig', () => {
+    const { container } = render(<StepButton {...base} />);
+    expect(dots(container)).toBeNull();
+  });
+
+  it('says retrig in the label of a lit step', () => {
+    render(<StepButton {...base} retrigHits={2} />);
+    expect(
+      screen.getByRole('button', { name: 'BD step 1 (retrig)' })
+    ).toBeTruthy();
+  });
+});
