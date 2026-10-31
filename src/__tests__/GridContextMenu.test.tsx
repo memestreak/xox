@@ -19,6 +19,10 @@ function renderMenu(overrides = {}) {
     hasCustomSamples: false,
     onResetAllSamples: vi.fn(),
     onCopyPattern: vi.fn(() => Promise.resolve()),
+    hasConditions: false,
+    onResetConditions: vi.fn(),
+    hasLocks: false,
+    onClearLocks: vi.fn(),
     ...overrides,
   };
   render(<GridContextMenu {...props} />);
@@ -77,5 +81,35 @@ describe('GridContextMenu Copy pattern', () => {
     });
     expect(screen.getByRole('status'))
       .toHaveTextContent('Failed');
+  });
+});
+
+describe('GridContextMenu conditions and locks', () => {
+  it('disables both when there is nothing to clear', () => {
+    renderMenu();
+    expect(screen.getByRole('menuitem', {
+      name: 'Reset trig conditions',
+    })).toBeDisabled();
+    expect(screen.getByRole('menuitem', {
+      name: 'Clear parameter locks',
+    })).toBeDisabled();
+  });
+
+  it('resets trig conditions and closes', () => {
+    const props = renderMenu({ hasConditions: true });
+    fireEvent.click(screen.getByRole('menuitem', {
+      name: 'Reset trig conditions',
+    }));
+    expect(props.onResetConditions).toHaveBeenCalledTimes(1);
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears parameter locks and closes', () => {
+    const props = renderMenu({ hasLocks: true });
+    fireEvent.click(screen.getByRole('menuitem', {
+      name: 'Clear parameter locks',
+    }));
+    expect(props.onClearLocks).toHaveBeenCalledTimes(1);
+    expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 });

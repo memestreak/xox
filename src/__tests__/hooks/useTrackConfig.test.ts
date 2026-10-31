@@ -198,6 +198,74 @@ describe('useTrackConfig: conditions and locks', () => {
   });
 });
 
+describe('useTrackConfig: bulk clear', () => {
+  /** Gives BD and SD a step with a condition and a lock. */
+  function setupWithData() {
+    const r = setup();
+    act(() => {
+      r.current.tc.setTrackSteps('bd', '1000100010001000');
+      r.current.tc.setTrigCondition('bd', 0, { probability: 50 });
+      r.current.tc.setParameterLock('bd', 4, { gain: 0.3 });
+      r.current.tc.setTrigCondition('sd', 1, { fill: 'fill' });
+      r.current.tc.setParameterLock('sd', 1, { pan: 0.1 });
+      r.current.tc.setTrigCondition('ac', 2, {
+        cycle: { a: 1, b: 2 },
+      });
+    });
+    return r;
+  }
+
+  it('clearTrackConditions clears one track only', () => {
+    const r = setupWithData();
+    act(() => r.current.tc.clearTrackConditions('bd'));
+    const { bd, sd } = r.current.config.tracks;
+    expect(bd.trigConditions).toBeUndefined();
+    expect(bd.parameterLocks).toEqual({ 4: { gain: 0.3 } });
+    expect(bd.steps).toBe('1000100010001000');
+    expect(sd.trigConditions).toEqual({ 1: { fill: 'fill' } });
+  });
+
+  it('clearTrackLocks clears one track only', () => {
+    const r = setupWithData();
+    act(() => r.current.tc.clearTrackLocks('bd'));
+    const { bd, sd } = r.current.config.tracks;
+    expect(bd.parameterLocks).toBeUndefined();
+    expect(bd.trigConditions).toEqual({ 0: { probability: 50 } });
+    expect(sd.parameterLocks).toEqual({ 1: { pan: 0.1 } });
+  });
+
+  it('clearAllConditions clears every track, accent too', () => {
+    const r = setupWithData();
+    act(() => r.current.tc.clearAllConditions());
+    for (const id of TRACK_IDS) {
+      expect(r.current.config.tracks[id].trigConditions)
+        .toBeUndefined();
+    }
+    expect(r.current.config.tracks.sd.parameterLocks)
+      .toEqual({ 1: { pan: 0.1 } });
+    expect(r.current.config.tracks.bd.steps)
+      .toBe('1000100010001000');
+  });
+
+  it('clearAllLocks clears every track', () => {
+    const r = setupWithData();
+    act(() => r.current.tc.clearAllLocks());
+    for (const id of TRACK_IDS) {
+      expect(r.current.config.tracks[id].parameterLocks)
+        .toBeUndefined();
+    }
+    expect(r.current.config.tracks.bd.trigConditions)
+      .toEqual({ 0: { probability: 50 } });
+  });
+
+  it('marks the preset modified', () => {
+    const { result } = renderHook(() => useHarness());
+    expect(result.current.selectedPatternId).toBe('start');
+    act(() => result.current.tc.clearAllLocks());
+    expect(result.current.selectedPatternId).toBe('start*');
+  });
+});
+
 describe('useTrackConfig: reset', () => {
   it('reset zeroes every cycle count', () => {
     const r = setup();

@@ -5,7 +5,7 @@ import type { RefObject } from 'react';
 import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
-import { computeEffectiveStep } from './trackUtils';
+import { computeEffectiveStep, hasStepData } from './trackUtils';
 import TrackNameButton from './TrackNameButton';
 import TrackMixer from './TrackMixer';
 import TrackEndBar from './TrackEndBar';
@@ -49,6 +49,8 @@ export interface TrackRowProps {
   ) => void;
   onToggleFreeRun: (trackId: TrackId) => void;
   onClearTrack: (trackId: TrackId) => void;
+  onResetConditions?: (trackId: TrackId) => void;
+  onClearLocks?: (trackId: TrackId) => void;
   onPlayPreview: (trackId: TrackId) => void;
   isTriggered: boolean;
   trigConditions?: Record<number, StepConditions>;
@@ -243,6 +245,8 @@ function TrackRowInner({
   onSetTrackLength,
   onToggleFreeRun,
   onClearTrack,
+  onResetConditions,
+  onClearLocks,
   onPlayPreview,
   isTriggered,
   trigConditions,
@@ -288,6 +292,14 @@ function TrackRowInner({
   const handleClearTrack = useCallback(
     () => onClearTrack(trackId),
     [onClearTrack, trackId]
+  );
+  const handleResetConditions = useCallback(
+    () => onResetConditions?.(trackId),
+    [onResetConditions, trackId]
+  );
+  const handleClearLocks = useCallback(
+    () => onClearLocks?.(trackId),
+    [onClearLocks, trackId]
   );
   const handlePlayPreview = useCallback(
     () => onPlayPreview(trackId),
@@ -435,6 +447,10 @@ function TrackRowInner({
             isTriggered={isTriggered}
             onToggleFreeRun={handleFreeRun}
             onClearTrack={handleClearTrack}
+            hasConditions={hasStepData(trigConditions)}
+            onResetConditions={handleResetConditions}
+            hasLocks={hasStepData(parameterLocks)}
+            onClearLocks={handleClearLocks}
             onPlayPreview={handlePlayPreview}
             customSampleName={customSampleName}
             isCustomSampleOn={isCustomSampleOn}
