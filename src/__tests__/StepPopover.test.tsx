@@ -3,6 +3,9 @@ import { render, screen, fireEvent, within }
 import { describe, it, expect, vi, beforeEach }
   from 'vitest';
 import StepPopover from '../app/StepPopover';
+import {
+  getEditorPosition, setEditorPosition,
+} from '../app/stepEditorPosition';
 
 const mockSet = vi.fn();
 const mockClear = vi.fn();
@@ -355,5 +358,59 @@ describe('StepPopover retrig', () => {
     expect(mockSetLock).toHaveBeenCalledWith('bd', 3, {
       retrig: { enabled: false, rate: 64, length: 0.5 },
     });
+  });
+});
+
+describe('StepPopover moving', () => {
+  beforeEach(() => {
+    setEditorPosition(null);
+    Element.prototype.setPointerCapture = vi.fn();
+  });
+
+  const anchored = { ...base, anchorRect: { top: 100, left: 50 } };
+  const dialog = () => screen.getByRole('dialog');
+  const header = () =>
+    screen.getByText('Step 4').closest('.cursor-move')!;
+
+  it('dragging the header moves it and remembers where', () => {
+    const { unmount } = render(<StepPopover {...anchored} />);
+    // jsdom has no layout: the editor sits at 0,0
+    fireEvent.pointerDown(header(), { clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(header(), { clientX: 210, clientY: 60, pointerId: 1 });
+    fireEvent.pointerUp(header(), { pointerId: 1 });
+    expect(dialog().style.left).toBe('200px');
+    expect(dialog().style.top).toBe('50px');
+    expect(getEditorPosition()).toEqual({ left: 200, top: 50 });
+    unmount();
+    // The next editor opens there, not by its step
+    render(<StepPopover {...anchored} stepIndex={7} />);
+    expect(dialog().style.left).toBe('200px');
+  });
+
+  it('double-clicking the header puts it back by the step', () => {
+    setEditorPosition({ left: 200, top: 50 });
+    render(<StepPopover {...anchored} />);
+    fireEvent.doubleClick(header());
+    expect(getEditorPosition()).toBeNull();
+    expect(dialog().style.top).toBe('100px');
+  });
+
+  it('the grip moves it with arrow keys', () => {
+    render(<StepPopover {...anchored} />);
+    const grip = screen.getByRole('button', { name: /Move step editor/ });
+    fireEvent.keyDown(grip, { key: 'ArrowRight', shiftKey: true });
+    fireEvent.keyDown(grip, { key: 'ArrowDown' });
+    // From 0,0 (no layout in jsdom); the first press keeps it 8 px in
+    expect(getEditorPosition()).toEqual({ left: 40, top: 18 });
+  });
+
+  it('pressing Reset in the header does not start a drag', () => {
+    render(
+      <StepPopover {...anchored} conditions={{ probability: 50 }} />
+    );
+    const reset = screen.getByRole('button', { name: 'Reset trig cond.' });
+    fireEvent.pointerDown(reset, { clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(header(), { clientX: 210, clientY: 60, pointerId: 1 });
+    expect(getEditorPosition()).toBeNull();
   });
 });

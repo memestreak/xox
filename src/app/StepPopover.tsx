@@ -14,6 +14,12 @@ import {
   PanLockEditor,
 } from './StepLockEditors';
 import RetrigEditor from './RetrigEditor';
+import {
+  clampToWindow,
+  getEditorPosition,
+  setEditorPosition,
+  type EditorPosition,
+} from './stepEditorPosition';
 import type { Retrig } from './retrig';
 import type {
   StepConditions, StepLocks, TrackId,
@@ -217,8 +223,9 @@ export default function StepPopover({
     }
     const el = popoverRef.current;
     if (!el) return;
+    // The move grip is skipped: it's not a first stop
     const first = el.querySelector<HTMLElement>(
-      'button, input, select, [tabindex]'
+      'button:not([data-grip]), input, select, [tabindex]'
     );
     first?.focus();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -300,8 +307,78 @@ export default function StepPopover({
       );
   }, [onClose]);
 
+  // ─── Moving (drag the header) ─────────────────
+  // Once moved, the editor floats where it was put (and
+  // later editors open there) until the header is
+  // double-clicked.
+  const [floatPos, setFloatPos] = useState<
+    EditorPosition | null
+  >(getEditorPosition);
+  const floating = floatPos !== null;
+  const dragRef = useRef<{ dx: number; dy: number } | null>(
+    null
+  );
+
+  const moveTo = useCallback((pos: EditorPosition) => {
+    const el = popoverRef.current;
+    const next = clampToWindow(
+      pos,
+      el?.offsetWidth ?? POPOVER_WIDTH,
+      el?.offsetHeight ?? 0,
+    );
+    setFloatPos(next);
+    setEditorPosition(next);
+  }, []);
+
+  const onHeaderPointerDown = (e: React.PointerEvent) => {
+    // The Reset key keeps its click
+    if ((e.target as Element).closest('button:not([data-grip])')) {
+      return;
+    }
+    const rect = popoverRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      dx: e.clientX - rect.left, dy: e.clientY - rect.top,
+    };
+  };
+
+  const onHeaderPointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    moveTo({ left: e.clientX - d.dx, top: e.clientY - d.dy });
+  };
+
+  const endDrag = () => {
+    dragRef.current = null;
+  };
+
+  const backToStep = () => {
+    setFloatPos(null);
+    setEditorPosition(null);
+  };
+
+  const onGripKeyDown = (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 40 : 10;
+    const delta: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0], ArrowRight: [step, 0],
+      ArrowUp: [0, -step], ArrowDown: [0, step],
+    };
+    const d = delta[e.key];
+    const from = floatPos
+      ?? popoverRef.current?.getBoundingClientRect();
+    if (!d || !from) return;
+    e.preventDefault();
+    moveTo({ left: from.left + d[0], top: from.top + d[1] });
+  };
+
   useEffect(() => {
-    if (!anchorRect || !scrollContainerRef?.current) {
+    // A floating editor isn't tied to its step, so a
+    // scroll leaves it open.
+    if (
+      floating || !anchorRect || !scrollContainerRef?.current
+    ) {
       return;
     }
     // Close when the grid scrolls: the track area on
@@ -317,7 +394,7 @@ export default function StepPopover({
       el.removeEventListener('scroll', onClose);
       window.removeEventListener('scroll', onClose);
     };
-  }, [anchorRect, onClose, scrollContainerRef]);
+  }, [anchorRect, floating, onClose, scrollContainerRef]);
 
   // ─── Flip above if overflowing ────────────────
   const [flippedTop, setFlippedTop] = useState<
@@ -325,14 +402,22 @@ export default function StepPopover({
   >(null);
   useEffect(() => {
     const el = popoverRef.current;
-    if (!el || !anchorRect) return;
+    if (!el) return;
+    // A remembered spot may not fit this window or this
+    // editor's height any more.
+    const saved = getEditorPosition();
+    if (saved) {
+      moveTo(saved);
+      return;
+    }
+    if (!anchorRect) return;
     const rect = el.getBoundingClientRect();
     if (rect.bottom > window.innerHeight - 8) {
       const above =
         anchorRect.top - 4 - 4 - rect.height;
       setFlippedTop(Math.max(8, above));
     }
-  }, [anchorRect]);
+  }, [anchorRect, moveTo]);
 
   // ─── Render ───────────────────────────────────
   return (
@@ -342,7 +427,10 @@ export default function StepPopover({
       aria-modal="true"
       aria-label="Step editor"
       className="ss-menu fixed z-30 w-72 p-3.5 space-y-3.5"
-      style={anchorRect ? {
+      style={floatPos ? {
+        top: `${floatPos.top}px`,
+        left: `${floatPos.left}px`,
+      } : anchorRect ? {
         top: `${flippedTop ?? anchorRect.top}px`,
         // Keep the popover on screen near the right edge.
         left: `${Math.max(
@@ -354,11 +442,44 @@ export default function StepPopover({
         )}px`,
       } : undefined}
     >
-      {/* Header */}
-      <div className={
-        'flex items-center justify-between'
-      }>
-        <div className="flex items-baseline gap-2">
+      {/* Header: drag it to move the editor */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div
+        className={
+          'flex items-center justify-between gap-2'
+          + ' cursor-move select-none'
+        }
+        style={{ touchAction: 'none' }}
+        onPointerDown={onHeaderPointerDown}
+        onPointerMove={onHeaderPointerMove}
+        onPointerUp={endDrag}
+        onLostPointerCapture={endDrag}
+        onDoubleClick={e => {
+          if (
+            !(e.target as Element)
+              .closest('button:not([data-grip])')
+          ) {
+            backToStep();
+          }
+        }}
+      >
+        <div className="flex items-baseline gap-2 min-w-0">
+          <button
+            type="button"
+            data-grip
+            aria-label={
+              'Move step editor (arrow keys).'
+              + ' Double-click to put it back by the step'
+            }
+            onKeyDown={onGripKeyDown}
+            className={
+              'self-center -ml-1 px-0.5 text-sm leading-none'
+              + ' cursor-move'
+              + (floating ? ' text-accent' : ' text-faint')
+            }
+          >
+            <span aria-hidden="true">⠿</span>
+          </button>
           {isBulk ? (
             <span className="ss-label text-ink">
               {`${bulkTargets!.length} cells selected`}
