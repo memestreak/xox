@@ -33,6 +33,16 @@ export interface StepConditions {
 export interface StepLocks {
   gain?: number; // 0.0–1.0
   pan?: number;  // 0.0–1.0 (0.5 = center)
+  /**
+   * Retrig: the hit repeats every 1/`rate` note for
+   * `length` steps (a step is a 1/16 note; 0.5 = 1/32).
+   * Off keeps rate and length. See retrig.ts.
+   */
+  retrig?: {
+    enabled: boolean;
+    rate: number;
+    length: number;
+  };
 }
 
 /**

@@ -13,6 +13,7 @@ import {
   PanIndicator,
   FillBadge,
   CycleBadge,
+  RetrigDots,
 } from './StepBadges';
 import Tooltip from './Tooltip';
 
@@ -44,6 +45,8 @@ interface StepButtonProps {
   onPlainClick?: () => boolean;
   onClearSelection?: () => void;
   longPressActiveRef?: RefObject<boolean>;
+  /** Retrig hits that land on this step, if any. */
+  retrigHits?: number;
 }
 
 /**
@@ -68,6 +71,7 @@ function StepButtonInner({
   onPlainClick,
   onClearSelection,
   longPressActiveRef,
+  retrigHits,
 }: StepButtonProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const gainLock = locks?.gain;
@@ -187,6 +191,8 @@ function StepButtonInner({
         }}
         aria-label={
           `${trackName} step ${stepIndex + 1}`
+          + (isActive && retrigHits !== undefined
+            ? ' (retrig)' : '')
         }
         aria-pressed={isActive}
         style={{
@@ -236,6 +242,9 @@ function StepButtonInner({
             a={conditions.cycle.a}
             b={conditions.cycle.b}
           />}
+        {!mini
+          && retrigHits !== undefined
+          && <RetrigDots hits={retrigHits} />}
       </button>
     </Tooltip>
   );

@@ -11,6 +11,9 @@ import {
 import { SAMPLE_ACCEPT } from './sampleFiles';
 import CustomSampleDot from './CustomSampleDot';
 
+// Menu items the arrow keys can reach.
+const ENABLED_ITEMS = '[role="menuitem"]:not(:disabled)';
+
 interface TrackNameButtonProps {
   size: 'sm' | 'lg';
   trackId: TrackId;
@@ -19,6 +22,12 @@ interface TrackNameButtonProps {
   isTriggered: boolean;
   onToggleFreeRun: () => void;
   onClearTrack: () => void;
+  /** True when some step on the track has a condition. */
+  hasConditions?: boolean;
+  onResetConditions?: () => void;
+  /** True when some step on the track has a lock. */
+  hasLocks?: boolean;
+  onClearLocks?: () => void;
   onPlayPreview: () => void;
   /** File name when the track plays a custom sample. */
   customSampleName?: string;
@@ -42,6 +51,10 @@ function TrackNameButtonInner({
   isTriggered,
   onToggleFreeRun,
   onClearTrack,
+  hasConditions = false,
+  onResetConditions,
+  hasLocks = false,
+  onClearLocks,
   onPlayPreview,
   customSampleName,
   isCustomSampleOn = true,
@@ -100,7 +113,7 @@ function TrackNameButtonInner({
     // Auto-focus first menu item
     const firstItem =
       menuRef.current?.querySelector<HTMLElement>(
-        '[role="menuitem"]'
+        ENABLED_ITEMS
       );
     firstItem?.focus();
     return () =>
@@ -115,7 +128,7 @@ function TrackNameButtonInner({
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       const items = Array.from(
         e.currentTarget.querySelectorAll<HTMLElement>(
-          '[role="menuitem"]'
+          ENABLED_ITEMS
         )
       );
       if (items.length === 0) return;
@@ -293,6 +306,28 @@ function TrackNameButtonInner({
             </button>
           )}
           <div className="h-px bg-line mx-1.5 my-1" />
+          <button
+            role="menuitem"
+            disabled={!hasConditions}
+            onClick={() => {
+              onResetConditions?.();
+              closeMenu();
+            }}
+            className={MENU_ITEM}
+          >
+            <span>Reset trig conditions</span>
+          </button>
+          <button
+            role="menuitem"
+            disabled={!hasLocks}
+            onClick={() => {
+              onClearLocks?.();
+              closeMenu();
+            }}
+            className={MENU_ITEM}
+          >
+            <span>Clear parameter locks</span>
+          </button>
           <button
             role="menuitem"
             onClick={() => {

@@ -65,6 +65,14 @@ export interface UseTrackConfigReturn {
     trackId: TrackId,
     stepIndex: number
   ) => void;
+  /** Removes every trig condition from one track. */
+  clearTrackConditions: (trackId: TrackId) => void;
+  /** Removes every parameter lock from one track. */
+  clearTrackLocks: (trackId: TrackId) => void;
+  /** Removes every trig condition from all tracks. */
+  clearAllConditions: () => void;
+  /** Removes every parameter lock from all tracks. */
+  clearAllLocks: () => void;
   initCycleCounts: () => void;
   reset: () => void;
 }
@@ -148,6 +156,25 @@ function withStepBit(
       },
     },
   };
+}
+
+/**
+ * Returns `tracks` with `field` (trig conditions or
+ * parameter locks) removed from each track in
+ * `trackIds`. Steps and everything else stay.
+ */
+function withoutStepData(
+  tracks: Record<TrackId, TrackConfig>,
+  trackIds: readonly TrackId[],
+  field: 'trigConditions' | 'parameterLocks'
+): Record<TrackId, TrackConfig> {
+  const next = { ...tracks };
+  for (const id of trackIds) {
+    if (next[id][field] !== undefined) {
+      next[id] = { ...next[id], [field]: undefined };
+    }
+  }
+  return next;
 }
 
 /**
@@ -597,6 +624,44 @@ export function useTrackConfig({
     [setConfig, setSelectedPatternId]
   );
 
+  const clearStepData = useCallback(
+    (
+      trackIds: readonly TrackId[],
+      field: 'trigConditions' | 'parameterLocks'
+    ) => {
+      setConfig(prev => ({
+        ...prev,
+        tracks: withoutStepData(
+          prev.tracks, trackIds, field
+        ),
+      }));
+      setSelectedPatternId(markPatternModified);
+    },
+    [setConfig, setSelectedPatternId]
+  );
+
+  const clearTrackConditions = useCallback(
+    (trackId: TrackId) =>
+      clearStepData([trackId], 'trigConditions'),
+    [clearStepData]
+  );
+
+  const clearTrackLocks = useCallback(
+    (trackId: TrackId) =>
+      clearStepData([trackId], 'parameterLocks'),
+    [clearStepData]
+  );
+
+  const clearAllConditions = useCallback(
+    () => clearStepData(TRACK_IDS, 'trigConditions'),
+    [clearStepData]
+  );
+
+  const clearAllLocks = useCallback(
+    () => clearStepData(TRACK_IDS, 'parameterLocks'),
+    [clearStepData]
+  );
+
   const initCycleCounts = useCallback(() => {
     const counts = {} as Record<TrackId, number>;
     for (const id of TRACK_IDS) { counts[id] = 0; }
@@ -625,6 +690,10 @@ export function useTrackConfig({
     clearTrigCondition,
     setParameterLock,
     clearParameterLock,
+    clearTrackConditions,
+    clearTrackLocks,
+    clearAllConditions,
+    clearAllLocks,
     initCycleCounts,
     reset,
   };

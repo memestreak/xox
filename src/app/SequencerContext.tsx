@@ -157,6 +157,10 @@ interface SequencerActions {
     trackId: TrackId,
     stepIndex: number
   ) => void;
+  clearTrackConditions: (trackId: TrackId) => void;
+  clearTrackLocks: (trackId: TrackId) => void;
+  clearAllConditions: () => void;
+  clearAllLocks: () => void;
   setPatternMode: (mode: PatternMode) => void;
   toggleTemp: () => void;
   toggleTempLatch: () => void;
@@ -519,6 +523,8 @@ export function SequencerProvider({
     setPatternLength, setTrackLength, clearTrack,
     setSwing, setTrigCondition, clearTrigCondition,
     setParameterLock, clearParameterLock,
+    clearTrackConditions, clearTrackLocks,
+    clearAllConditions, clearAllLocks,
   } = trackConfig;
   const {
     loadSample, resetSample, resetAllSamples,
@@ -549,6 +555,10 @@ export function SequencerProvider({
     clearTrigCondition,
     setParameterLock,
     clearParameterLock,
+    clearTrackConditions,
+    clearTrackLocks,
+    clearAllConditions,
+    clearAllLocks,
     setPatternMode,
     toggleTemp,
     toggleTempLatch,
@@ -572,7 +582,9 @@ export function SequencerProvider({
     setTrackLength, clearAll, clearTrack, setSwing,
     toggleFillLatch, setFillHeld, setTrigCondition,
     clearTrigCondition, setParameterLock,
-    clearParameterLock, setPatternMode, toggleTemp,
+    clearParameterLock, clearTrackConditions,
+    clearTrackLocks, clearAllConditions, clearAllLocks,
+    setPatternMode, toggleTemp,
     toggleTempLatch, playPreview, dismissError, dismissImportNotice,
     minimizeEmptyTracks, restoreTrack, restoreAllTracks,
     holdAutoMinimize, loadSample, resetSample,

@@ -3,6 +3,7 @@
 import kitsData from './data/kits.json';
 import patternsData from './data/patterns.json';
 import { withPresetLevels } from './mixerUtils';
+import { isRetrigLength, isRetrigRate } from './retrig';
 import type {
   PatternMixer,
   SequencerConfig,
@@ -533,8 +534,33 @@ function validateSingleLock(
     sl.pan = Math.max(0, Math.min(1, obj.pan));
   }
 
+  const retrig = validateRetrig(obj.retrig);
+  if (retrig) sl.retrig = retrig;
+
   if (Object.keys(sl).length === 0) return null;
   return sl;
+}
+
+/**
+ * A retrig lock: a boolean `enabled` plus a rate and a
+ * length from the editor's lists. Anything else drops
+ * the lock (rather than guess a nearby value).
+ */
+function validateRetrig(
+  raw: unknown
+): StepLocks['retrig'] | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (
+    typeof r.enabled !== 'boolean'
+    || typeof r.rate !== 'number'
+    || !isRetrigRate(r.rate)
+    || typeof r.length !== 'number'
+    || !isRetrigLength(r.length)
+  ) {
+    return null;
+  }
+  return { enabled: r.enabled, rate: r.rate, length: r.length };
 }
 
 function validateMixer(

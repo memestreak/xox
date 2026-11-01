@@ -20,8 +20,11 @@ import { getCategorizedPatterns } from './patternUtils';
 import { useInputModality } from './hooks/useInputModality';
 import { usePreventFileNavigation } from './hooks/useFileDrop';
 import type { Pattern } from './types';
-import { useMockVariant } from './mockVariant';
-import { PresetDrawer, PresetTrigger, SplitKey } from './PresetMock';
+import { MockSwitcher } from './mocks/MockSwitcher';
+import { useMock } from './mocks/useMock';
+import {
+  PRESET_MOCK, PresetDrawer, PresetTrigger, SplitKey, TabTrigger,
+} from './PresetMock';
 
 const categories = getCategorizedPatterns(
   patternsData.patterns as Pattern[]
@@ -34,7 +37,9 @@ function SequencerInner() {
   const { setPattern } = actions;
   const patternLength = getPatternLength(meta.config.tracks);
   const status = pickStatus(state);
-  const mock = useMockVariant();
+  // MOCK: a is today's app; b-e are preset layouts.
+  const presetMock = useMock(PRESET_MOCK);
+  const mock = presetMock === 'a' ? null : presetMock.toUpperCase();
   const [mockOpen, setMockOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(0);
@@ -104,28 +109,24 @@ function SequencerInner() {
           pendingPatternId={state.pendingPatternId}
           onSelect={setPattern}
         >
-          {({ trigger, drawer }) => mock === 'D' ? (
+          {({ trigger, drawer }) => mock === 'E' ? (
+            <>
+              <TransportControls
+                page={page}
+                mock={mock}
+                patternTrigger={
+                  <TabTrigger open={mockOpen} onOpen={setMockOpen} />
+                }
+              />
+              <PresetDrawer variant="D" open={mockOpen} />
+            </>
+          ) : mock === 'D' ? (
             <>
               <TransportControls
                 page={page}
                 mock={mock}
                 patternTrigger={
                   <SplitKey open={mockOpen} onOpen={setMockOpen} />
-                }
-              />
-              <PresetDrawer variant={mock} open={mockOpen} />
-            </>
-          ) : mock === 'A' ? (
-            <>
-              <TransportControls
-                page={page}
-                mock={mock}
-                patternTrigger={
-                  <PresetTrigger
-                    variant={mock}
-                    open={mockOpen}
-                    onToggle={() => setMockOpen(o => !o)}
-                  />
                 }
               />
               <PresetDrawer variant={mock} open={mockOpen} />
@@ -218,14 +219,19 @@ export default function Sequencer() {
   usePreventFileNavigation();
 
   return (
-    <ErrorBoundary>
-      <SequencerProvider>
-        <MidiProvider>
-          <HelpProvider>
-            <SequencerInner />
-          </HelpProvider>
-        </MidiProvider>
-      </SequencerProvider>
-    </ErrorBoundary>
+    <>
+      <ErrorBoundary>
+        <SequencerProvider>
+          <MidiProvider>
+            <HelpProvider>
+              <SequencerInner />
+            </HelpProvider>
+          </MidiProvider>
+        </SequencerProvider>
+      </ErrorBoundary>
+      {/* Outside the boundary, so a mock that crashes
+          can still be switched away from. */}
+      <MockSwitcher />
+    </>
   );
 }

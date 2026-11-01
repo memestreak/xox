@@ -91,8 +91,9 @@ describe('TrackNameButton', () => {
   it('arrow keys move focus between menu items', () => {
     renderButton();
     const menu = openMenu();
-    const [freeRun, load, clear] =
-      screen.getAllByRole('menuitem');
+    const items = screen.getAllByRole('menuitem');
+    const [freeRun, load] = items;
+    const clear = items[items.length - 1];
     expect(freeRun).toHaveFocus();
     fireEvent.keyDown(menu, { key: 'ArrowDown' });
     expect(load).toHaveFocus();
@@ -242,5 +243,54 @@ describe('TrackNameButton', () => {
     renderButton({ size: 'sm' });
     expect(screen.queryByLabelText('Load sample for SD'))
       .toBeNull();
+  });
+});
+
+describe('TrackNameButton conditions and locks', () => {
+  it('disables both when the track has none', () => {
+    renderButton();
+    openMenu();
+    expect(screen.getByRole('menuitem', {
+      name: 'Reset trig conditions',
+    })).toBeDisabled();
+    expect(screen.getByRole('menuitem', {
+      name: 'Clear parameter locks',
+    })).toBeDisabled();
+  });
+
+  it('resets the track\'s trig conditions', () => {
+    const onResetConditions = vi.fn();
+    renderButton({ hasConditions: true, onResetConditions });
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', {
+      name: 'Reset trig conditions',
+    }));
+    expect(onResetConditions).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('clears the track\'s parameter locks', () => {
+    const onClearLocks = vi.fn();
+    renderButton({ hasLocks: true, onClearLocks });
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', {
+      name: 'Clear parameter locks',
+    }));
+    expect(onClearLocks).toHaveBeenCalledTimes(1);
+  });
+
+  it('arrow keys skip disabled items', () => {
+    renderButton();
+    const menu = openMenu();
+    const items = screen.getAllByRole('menuitem');
+    const clearPattern = items.find(
+      el => el.textContent?.includes('Clear track pattern')
+    )!;
+    const loadSample = items.find(
+      el => el.textContent?.includes('Load sample')
+    )!;
+    loadSample.focus();
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(clearPattern).toHaveFocus();
   });
 });

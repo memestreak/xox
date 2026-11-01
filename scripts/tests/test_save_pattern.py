@@ -117,6 +117,14 @@ def _broken(change: str) -> str:
     entry["mixer"] = {"bd": {"isMuted": True}}
   elif change == "bpm":
     entry["bpm"] = 120
+  elif change == "odd retrig rate":
+    entry["tracks"]["bd"]["parameterLocks"] = {
+      "0": {"retrig": {"enabled": True, "rate": 7, "length": 1}},
+    }
+  elif change == "retrig without length":
+    entry["tracks"]["bd"]["parameterLocks"] = {
+      "0": {"retrig": {"enabled": True, "rate": 32}},
+    }
   return json.dumps(entry)
 
 
@@ -124,10 +132,27 @@ def _broken(change: str) -> str:
   "custom id", "edited mark", "missing track", "bad steps",
   "too many steps", "condition past the end", "loud mixer",
   "accent in mixer", "mute in mixer", "bpm",
+  "odd retrig rate", "retrig without length",
 ])
 def test_rejects(change: str) -> None:
   with pytest.raises(PatternError):
     save_pattern.parse_entry(_broken(change))
+
+
+def test_accepts_a_retrig_lock() -> None:
+  entry: dict[str, Any] = copy.deepcopy(
+    first_pattern(save_pattern.PATTERNS_JSON)
+  )
+  entry["tracks"]["bd"]["steps"] = "1" + entry["tracks"]["bd"]["steps"][1:]
+  entry["tracks"]["bd"]["parameterLocks"] = {
+    "0": {"gain": 0.5, "retrig": {
+      "enabled": True, "rate": 64, "length": 0.5,
+    }},
+  }
+  parsed = save_pattern.parse_entry(json.dumps(entry))
+  assert parsed["tracks"]["bd"]["parameterLocks"]["0"]["retrig"] == {
+    "enabled": True, "rate": 64, "length": 0.5,
+  }
 
 
 def test_rejects_text_that_is_not_json() -> None:

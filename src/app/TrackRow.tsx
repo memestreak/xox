@@ -1,15 +1,16 @@
 "use client";
 
-import { memo, useCallback, useRef } from 'react';
+import { memo, useCallback, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
 import type {
   StepConditions, StepLocks, TrackId,
 } from './types';
-import { computeEffectiveStep } from './trackUtils';
+import { computeEffectiveStep, hasStepData } from './trackUtils';
 import TrackNameButton from './TrackNameButton';
 import TrackMixer from './TrackMixer';
 import TrackEndBar from './TrackEndBar';
 import StepButton from './StepButton';
+import { retrigCoverage } from './retrig';
 import CustomSampleDot from './CustomSampleDot';
 import { useFileDrop } from './hooks/useFileDrop';
 import type { FileDropHandlers } from './hooks/useFileDrop';
@@ -48,6 +49,8 @@ export interface TrackRowProps {
   ) => void;
   onToggleFreeRun: (trackId: TrackId) => void;
   onClearTrack: (trackId: TrackId) => void;
+  onResetConditions?: (trackId: TrackId) => void;
+  onClearLocks?: (trackId: TrackId) => void;
   onPlayPreview: (trackId: TrackId) => void;
   isTriggered: boolean;
   trigConditions?: Record<number, StepConditions>;
@@ -242,6 +245,8 @@ function TrackRowInner({
   onSetTrackLength,
   onToggleFreeRun,
   onClearTrack,
+  onResetConditions,
+  onClearLocks,
   onPlayPreview,
   isTriggered,
   trigConditions,
@@ -288,6 +293,14 @@ function TrackRowInner({
     () => onClearTrack(trackId),
     [onClearTrack, trackId]
   );
+  const handleResetConditions = useCallback(
+    () => onResetConditions?.(trackId),
+    [onResetConditions, trackId]
+  );
+  const handleClearLocks = useCallback(
+    () => onClearLocks?.(trackId),
+    [onClearLocks, trackId]
+  );
   const handlePlayPreview = useCallback(
     () => onPlayPreview(trackId),
     [onPlayPreview, trackId]
@@ -310,6 +323,12 @@ function TrackRowInner({
   const handleSetLength = useCallback(
     (len: number) => onSetTrackLength(trackId, len),
     [onSetTrackLength, trackId]
+  );
+
+  // Retrig hits per step, for the dots on the keys
+  const retrigCover = useMemo(
+    () => retrigCoverage(steps, parameterLocks, patternLength),
+    [steps, parameterLocks, patternLength],
   );
 
   const effectiveStep = computeEffectiveStep(
@@ -428,6 +447,10 @@ function TrackRowInner({
             isTriggered={isTriggered}
             onToggleFreeRun={handleFreeRun}
             onClearTrack={handleClearTrack}
+            hasConditions={hasStepData(trigConditions)}
+            onResetConditions={handleResetConditions}
+            hasLocks={hasStepData(parameterLocks)}
+            onClearLocks={handleClearLocks}
             onPlayPreview={handlePlayPreview}
             customSampleName={customSampleName}
             isCustomSampleOn={isCustomSampleOn}
@@ -498,6 +521,11 @@ function TrackRowInner({
                     }
                     longPressActiveRef={
                       longPressActiveRef
+                    }
+                    retrigHits={
+                      disabled
+                        ? undefined
+                        : retrigCover.get(globalIdx)
                     }
                   />
                 );

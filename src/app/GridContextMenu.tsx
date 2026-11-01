@@ -29,6 +29,12 @@ interface GridContextMenuProps {
    * Rejects when the clipboard refuses.
    */
   onCopyPattern: () => Promise<void>;
+  /** True when some step on any track has a condition. */
+  hasConditions: boolean;
+  onResetConditions: () => void;
+  /** True when some step on any track has a lock. */
+  hasLocks: boolean;
+  onClearLocks: () => void;
   onClose: () => void;
   /**
    * The key that toggles the menu. A press on it is not
@@ -41,7 +47,8 @@ interface GridContextMenuProps {
 /**
  * Grid menu: minimize empty tracks, restore all tracks,
  * the auto-minimize setting, reset samples, copy
- * pattern, reset.
+ * pattern, reset trig conditions, clear parameter
+ * locks, reset.
  * Opens at the pointer on a right-click in a blank
  * part of the grid, or under the ⋯ key over the
  * track names; kept inside the viewport. Closes on a
@@ -61,6 +68,10 @@ export default function GridContextMenu({
   hasCustomSamples,
   onResetAllSamples,
   onCopyPattern,
+  hasConditions,
+  onResetConditions,
+  hasLocks,
+  onClearLocks,
   onClose,
   anchorRef,
 }: GridContextMenuProps) {
@@ -157,6 +168,28 @@ export default function GridContextMenu({
             {copyResult === 'copied' ? 'Copied' : 'Failed'}
           </span>
         )}
+      </button>
+      <button
+        role="menuitem"
+        disabled={!hasConditions}
+        onClick={() => {
+          onResetConditions();
+          onClose();
+        }}
+        className={MENU_ITEM}
+      >
+        <span>Reset trig conditions</span>
+      </button>
+      <button
+        role="menuitem"
+        disabled={!hasLocks}
+        onClick={() => {
+          onClearLocks();
+          onClose();
+        }}
+        className={MENU_ITEM}
+      >
+        <span>Clear parameter locks</span>
       </button>
       <button
         role="menuitem"

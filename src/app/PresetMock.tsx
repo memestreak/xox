@@ -18,6 +18,23 @@ import { basePatternId } from './patternUtils';
 import { LcdCaret } from './LcdSelect';
 import LcdSelect from './LcdSelect';
 import Knob from './Knob';
+import type { Mock } from './mocks/useMock';
+
+/**
+ * The preset layout mock. a is today's app (no presets),
+ * so a link without ?preset= shows what ships today.
+ */
+export const PRESET_MOCK: Mock = {
+  param: 'preset',
+  label: 'Presets',
+  options: [
+    { value: 'a', label: 'a Today' },
+    { value: 'b', label: 'b Banks' },
+    { value: 'c', label: 'c Sheet' },
+    { value: 'd', label: 'd Split key' },
+    { value: 'e', label: 'e Tab only' },
+  ],
+};
 
 export interface MockSub { track: TrackId; kit: string }
 export interface MockPreset {
@@ -668,5 +685,37 @@ function DrawerD({ open }: { open: boolean }) {
         </>
       )}
     </Drawer>
+  );
+}
+
+/**
+ * E: today's header. The Pattern key opens the tabbed
+ * browser on Patterns; presets live only in its first tab.
+ */
+export function TabTrigger({ open, onOpen }: {
+  open: boolean;
+  onOpen: (open: boolean) => void;
+}) {
+  const { state } = useSequencer();
+  const patternId = basePatternId(state.selectedPatternId);
+  const pattern = PATTERNS.find(p => p.id === patternId);
+  return (
+    <button
+      type="button"
+      aria-label="Pattern"
+      aria-expanded={open}
+      data-open={open || undefined}
+      onClick={() => {
+        if (!open) tabStore.set('patterns');
+        onOpen(!open);
+      }}
+      className="ss-lcd-select h-9 w-full"
+    >
+      <span className="truncate">
+        {pattern?.name ?? 'Custom'}
+        {state.selectedPatternId.endsWith('*') ? '*' : ''}
+      </span>
+      <LcdCaret open={open} />
+    </button>
   );
 }

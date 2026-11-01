@@ -16,18 +16,21 @@ interface TrackToggleProps {
 
 const VARIANT_STYLES: Record<
   Variant,
-  { active: string; led: string; label: string }
+  { active: string; idle: string; led: string; label: string }
 > = {
-  // Mute lights amber, solo lights cream.
+  // Mute lights red, solo lights yellow. Unlit, the
+  // letter keeps a hint of its lit color.
   mute: {
     active:
       'bg-none bg-mute border-mute text-[#1a1208]',
+    idle: 'text-mute-dim',
     led: 'bg-[#fff4d6]',
     label: 'M',
   },
   solo: {
     active:
-      'bg-none bg-step4 border-step4 text-[#1a1208]',
+      'bg-none bg-solo border-solo text-[#1a1208]',
+    idle: 'text-solo-dim',
     led: 'bg-accent',
     label: 'S',
   },
@@ -67,7 +70,7 @@ function TrackToggleInner({
           + ' items-center justify-center tracking-normal '
           + SIZE_STYLES[size]
           + ' '
-          + (active ? v.active : 'text-muted')
+          + (active ? v.active : v.idle)
         }
         aria-label={`${action} ${trackName}`}
         aria-pressed={active}
