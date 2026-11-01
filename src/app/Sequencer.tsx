@@ -20,6 +20,7 @@ import { getCategorizedPatterns } from './patternUtils';
 import { useInputModality } from './hooks/useInputModality';
 import { usePreventFileNavigation } from './hooks/useFileDrop';
 import type { Pattern } from './types';
+import { MockSwitcher } from './mocks/MockSwitcher';
 
 const categories = getCategorizedPatterns(
   patternsData.patterns as Pattern[]
@@ -171,14 +172,19 @@ export default function Sequencer() {
   usePreventFileNavigation();
 
   return (
-    <ErrorBoundary>
-      <SequencerProvider>
-        <MidiProvider>
-          <HelpProvider>
-            <SequencerInner />
-          </HelpProvider>
-        </MidiProvider>
-      </SequencerProvider>
-    </ErrorBoundary>
+    <>
+      <ErrorBoundary>
+        <SequencerProvider>
+          <MidiProvider>
+            <HelpProvider>
+              <SequencerInner />
+            </HelpProvider>
+          </MidiProvider>
+        </SequencerProvider>
+      </ErrorBoundary>
+      {/* Outside the boundary, so a mock that crashes
+          can still be switched away from. */}
+      <MockSwitcher />
+    </>
   );
 }
