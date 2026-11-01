@@ -324,6 +324,17 @@ Supporting files:
   Settings › Interface turns that off
   (`useChooserClickAwaySetting.ts`, `interfacePrefs`,
   on by default)
+- `mocks/useMock.ts`, `mocks/MockSwitcher.tsx` — UI
+  options on a branch while Jeremy picks
+  (`docs/specs/2026-11-01-mock-switcher-design.md`).
+  Declare each with `useMock(MOCK_CONST)` (link
+  parameter, label, options; first is the default),
+  never by reading the query string. `Sequencer` mounts
+  the switcher card, shown only when the link names a
+  declared mock. `noMocksLeft.test.ts` fails while any
+  file outside `src/app/mocks/` calls `useMock(`, so a
+  mock branch stays red in CI until the pick: open it as
+  a draft, and afterwards keep only the chosen option
 - `data/kits.json` — Kit definitions (id, name, folder path)
 - `patternExport.ts` — Copy pattern (grid menu): the
   grid as a `patterns.json` entry (preset id without
