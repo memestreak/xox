@@ -28,6 +28,11 @@ indent-width = 2
 python_version = "3.11"
 strict = true
 
+[[tool.mypy.overrides]]
+# pytesseract ships no type hints.
+module = ["pytesseract"]
+ignore_missing_imports = true
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"

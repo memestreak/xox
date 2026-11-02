@@ -44,6 +44,9 @@ import numpy as np
 import pytesseract
 from numpy.typing import NDArray
 
+# An 8-bit grayscale or binary (0/255) page image.
+GrayImage = NDArray[np.uint8]
+
 logger = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).parent
@@ -139,19 +142,20 @@ def extract_names_gemini(
     data=image_data, mime_type="image/png"
   )
 
+  contents: list[types.PartUnionDict] = [image_part, NAMES_PROMPT]
   response = client.models.generate_content(
     model=GEMINI_MODEL,
-    contents=[image_part, NAMES_PROMPT],
+    contents=contents,
     config=types.GenerateContentConfig(
       response_mime_type="application/json",
     ),
   )
 
   try:
-    names = json.loads(response.text)
+    names = json.loads(response.text or "")
     if isinstance(names, list):
       return [str(n) for n in names]
-  except (json.JSONDecodeError, TypeError):
+  except json.JSONDecodeError:
     logger.warning("Failed to parse Gemini names response")
   return []
 
@@ -377,7 +381,7 @@ def do_merge(dry_run: bool) -> None:
 
 def preprocess_image(
   path: Path,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[GrayImage, GrayImage]:
   """Load image, convert to binary via Gaussian blur + Otsu.
 
   Args:
@@ -397,10 +401,10 @@ def preprocess_image(
     255,
     cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU,
   )
-  return gray, binary
+  return np.asarray(gray, np.uint8), np.asarray(binary, np.uint8)
 
 
-def detect_grids(binary: NDArray) -> list[GridRegion]:
+def detect_grids(binary: GrayImage) -> list[GridRegion]:
   """Detect grid regions via vertical line density.
 
   Pattern grids have many closely-spaced vertical lines
@@ -468,7 +472,7 @@ def detect_grids(binary: NDArray) -> list[GridRegion]:
   return grids
 
 
-def _count_runs(mask: NDArray) -> int:
+def _count_runs(mask: NDArray[np.bool_]) -> int:
   """Count the number of True runs in a 1D boolean array.
 
   Args:
@@ -489,7 +493,7 @@ def _count_runs(mask: NDArray) -> int:
 
 
 def find_cell_boundaries(
-  binary: NDArray,
+  binary: GrayImage,
   grid: GridRegion,
 ) -> tuple[list[int], list[int]]:
   """Find row and column line positions via projection.
@@ -519,8 +523,8 @@ def find_cell_boundaries(
   v_lines = cv2.morphologyEx(roi, cv2.MORPH_OPEN, v_kernel)
 
   # Project onto axes
-  h_proj = np.sum(h_lines, axis=1, dtype=np.float64)
-  v_proj = np.sum(v_lines, axis=0, dtype=np.float64)
+  h_proj = np.asarray(np.sum(h_lines, axis=1), dtype=np.float64)
+  v_proj = np.asarray(np.sum(v_lines, axis=0), dtype=np.float64)
 
   row_positions = _find_peaks(h_proj, grid.y)
   col_positions = _find_peaks(v_proj, grid.x)
@@ -575,7 +579,7 @@ def _filter_even_spacing(
 
 
 def _find_peaks(
-  projection: NDArray,
+  projection: NDArray[np.float64],
   offset: int,
 ) -> list[int]:
   """Find peak positions in a 1D projection signal.
@@ -620,7 +624,7 @@ def _find_peaks(
 
 
 def classify_cells(
-  binary: NDArray,
+  binary: GrayImage,
   row_positions: list[int],
   col_positions: list[int],
 ) -> list[list[bool]]:
@@ -711,7 +715,7 @@ def _adaptive_threshold(
 
 
 def extract_pattern_name(
-  gray: NDArray,
+  gray: GrayImage,
   grid: GridRegion,
   prev_valid_grid: GridRegion | None,
   page_num: int,
@@ -847,11 +851,11 @@ def assemble_pattern(
 
 
 def draw_debug_image(
-  gray: NDArray,
+  gray: GrayImage,
   grids: list[GridRegion],
   patterns: list[dict[str, Any]],
   row_data: list[tuple[list[int], list[int]]],
-) -> NDArray:
+) -> GrayImage:
   """Draw side-by-side debug comparison image.
 
   Left side: original page image.
@@ -1057,7 +1061,7 @@ def process_page(
 
 
 def _save_debug_no_grids(
-  gray: NDArray,
+  gray: GrayImage,
   page_num: int,
 ) -> None:
   """Save debug image for a page with no detected grids.
