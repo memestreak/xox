@@ -19,7 +19,7 @@ offset in `handleStep`. `swing` field added to
 Vitest, Web Audio API
 
 **Spec:**
-`docs/superpowers/specs/2026-03-16-global-section-design.md`
+`docs/specs/2026-03-16-global-section-design.md`
 
 ---
 

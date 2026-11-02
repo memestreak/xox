@@ -1788,7 +1788,7 @@ Start dev server (`npm run dev`), open in browser:
 create PR**
 
 **Spec:**
-`docs/superpowers/specs/2026-03-17-trig-conditions-tier1-spec.md`
+`docs/specs/2026-03-17-trig-conditions-tier1-spec.md`
 
 **Design decisions:**
 - Cycle B range: 2-8 (matches Elektron)

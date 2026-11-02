@@ -65,9 +65,9 @@ d829284 Implement parse subcommand with Gemini API
 
 ## Design Documents
 
-- `docs/plans/2026-03-02-pdf-pattern-extraction-design.md`
+- `docs/specs/2026-03-02-pdf-pattern-extraction-design.md`
   — architecture and rationale
-- `docs/plans/2026-03-02-pdf-pattern-extraction-impl.md`
+- `plans/2026-03-02-pdf-pattern-extraction-impl.md`
   — step-by-step implementation plan (8 tasks)
 
 ## Critical Finding: Accuracy Is Not Sufficient
