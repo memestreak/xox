@@ -18,6 +18,9 @@ npm run typecheck  # tsc --noEmit (app + tests)
 npm test         # Vitest (unit + integration)
 npm run test:watch  # Vitest in watch mode
 npm run save-pattern  # Grid menu > Copy pattern → patterns.json
+uv run --extra dev ruff check scripts  # Python lint (also ruff format --check)
+uv run --extra dev mypy scripts        # Python types (strict)
+uv run --extra dev pytest scripts      # Python tests
 ```
 
 ## Keeping this file stable
