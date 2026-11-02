@@ -3,6 +3,7 @@
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -14,10 +15,11 @@ GOLDEN_DIR = TESTS_DIR / "golden"
 IMAGES_DIR = cv.IMAGES_DIR
 
 
-def _load_golden(page_num: int) -> dict:
+def _load_golden(page_num: int) -> dict[str, Any]:
   """Load golden reference JSON for a page."""
   path = GOLDEN_DIR / f"page_{page_num:03d}.json"
-  return json.loads(path.read_text())
+  data: dict[str, Any] = json.loads(path.read_text())
+  return data
 
 
 @pytest.fixture(autouse=True)

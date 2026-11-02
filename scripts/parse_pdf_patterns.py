@@ -33,7 +33,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -322,20 +322,24 @@ def send_to_gemini(
     data=image_data, mime_type="image/png"
   )
 
+  contents: list[types.PartUnionDict] = [image_part, EXTRACTION_PROMPT]
   response = client.models.generate_content(
     model=model,
-    contents=[image_part, EXTRACTION_PROMPT],
+    contents=contents,
     config=types.GenerateContentConfig(
       response_mime_type="application/json",
       response_schema=PageResponse,
       thinking_config=types.ThinkingConfig(
-        thinking_level="high",
+        thinking_level=types.ThinkingLevel.HIGH,
       ),
-      media_resolution="MEDIA_RESOLUTION_HIGH",
+      media_resolution=types.MediaResolution.MEDIA_RESOLUTION_HIGH,
     ),
   )
 
-  return response.parsed.patterns
+  parsed = response.parsed
+  if not isinstance(parsed, PageResponse):
+    raise ValueError(f"Gemini returned no patterns for {image_path.name}")
+  return parsed.patterns
 
 
 def grid_to_steps_dict(grid: PatternGrid) -> dict[str, str]:
@@ -477,7 +481,7 @@ def clean_name(name: str) -> str:
   return " ".join(titled)
 
 
-def normalize_pattern(raw: dict) -> dict | None:
+def normalize_pattern(raw: dict[str, Any]) -> dict[str, Any] | None:
   """Normalize a raw parsed pattern into app format.
 
   Converts instrument names to lowercase track IDs, validates
@@ -726,7 +730,7 @@ def do_verify(args: argparse.Namespace) -> None:
 
   start, end = parse_page_range(args.pages)
 
-  ground_truth: dict[str, dict] = {}
+  ground_truth: dict[str, dict[str, Any]] = {}
   if PATTERNS_JSON.exists():
     data = json.loads(PATTERNS_JSON.read_text())
     for p in data["patterns"]:
@@ -823,7 +827,7 @@ def do_merge(args: argparse.Namespace) -> None:
     logger.error("No consensus files. Run parse first.")
     sys.exit(1)
 
-  parsed: dict[str, dict] = {}
+  parsed: dict[str, dict[str, Any]] = {}
   for cf in consensus_files:
     data = json.loads(cf.read_text())
     for raw in data.get("patterns", []):
