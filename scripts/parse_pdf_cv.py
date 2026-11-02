@@ -138,9 +138,7 @@ def extract_names_gemini(
   from google.genai import types
 
   image_data = image_path.read_bytes()
-  image_part = types.Part.from_bytes(
-    data=image_data, mime_type="image/png"
-  )
+  image_part = types.Part.from_bytes(data=image_data, mime_type="image/png")
 
   contents: list[types.PartUnionDict] = [image_part, NAMES_PROMPT]
   response = client.models.generate_content(
@@ -1173,10 +1171,7 @@ def main() -> None:
     if n_patterns > 0:
       names = [p["name"] for p in result["patterns"]]
       widths = [p["grid_width"] for p in result["patterns"]]
-      print(
-        f"Page {page_num}: {n_patterns} patterns "
-        f"{names} (cols: {widths})"
-      )
+      print(f"Page {page_num}: {n_patterns} patterns {names} (cols: {widths})")
     else:
       print(f"Page {page_num}: no patterns")
 

@@ -9,16 +9,16 @@ import termios
 
 
 def getch() -> str:
-    """Read a single keypress without waiting for Enter.
+  """Read a single keypress without waiting for Enter.
 
-    Returns:
-        The character pressed (lowercase).
-    """
-    fd = sys.stdin.fileno()
-    old = termios.tcgetattr(fd)
-    try:
-        tty.setraw(fd)
-        ch = sys.stdin.read(1)
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old)
-    return ch.lower()
+  Returns:
+      The character pressed (lowercase).
+  """
+  fd = sys.stdin.fileno()
+  old = termios.tcgetattr(fd)
+  try:
+    tty.setraw(fd)
+    ch = sys.stdin.read(1)
+  finally:
+    termios.tcsetattr(fd, termios.TCSADRAIN, old)
+  return ch.lower()
