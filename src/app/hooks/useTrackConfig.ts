@@ -115,6 +115,13 @@ function withoutFill(
   return Object.keys(next).length > 0 ? next : undefined;
 }
 
+/** Pads `steps` with rests, or cuts it, to `length`. */
+function fitSteps(steps: string, length: number): string {
+  return steps.length < length
+    ? steps.padEnd(length, '0')
+    : steps.substring(0, length);
+}
+
 /**
  * Returns `track` with step `stepIndex` set to `bit`.
  * Turning a step on while Fill is active also gives it
@@ -158,6 +165,63 @@ function withStepBit(
   };
 }
 
+/** Step data kept per step: conditions or locks. */
+type StepField = 'trigConditions' | 'parameterLocks';
+
+/**
+ * Returns `config` with track `trackId` replaced by
+ * `fn(track)`. When `fn` returns the track unchanged,
+ * `config` itself comes back, so React skips the
+ * update.
+ */
+function updateTrack(
+  config: SequencerConfig,
+  trackId: TrackId,
+  fn: (track: TrackConfig) => TrackConfig
+): SequencerConfig {
+  const track = config.tracks[trackId];
+  const next = fn(track);
+  if (next === track) return config;
+  return {
+    ...config,
+    tracks: { ...config.tracks, [trackId]: next },
+  };
+}
+
+/** Returns `config` with one mixer channel changed. */
+function updateMixer(
+  config: SequencerConfig,
+  trackId: TrackId,
+  change: Partial<SequencerConfig['mixer'][TrackId]>
+): SequencerConfig {
+  return {
+    ...config,
+    mixer: {
+      ...config.mixer,
+      [trackId]: { ...config.mixer[trackId], ...change },
+    },
+  };
+}
+
+/**
+ * Returns `track` without `field` data on step
+ * `stepIndex`. A map left empty becomes undefined.
+ */
+function withoutStep(
+  track: TrackConfig,
+  field: StepField,
+  stepIndex: number
+): TrackConfig {
+  const map = track[field];
+  if (map?.[stepIndex] === undefined) return track;
+  const rest = { ...map };
+  delete rest[stepIndex];
+  return {
+    ...track,
+    [field]: Object.keys(rest).length > 0 ? rest : undefined,
+  };
+}
+
 /**
  * Returns `tracks` with `field` (trig conditions or
  * parameter locks) removed from each track in
@@ -166,7 +230,7 @@ function withStepBit(
 function withoutStepData(
   tracks: Record<TrackId, TrackConfig>,
   trackIds: readonly TrackId[],
-  field: 'trigConditions' | 'parameterLocks'
+  field: StepField
 ): Record<TrackId, TrackConfig> {
   const next = { ...tracks };
   for (const id of trackIds) {
@@ -190,30 +254,60 @@ export function useTrackConfig({
     Record<TrackId, number>
   >({} as Record<TrackId, number>);
 
-  const toggleStep = useCallback(
-    (trackId: TrackId, stepIndex: number) => {
-      // Read before setConfig: the updater can run later.
-      const fillActive = !!fillActiveRef?.current;
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
-        if (stepIndex >= track.steps.length) {
-          return prev;
-        }
-        const bit =
-          track.steps[stepIndex] === '1' ? '0' : '1';
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: withStepBit(
-              track, stepIndex, bit, fillActive
-            ),
-          },
-        };
-      });
+  /**
+   * Changes one track with `fn` and marks the pattern
+   * modified. `fn` may run later (it is a state
+   * updater), so it must not read refs.
+   */
+  const editTrack = useCallback(
+    (
+      trackId: TrackId,
+      fn: (track: TrackConfig) => TrackConfig
+    ) => {
+      setConfig(prev => updateTrack(prev, trackId, fn));
       setSelectedPatternId(markPatternModified);
     },
-    [setConfig, setSelectedPatternId, fillActiveRef]
+    [setConfig, setSelectedPatternId]
+  );
+
+  /**
+   * Changes one mixer channel. Presets set track
+   * levels, so a gain or pan change marks the pattern
+   * modified; the accent level isn't preset data, and
+   * mute and solo aren't either.
+   */
+  const editMixer = useCallback(
+    (
+      trackId: TrackId,
+      fn: (
+        channel: SequencerConfig['mixer'][TrackId]
+      ) => Partial<SequencerConfig['mixer'][TrackId]>,
+      marksModified: boolean
+    ) => {
+      setConfig(prev => updateMixer(
+        prev, trackId, fn(prev.mixer[trackId])
+      ));
+      if (marksModified && trackId !== 'ac') {
+        setSelectedPatternId(markPatternModified);
+      }
+    },
+    [setConfig, setSelectedPatternId]
+  );
+
+  const toggleStep = useCallback(
+    (trackId: TrackId, stepIndex: number) => {
+      // Read before editTrack: the updater can run later.
+      const fillActive = !!fillActiveRef?.current;
+      editTrack(trackId, track => {
+        if (stepIndex >= track.steps.length) return track;
+        const bit =
+          track.steps[stepIndex] === '1' ? '0' : '1';
+        return withStepBit(
+          track, stepIndex, bit, fillActive
+        );
+      });
+    },
+    [editTrack, fillActiveRef]
   );
 
   const setStep = useCallback(
@@ -223,25 +317,15 @@ export function useTrackConfig({
       value: '0' | '1'
     ) => {
       const fillActive = !!fillActiveRef?.current;
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
-        if (stepIndex >= track.steps.length) {
-          return prev;
-        }
-        if (track.steps[stepIndex] === value) return prev;
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: withStepBit(
-              track, stepIndex, value, fillActive
-            ),
-          },
-        };
+      editTrack(trackId, track => {
+        if (stepIndex >= track.steps.length) return track;
+        if (track.steps[stepIndex] === value) return track;
+        return withStepBit(
+          track, stepIndex, value, fillActive
+        );
       });
-      setSelectedPatternId(markPatternModified);
     },
-    [setConfig, setSelectedPatternId, fillActiveRef]
+    [editTrack, fillActiveRef]
   );
 
   /**
@@ -262,8 +346,7 @@ export function useTrackConfig({
       base?: TrackConfig
     ) => {
       const fillActive = !!fillActiveRef?.current;
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
+      editTrack(trackId, track => {
         const from = base ?? track;
         let trigConditions = from.trigConditions;
         for (let i = 0; i < newSteps.length; i++) {
@@ -278,43 +361,24 @@ export function useTrackConfig({
             };
           }
         }
-        const condsUnchanged =
-          trigConditions === track.trigConditions;
-        if (newSteps === track.steps && condsUnchanged) {
-          return prev;
+        if (
+          newSteps === track.steps
+          && trigConditions === track.trigConditions
+        ) {
+          return track;
         }
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: {
-              ...track,
-              steps: newSteps,
-              trigConditions,
-            },
-          },
-        };
+        return { ...track, steps: newSteps, trigConditions };
       });
-      setSelectedPatternId(markPatternModified);
     },
-    [setConfig, setSelectedPatternId, fillActiveRef]
+    [editTrack, fillActiveRef]
   );
 
   const toggleFreeRun = useCallback(
-    (trackId: TrackId) => {
-      setConfig(prev => ({
-        ...prev,
-        tracks: {
-          ...prev.tracks,
-          [trackId]: {
-            ...prev.tracks[trackId],
-            freeRun: !prev.tracks[trackId].freeRun,
-          },
-        },
-      }));
-      setSelectedPatternId(markPatternModified);
-    },
-    [setConfig, setSelectedPatternId]
+    (trackId: TrackId) => editTrack(
+      trackId,
+      track => ({ ...track, freeRun: !track.freeRun })
+    ),
+    [editTrack]
   );
 
   /**
@@ -340,26 +404,13 @@ export function useTrackConfig({
           ...prev.tracks,
         } as Record<TrackId, TrackConfig>;
         for (const id of TRACK_IDS) {
-          const track = prev.tracks[id];
           const fromSteps = from[id].steps;
-          const curLen = fromSteps.length;
-          let newLen: number;
-          if (clamped > currentMax) {
-            newLen = clamped;
-          } else {
-            newLen = curLen > clamped
-              ? clamped
-              : curLen;
-          }
-          let newSteps = fromSteps;
-          if (newSteps.length < newLen) {
-            newSteps = newSteps.padEnd(newLen, '0');
-          } else if (newSteps.length > newLen) {
-            newSteps = newSteps.substring(0, newLen);
-          }
+          const newLen = clamped > currentMax
+            ? clamped
+            : Math.min(fromSteps.length, clamped);
           newTracks[id] = {
-            ...track,
-            steps: newSteps,
+            ...prev.tracks[id],
+            steps: fitSteps(fromSteps, newLen),
           };
         }
         return {
@@ -375,31 +426,15 @@ export function useTrackConfig({
   const setTrackLength = useCallback(
     (trackId: TrackId, length: number) => {
       setConfig(prev => {
-        const patLen =
-          getPatternLength(prev.tracks);
+        const patLen = getPatternLength(prev.tracks);
         const clamped = Math.max(
           1,
           Math.min(patLen, length)
         );
-        const track = prev.tracks[trackId];
-        let newSteps: string;
-        if (track.steps.length < clamped) {
-          newSteps =
-            track.steps.padEnd(clamped, '0');
-        } else {
-          newSteps =
-            track.steps.substring(0, clamped);
-        }
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: {
-              ...track,
-              steps: newSteps,
-            },
-          },
-        };
+        return updateTrack(prev, trackId, track => ({
+          ...track,
+          steps: fitSteps(track.steps, clamped),
+        }));
       });
       setSelectedPatternId(markPatternModified);
     },
@@ -408,94 +443,41 @@ export function useTrackConfig({
 
   const toggleMute = useCallback(
     (trackId: TrackId) => {
-      setConfig(prev => ({
-        ...prev,
-        mixer: {
-          ...prev.mixer,
-          [trackId]: {
-            ...prev.mixer[trackId],
-            isMuted: !prev.mixer[trackId].isMuted,
-          },
-        },
-      }));
+      editMixer(
+        trackId, ch => ({ isMuted: !ch.isMuted }), false
+      );
       cycleCountRef.current[trackId] = 0;
     },
-    [setConfig]
+    [editMixer]
   );
 
   const toggleSolo = useCallback(
     (trackId: TrackId) => {
-      setConfig(prev => ({
-        ...prev,
-        mixer: {
-          ...prev.mixer,
-          [trackId]: {
-            ...prev.mixer[trackId],
-            isSolo: !prev.mixer[trackId].isSolo,
-          },
-        },
-      }));
+      editMixer(
+        trackId, ch => ({ isSolo: !ch.isSolo }), false
+      );
       cycleCountRef.current[trackId] = 0;
     },
-    [setConfig]
+    [editMixer]
   );
 
   const setGain = useCallback(
-    (trackId: TrackId, value: number) => {
-      setConfig(prev => ({
-        ...prev,
-        mixer: {
-          ...prev.mixer,
-          [trackId]: {
-            ...prev.mixer[trackId],
-            gain: value,
-          },
-        },
-      }));
-      // Presets set track levels, so a change marks the
-      // pattern modified. The accent level isn't preset
-      // data.
-      if (trackId !== 'ac') {
-        setSelectedPatternId(markPatternModified);
-      }
-    },
-    [setConfig, setSelectedPatternId]
+    (trackId: TrackId, value: number) =>
+      editMixer(trackId, () => ({ gain: value }), true),
+    [editMixer]
   );
 
   const setPan = useCallback(
-    (trackId: TrackId, value: number) => {
-      setConfig(prev => ({
-        ...prev,
-        mixer: {
-          ...prev.mixer,
-          [trackId]: {
-            ...prev.mixer[trackId],
-            pan: value,
-          },
-        },
-      }));
-      // Presets set track levels, so a change marks the
-      // pattern modified. The accent level isn't preset
-      // data.
-      if (trackId !== 'ac') {
-        setSelectedPatternId(markPatternModified);
-      }
-    },
-    [setConfig, setSelectedPatternId]
+    (trackId: TrackId, value: number) =>
+      editMixer(trackId, () => ({ pan: value }), true),
+    [editMixer]
   );
 
   const clearTrack = useCallback(
-    (trackId: TrackId) => {
-      setConfig(prev => ({
-        ...prev,
-        tracks: {
-          ...prev.tracks,
-          [trackId]: { steps: '0'.repeat(16) },
-        },
-      }));
-      setSelectedPatternId(markPatternModified);
-    },
-    [setConfig, setSelectedPatternId]
+    (trackId: TrackId) => editTrack(
+      trackId, () => ({ steps: '0'.repeat(16) })
+    ),
+    [editTrack]
   );
 
   const setSwing = useCallback(
@@ -508,126 +490,70 @@ export function useTrackConfig({
     [setConfig]
   );
 
+  /** Replaces one step's trig conditions. */
   const setTrigCondition = useCallback(
     (
       trackId: TrackId,
       stepIndex: number,
       conditions: StepConditions
-    ) => {
-      setConfig(prev => ({
-        ...prev,
-        tracks: {
-          ...prev.tracks,
-          [trackId]: {
-            ...prev.tracks[trackId],
-            trigConditions: {
-              ...prev.tracks[trackId].trigConditions,
-              [stepIndex]: conditions,
-            },
-          },
-        },
-      }));
-      setSelectedPatternId(markPatternModified);
-    },
-    [setConfig, setSelectedPatternId]
+    ) => editTrack(trackId, track => ({
+      ...track,
+      trigConditions: {
+        ...track.trigConditions,
+        [stepIndex]: conditions,
+      },
+    })),
+    [editTrack]
   );
 
-  const clearTrigCondition = useCallback(
-    (trackId: TrackId, stepIndex: number) => {
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
-        const trackConds = {
-          ...track.trigConditions,
-        };
-        delete trackConds[stepIndex];
-        const newTrack = Object.keys(
-          trackConds
-        ).length === 0
-          ? {
-              ...track,
-              trigConditions: undefined,
-            }
-          : {
-              ...track,
-              trigConditions: trackConds,
-            };
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: newTrack,
-          },
-        };
-      });
-      setSelectedPatternId(markPatternModified);
-    },
-    [setConfig, setSelectedPatternId]
-  );
-
+  /** Merges `locks` into one step's parameter locks. */
   const setParameterLock = useCallback(
     (
       trackId: TrackId,
       stepIndex: number,
       locks: StepLocks
-    ) => {
-      setConfig(prev => ({
-        ...prev,
-        tracks: {
-          ...prev.tracks,
-          [trackId]: {
-            ...prev.tracks[trackId],
-            parameterLocks: {
-              ...prev.tracks[trackId].parameterLocks,
-              [stepIndex]: {
-                ...prev.tracks[trackId]
-                  .parameterLocks?.[stepIndex],
-                ...locks,
-              },
-            },
-          },
+    ) => editTrack(trackId, track => ({
+      ...track,
+      parameterLocks: {
+        ...track.parameterLocks,
+        [stepIndex]: {
+          ...track.parameterLocks?.[stepIndex],
+          ...locks,
         },
-      }));
-      setSelectedPatternId(markPatternModified);
-    },
-    [setConfig, setSelectedPatternId]
+      },
+    })),
+    [editTrack]
+  );
+
+  /** Removes one step's conditions or locks. */
+  const clearStep = useCallback(
+    (
+      trackId: TrackId,
+      stepIndex: number,
+      field: StepField
+    ) => editTrack(
+      trackId, track => withoutStep(track, field, stepIndex)
+    ),
+    [editTrack]
+  );
+
+  const clearTrigCondition = useCallback(
+    (trackId: TrackId, stepIndex: number) =>
+      clearStep(trackId, stepIndex, 'trigConditions'),
+    [clearStep]
   );
 
   const clearParameterLock = useCallback(
-    (trackId: TrackId, stepIndex: number) => {
-      setConfig(prev => {
-        const track = prev.tracks[trackId];
-        const trackLocks = {
-          ...track.parameterLocks,
-        };
-        delete trackLocks[stepIndex];
-        const newTrack = Object.keys(
-          trackLocks
-        ).length === 0
-          ? {
-              ...track,
-              parameterLocks: undefined,
-            }
-          : {
-              ...track,
-              parameterLocks: trackLocks,
-            };
-        return {
-          ...prev,
-          tracks: {
-            ...prev.tracks,
-            [trackId]: newTrack,
-          },
-        };
-      });
-      setSelectedPatternId(markPatternModified);
-    },
-    [setConfig, setSelectedPatternId]
+    (trackId: TrackId, stepIndex: number) =>
+      clearStep(trackId, stepIndex, 'parameterLocks'),
+    [clearStep]
   );
 
+  /** Removes conditions or locks from whole tracks. */
   const clearStepData = useCallback(
     (
       trackIds: readonly TrackId[],
-      field: 'trigConditions' | 'parameterLocks'
+      field: StepField
     ) => {
       setConfig(prev => ({
         ...prev,

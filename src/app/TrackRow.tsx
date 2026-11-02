@@ -13,11 +13,23 @@ import StepButton from './StepButton';
 import { retrigCoverage } from './retrig';
 import CustomSampleDot from './CustomSampleDot';
 import { useFileDrop } from './hooks/useFileDrop';
+import type { SequencerActions } from './SequencerContext';
 import type { FileDropHandlers } from './hooks/useFileDrop';
 
 /** Marks a row a file is being dragged over (no layout shift). */
 const DROP_TARGET =
   ' rounded outline-2 outline-dashed outline-accent outline-offset-2';
+
+/** The sequencer actions a track row uses. */
+export type TrackRowActions = Pick<
+  SequencerActions,
+  | 'toggleStep' | 'toggleMute' | 'toggleSolo'
+  | 'setGain' | 'setPan' | 'setTrackLength'
+  | 'toggleFreeRun' | 'clearTrack'
+  | 'clearTrackConditions' | 'clearTrackLocks'
+  | 'restoreTrack'
+  | 'loadSample' | 'resetSample' | 'toggleSample'
+>;
 
 export interface TrackRowProps {
   trackId: TrackId;
@@ -33,24 +45,12 @@ export interface TrackRowProps {
   pan: number;
   currentStep: number;
   totalSteps: number;
-  onToggleStep: (
-    trackId: TrackId, stepIndex: number
-  ) => void;
-  onToggleMute: (trackId: TrackId) => void;
-  onToggleSolo: (trackId: TrackId) => void;
-  onSetGain: (
-    trackId: TrackId, value: number
-  ) => void;
-  onSetPan: (
-    trackId: TrackId, value: number
-  ) => void;
-  onSetTrackLength: (
-    trackId: TrackId, length: number
-  ) => void;
-  onToggleFreeRun: (trackId: TrackId) => void;
-  onClearTrack: (trackId: TrackId) => void;
-  onResetConditions?: (trackId: TrackId) => void;
-  onClearLocks?: (trackId: TrackId) => void;
+  /**
+   * The sequencer's actions (useSequencer().actions).
+   * The object is stable, so passing it whole keeps
+   * the row's memo working.
+   */
+  actions: TrackRowActions;
   onPlayPreview: (trackId: TrackId) => void;
   isTriggered: boolean;
   trigConditions?: Record<number, StepConditions>;
@@ -72,8 +72,6 @@ export interface TrackRowProps {
   onClearSelection?: () => void;
   /** Draw as a thin row: caret, name, step line. */
   isMinimized?: boolean;
-  /** Restores a minimized row (caret or line click). */
-  onRestore?: (trackId: TrackId) => void;
   /**
    * The next row is minimized too: pull it closer
    * (a margin, not a border, so nothing reflows).
@@ -83,9 +81,6 @@ export interface TrackRowProps {
   customSampleName?: string;
   /** False while a custom track plays the kit sample. */
   isCustomSampleOn?: boolean;
-  onLoadSample?: (trackId: TrackId, file: File) => void;
-  onResetSample?: (trackId: TrackId) => void;
-  onToggleSample?: (trackId: TrackId) => void;
 }
 
 interface MinimizedTrackRowProps {
@@ -237,16 +232,7 @@ function TrackRowInner({
   pan,
   currentStep,
   totalSteps,
-  onToggleStep,
-  onToggleMute,
-  onToggleSolo,
-  onSetGain,
-  onSetPan,
-  onSetTrackLength,
-  onToggleFreeRun,
-  onClearTrack,
-  onResetConditions,
-  onClearLocks,
+  actions,
   onPlayPreview,
   isTriggered,
   trigConditions,
@@ -259,70 +245,70 @@ function TrackRowInner({
   onPlainClick,
   onClearSelection,
   isMinimized = false,
-  onRestore,
   tightBelow = false,
   customSampleName,
   isCustomSampleOn = true,
-  onLoadSample,
-  onResetSample,
-  onToggleSample,
 }: TrackRowProps) {
+  const {
+    toggleStep, toggleMute, toggleSolo, setGain, setPan,
+    setTrackLength, toggleFreeRun, clearTrack,
+    clearTrackConditions, clearTrackLocks, restoreTrack,
+    loadSample, resetSample, toggleSample,
+  } = actions;
   const stepGridRef = useRef<HTMLDivElement>(null);
   // ─── Bound callbacks ──────────────────────────
   const handleMute = useCallback(
-    () => onToggleMute(trackId),
-    [onToggleMute, trackId]
+    () => toggleMute(trackId),
+    [toggleMute, trackId]
   );
   const handleSolo = useCallback(
-    () => onToggleSolo(trackId),
-    [onToggleSolo, trackId]
+    () => toggleSolo(trackId),
+    [toggleSolo, trackId]
   );
   const handlePan = useCallback(
-    (v: number) => onSetPan(trackId, v),
-    [onSetPan, trackId]
+    (v: number) => setPan(trackId, v),
+    [setPan, trackId]
   );
   const handleGain = useCallback(
-    (v: number) => onSetGain(trackId, v),
-    [onSetGain, trackId]
+    (v: number) => setGain(trackId, v),
+    [setGain, trackId]
   );
   const handleFreeRun = useCallback(
-    () => onToggleFreeRun(trackId),
-    [onToggleFreeRun, trackId]
+    () => toggleFreeRun(trackId),
+    [toggleFreeRun, trackId]
   );
   const handleClearTrack = useCallback(
-    () => onClearTrack(trackId),
-    [onClearTrack, trackId]
+    () => clearTrack(trackId),
+    [clearTrack, trackId]
   );
   const handleResetConditions = useCallback(
-    () => onResetConditions?.(trackId),
-    [onResetConditions, trackId]
+    () => clearTrackConditions(trackId),
+    [clearTrackConditions, trackId]
   );
   const handleClearLocks = useCallback(
-    () => onClearLocks?.(trackId),
-    [onClearLocks, trackId]
+    () => clearTrackLocks(trackId),
+    [clearTrackLocks, trackId]
   );
   const handlePlayPreview = useCallback(
     () => onPlayPreview(trackId),
     [onPlayPreview, trackId]
   );
   const handleLoadSample = useCallback(
-    (file: File) => onLoadSample?.(trackId, file),
-    [onLoadSample, trackId]
+    (file: File) => void loadSample(trackId, file),
+    [loadSample, trackId]
   );
   const handleResetSample = useCallback(
-    () => onResetSample?.(trackId),
-    [onResetSample, trackId]
+    () => resetSample(trackId),
+    [resetSample, trackId]
   );
   const handleToggleSample = useCallback(
-    () => onToggleSample?.(trackId),
-    [onToggleSample, trackId]
+    () => toggleSample(trackId),
+    [toggleSample, trackId]
   );
-  const drop = useFileDrop(
-    onLoadSample ? handleLoadSample : undefined
-  );
+  const drop = useFileDrop(handleLoadSample);
   const handleSetLength = useCallback(
-    (len: number) => onSetTrackLength(trackId, len),
-    [onSetTrackLength, trackId]
+    (len: number) => setTrackLength(trackId, len),
+    [setTrackLength, trackId]
   );
 
   // Retrig hits per step, for the dots on the keys
@@ -338,8 +324,8 @@ function TrackRowInner({
   // ─── Page-offset wrappers ─────────────────────
   const handleToggleStep = useCallback(
     (tid: TrackId, localStep: number) =>
-      onToggleStep(tid, localStep + pageOffset),
-    [onToggleStep, pageOffset]
+      toggleStep(tid, localStep + pageOffset),
+    [toggleStep, pageOffset]
   );
 
   const handleOpenPopover = useCallback(
@@ -366,8 +352,8 @@ function TrackRowInner({
   );
 
   const handleRestore = useCallback(
-    () => onRestore?.(trackId),
-    [onRestore, trackId]
+    () => restoreTrack(trackId),
+    [restoreTrack, trackId]
   );
 
   if (isMinimized) {

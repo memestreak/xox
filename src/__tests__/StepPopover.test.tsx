@@ -117,7 +117,7 @@ describe('StepPopover', () => {
       </div>
     );
     vi.advanceTimersByTime(1);
-    fireEvent.mouseDown(
+    fireEvent.pointerDown(
       screen.getByTestId('outside')
     );
     expect(onClose).toHaveBeenCalled();
