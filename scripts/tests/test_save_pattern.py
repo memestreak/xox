@@ -128,12 +128,23 @@ def _broken(change: str) -> str:
   return json.dumps(entry)
 
 
-@pytest.mark.parametrize("change", [
-  "custom id", "edited mark", "missing track", "bad steps",
-  "too many steps", "condition past the end", "loud mixer",
-  "accent in mixer", "mute in mixer", "bpm",
-  "odd retrig rate", "retrig without length",
-])
+@pytest.mark.parametrize(
+  "change",
+  [
+    "custom id",
+    "edited mark",
+    "missing track",
+    "bad steps",
+    "too many steps",
+    "condition past the end",
+    "loud mixer",
+    "accent in mixer",
+    "mute in mixer",
+    "bpm",
+    "odd retrig rate",
+    "retrig without length",
+  ],
+)
 def test_rejects(change: str) -> None:
   with pytest.raises(PatternError):
     save_pattern.parse_entry(_broken(change))
@@ -145,13 +156,20 @@ def test_accepts_a_retrig_lock() -> None:
   )
   entry["tracks"]["bd"]["steps"] = "1" + entry["tracks"]["bd"]["steps"][1:]
   entry["tracks"]["bd"]["parameterLocks"] = {
-    "0": {"gain": 0.5, "retrig": {
-      "enabled": True, "rate": 64, "length": 0.5,
-    }},
+    "0": {
+      "gain": 0.5,
+      "retrig": {
+        "enabled": True,
+        "rate": 64,
+        "length": 0.5,
+      },
+    },
   }
   parsed = save_pattern.parse_entry(json.dumps(entry))
   assert parsed["tracks"]["bd"]["parameterLocks"]["0"]["retrig"] == {
-    "enabled": True, "rate": 64, "length": 0.5,
+    "enabled": True,
+    "rate": 64,
+    "length": 0.5,
   }
 
 
@@ -169,14 +187,16 @@ def test_main_reads_a_file(
   monkeypatch.setattr(save_pattern, "PATTERNS_JSON", patterns_file)
   entry_file = tmp_path / "entry.json"
   entry_file.write_text(
-    json.dumps(first_pattern(patterns_file)), encoding="utf-8",
+    json.dumps(first_pattern(patterns_file)),
+    encoding="utf-8",
   )
   assert save_pattern.main([str(entry_file)]) == 0
   assert "Updated" in capsys.readouterr().out
 
 
 def test_main_reports_errors(
-  tmp_path: Path, capsys: pytest.CaptureFixture[str],
+  tmp_path: Path,
+  capsys: pytest.CaptureFixture[str],
 ) -> None:
   entry_file = tmp_path / "entry.json"
   entry_file.write_text("[]", encoding="utf-8")

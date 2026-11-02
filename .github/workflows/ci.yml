@@ -29,5 +29,6 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --extra dev
       - run: uv run ruff check scripts
+      - run: uv run ruff format --check scripts
       - run: uv run mypy scripts
       - run: uv run pytest scripts

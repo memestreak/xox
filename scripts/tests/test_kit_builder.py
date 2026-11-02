@@ -60,18 +60,29 @@ class TestClassify:
     assert classify(path) == ["ht", "mt", "lt"]
 
   def test_toms_inside_percussion_folder(self) -> None:
-    path = _p("geist", "geist_factory", "percussion", "toms",
-              "tm_tom_real_a1_mpc60_gb.wav")
+    path = _p(
+      "geist",
+      "geist_factory",
+      "percussion",
+      "toms",
+      "tm_tom_real_a1_mpc60_gb.wav",
+    )
     assert classify(path) == ["ht", "mt", "lt"]
 
   def test_claps_inside_percussion_folder(self) -> None:
-    path = _p("geist", "best_of_guru", "percussion", "claps",
-              "con_clap04_gb.aif")
+    path = _p(
+      "geist", "best_of_guru", "percussion", "claps", "con_clap04_gb.aif"
+    )
     assert classify(path) == ["cp"]
 
   def test_shaker_in_percussion_is_unmapped(self) -> None:
-    path = _p("geist", "geist_factory", "percussion", "shaker",
-              "sh_shaker_stereo_061_hc.wav")
+    path = _p(
+      "geist",
+      "geist_factory",
+      "percussion",
+      "shaker",
+      "sh_shaker_stereo_061_hc.wav",
+    )
     assert classify(path) == []
 
   def test_top_level_percussion_needs_a_keyword(self) -> None:
@@ -106,9 +117,9 @@ def kit_env(
   kits_dir = tmp_path / "kits"
   kits_dir.mkdir()
   kits_json = tmp_path / "kits.json"
-  kits_json.write_text(json.dumps(
-    {"kits": [{"id": "808", "name": "808", "folder": "808"}]}
-  ))
+  kits_json.write_text(
+    json.dumps({"kits": [{"id": "808", "name": "808", "folder": "808"}]})
+  )
   monkeypatch.setattr(assembler, "KITS_DIR", kits_dir)
   monkeypatch.setattr(assembler, "KITS_JSON", kits_json)
   return tmp_path
@@ -138,27 +149,28 @@ class TestKitConflict:
     assert assembler.kit_conflict("new", "new") is None
 
   def test_taken_id(self, kit_env: Path) -> None:
-    assert "already exists" in str(
-      assembler.kit_conflict("808", "other")
-    )
+    assert "already exists" in str(assembler.kit_conflict("808", "other"))
 
   def test_taken_folder(self, kit_env: Path) -> None:
     (kit_env / "kits" / "taken").mkdir()
-    assert "already exists" in str(
-      assembler.kit_conflict("new", "taken")
-    )
+    assert "already exists" in str(assembler.kit_conflict("new", "taken"))
 
 
 class TestAssembleKit:
   """File writing and cleanup."""
 
   def test_skipped_slots_get_silence(
-    self, kit_env: Path, monkeypatch: pytest.MonkeyPatch,
+    self,
+    kit_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
   ) -> None:
     monkeypatch.setattr(assembler, "_convert", _fake_convert)
 
     assembler.assemble_kit(
-      "new", "New", "new", {"bd": _sample(kit_env)},
+      "new",
+      "New",
+      "new",
+      {"bd": _sample(kit_env)},
     )
 
     kit_dir = kit_env / "kits" / "new"
@@ -166,20 +178,22 @@ class TestAssembleKit:
     assert names == sorted(f"{t}.wav" for t in KIT_TRACK_IDS)
     with wave.open(str(kit_dir / "bd.wav")) as picked:
       # Picks are trimmed: the 0.1 s lead-in is gone.
-      preroll = int(
-        assembler.SAMPLE_RATE * assembler.TRIM_PREROLL_SECONDS
-      )
+      preroll = int(assembler.SAMPLE_RATE * assembler.TRIM_PREROLL_SECONDS)
       assert picked.getnframes() == preroll + 4410
     with wave.open(str(kit_dir / "sd.wav")) as silent:
       assert silent.getframerate() == assembler.SAMPLE_RATE
       assert silent.getsampwidth() == 2
     kits = json.loads((kit_env / "kits.json").read_text())
     assert kits["kits"][-1] == {
-      "id": "new", "name": "New", "folder": "new",
+      "id": "new",
+      "name": "New",
+      "folder": "new",
     }
 
   def test_failure_leaves_nothing_behind(
-    self, kit_env: Path, monkeypatch: pytest.MonkeyPatch,
+    self,
+    kit_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
   ) -> None:
     def fail(src: str, dest: Path) -> None:
       raise subprocess.CalledProcessError(1, "ffmpeg")
@@ -188,7 +202,10 @@ class TestAssembleKit:
 
     with pytest.raises(subprocess.CalledProcessError):
       assembler.assemble_kit(
-        "new", "New", "new", {"bd": _sample(kit_env)},
+        "new",
+        "New",
+        "new",
+        {"bd": _sample(kit_env)},
       )
 
     assert list((kit_env / "kits").iterdir()) == []
@@ -196,7 +213,8 @@ class TestAssembleKit:
     assert len(kits["kits"]) == 1
 
   def test_taken_name_raises_before_writing(
-    self, kit_env: Path,
+    self,
+    kit_env: Path,
   ) -> None:
     with pytest.raises(ValueError):
       assembler.assemble_kit("808", "Dup", "dup", {})

@@ -27,13 +27,26 @@ from typing import Any
 
 PATTERNS_JSON = (
   Path(__file__).resolve().parent.parent
-  / "src" / "app" / "data" / "patterns.json"
+  / "src"
+  / "app"
+  / "data"
+  / "patterns.json"
 )
 
 # Same order as TRACK_IDS in src/app/types.ts.
 TRACK_IDS = (
-  "ac", "bd", "sd", "ch", "oh", "cy",
-  "ht", "mt", "lt", "rs", "cp", "cb",
+  "ac",
+  "bd",
+  "sd",
+  "ch",
+  "oh",
+  "cy",
+  "ht",
+  "mt",
+  "lt",
+  "rs",
+  "cp",
+  "cb",
 )
 GRID_TRACK_IDS = TRACK_IDS[1:]
 
@@ -43,7 +56,10 @@ CUSTOM_ID = "custom"
 
 ENTRY_KEYS = ("id", "name", "category", "tracks", "mixer")
 TRACK_KEYS = (
-  "steps", "freeRun", "trigConditions", "parameterLocks",
+  "steps",
+  "freeRun",
+  "trigConditions",
+  "parameterLocks",
 )
 CONDITION_KEYS = {"probability", "cycle", "fill"}
 LOCK_KEYS = {"gain", "pan", "retrig"}
@@ -71,24 +87,29 @@ def _check_level(value: Any, where: str) -> None:
 def _check_retrig(value: Any, where: str) -> None:
   """A retrig lock: enabled, plus a rate and length the app offers."""
   if not isinstance(value, dict) or set(value) != {
-    "enabled", "rate", "length",
+    "enabled",
+    "rate",
+    "length",
   }:
     raise PatternError(f"{where} must have enabled, rate and length")
   if not isinstance(value["enabled"], bool):
     raise PatternError(f"{where}.enabled must be true or false")
   for name, allowed in (
-    ("rate", RETRIG_RATES), ("length", RETRIG_LENGTHS),
+    ("rate", RETRIG_RATES),
+    ("length", RETRIG_LENGTHS),
   ):
     v = value[name]
-    if isinstance(v, bool) or not isinstance(v, (int, float)) \
-        or v not in allowed:
-      raise PatternError(
-        f"{where}.{name} must be one of {sorted(allowed)}"
-      )
+    if (
+      isinstance(v, bool) or not isinstance(v, (int, float)) or v not in allowed
+    ):
+      raise PatternError(f"{where}.{name} must be one of {sorted(allowed)}")
 
 
 def _check_step_map(
-  value: Any, steps: int, allowed: set[str], where: str,
+  value: Any,
+  steps: int,
+  allowed: set[str],
+  where: str,
 ) -> None:
   """trigConditions or parameterLocks: step index -> fields."""
   if not isinstance(value, dict):
@@ -100,9 +121,7 @@ def _check_step_map(
       raise PatternError(f"{where}.{key} must be a non-empty object")
     unknown = set(fields) - allowed
     if unknown:
-      raise PatternError(
-        f"{where}.{key} has unknown fields: {sorted(unknown)}"
-      )
+      raise PatternError(f"{where}.{key} has unknown fields: {sorted(unknown)}")
 
 
 def _check_track(track_id: str, track: Any) -> None:
@@ -114,20 +133,23 @@ def _check_track(track_id: str, track: Any) -> None:
     raise PatternError(f"{where} has unknown fields: {sorted(unknown)}")
   steps = track.get("steps")
   if not isinstance(steps, str) or not STEPS_RE.match(steps):
-    raise PatternError(
-      f"{where}.steps must be 1-64 characters of 0 and 1"
-    )
+    raise PatternError(f"{where}.steps must be 1-64 characters of 0 and 1")
   if "freeRun" in track and not isinstance(track["freeRun"], bool):
     raise PatternError(f"{where}.freeRun must be true or false")
   if "trigConditions" in track:
     _check_step_map(
-      track["trigConditions"], len(steps), CONDITION_KEYS,
+      track["trigConditions"],
+      len(steps),
+      CONDITION_KEYS,
       f"{where}.trigConditions",
     )
   if "parameterLocks" in track:
     locks = track["parameterLocks"]
     _check_step_map(
-      locks, len(steps), LOCK_KEYS, f"{where}.parameterLocks",
+      locks,
+      len(steps),
+      LOCK_KEYS,
+      f"{where}.parameterLocks",
     )
     for key, fields in locks.items():
       for name, value in fields.items():
@@ -181,9 +203,7 @@ def parse_entry(text: str) -> dict[str, Any]:
       " and category in the entry first"
     )
   if not isinstance(pattern_id, str) or not ID_RE.match(pattern_id):
-    raise PatternError(
-      "id must be lowercase words joined by hyphens"
-    )
+    raise PatternError("id must be lowercase words joined by hyphens")
   name = entry.get("name")
   if not isinstance(name, str) or not name.strip():
     raise PatternError("name must be a non-empty string")
@@ -198,8 +218,7 @@ def parse_entry(text: str) -> dict[str, Any]:
     raise PatternError("tracks must be an object")
   if set(tracks) != set(TRACK_IDS):
     raise PatternError(
-      "tracks must have exactly these tracks: "
-      + " ".join(TRACK_IDS)
+      "tracks must have exactly these tracks: " + " ".join(TRACK_IDS)
     )
   for track_id in TRACK_IDS:
     _check_track(track_id, tracks[track_id])
@@ -213,7 +232,8 @@ def parse_entry(text: str) -> dict[str, Any]:
   ordered["tracks"] = {
     track_id: {
       key: tracks[track_id][key]
-      for key in TRACK_KEYS if key in tracks[track_id]
+      for key in TRACK_KEYS
+      if key in tracks[track_id]
     }
     for track_id in TRACK_IDS
   }
@@ -221,7 +241,8 @@ def parse_entry(text: str) -> dict[str, Any]:
 
 
 def upsert(
-  patterns: list[dict[str, Any]], entry: dict[str, Any],
+  patterns: list[dict[str, Any]],
+  entry: dict[str, Any],
 ) -> bool:
   """Replace the preset with the entry's id, or append it.
 
@@ -265,7 +286,10 @@ def read_input(file: str | None) -> str:
     return sys.stdin.read()
   try:
     result = subprocess.run(
-      ["pbpaste"], capture_output=True, text=True, check=True,
+      ["pbpaste"],
+      capture_output=True,
+      text=True,
+      check=True,
     )
   except (OSError, subprocess.CalledProcessError) as err:
     raise PatternError(
@@ -276,11 +300,11 @@ def read_input(file: str | None) -> str:
 
 def main(argv: list[str] | None = None) -> int:
   parser = argparse.ArgumentParser(
-    description="Save a pattern copied from the app into"
-    " patterns.json.",
+    description="Save a pattern copied from the app into patterns.json.",
   )
   parser.add_argument(
-    "file", nargs="?",
+    "file",
+    nargs="?",
     help="JSON file with the entry (default: stdin or clipboard)",
   )
   args = parser.parse_args(argv)

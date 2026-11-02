@@ -48,9 +48,7 @@ OUTPUT_DIR = SCRIPT_DIR / "parsed_patterns"
 IMAGES_DIR = OUTPUT_DIR / "images"
 PASSES_DIR = OUTPUT_DIR / "passes"
 CONSENSUS_DIR = OUTPUT_DIR / "consensus"
-PATTERNS_JSON = (
-  PROJECT_ROOT / "src" / "app" / "data" / "patterns.json"
-)
+PATTERNS_JSON = PROJECT_ROOT / "src" / "app" / "data" / "patterns.json"
 
 DEFAULT_PDF = PROJECT_ROOT / "260_drum_machine_patterns_1987.pdf"
 DEFAULT_PAGE_START = 9
@@ -59,19 +57,48 @@ DEFAULT_PASSES = 3
 MODEL = "gemini-3.1-pro-preview"
 
 ALL_TRACK_IDS = [
-  "ac", "bd", "sd", "ch", "oh", "cy",
-  "ht", "mt", "lt", "rs", "cp", "cb",
+  "ac",
+  "bd",
+  "sd",
+  "ch",
+  "oh",
+  "cy",
+  "ht",
+  "mt",
+  "lt",
+  "rs",
+  "cp",
+  "cb",
 ]
 
 INSTRUMENT_MAP = {
-  "AC": "ac", "CY": "cy", "CH": "ch", "OH": "oh",
-  "HT": "ht", "MT": "mt", "SD": "sd", "RS": "rs",
-  "LT": "lt", "CPS": "cp", "CB": "cb", "BD": "bd",
+  "AC": "ac",
+  "CY": "cy",
+  "CH": "ch",
+  "OH": "oh",
+  "HT": "ht",
+  "MT": "mt",
+  "SD": "sd",
+  "RS": "rs",
+  "LT": "lt",
+  "CPS": "cp",
+  "CB": "cb",
+  "BD": "bd",
 }
 
 INSTRUMENT_ORDER = [
-  "AC", "CY", "CH", "OH", "HT", "MT",
-  "SD", "RS", "LT", "CPS", "CB", "BD",
+  "AC",
+  "CY",
+  "CH",
+  "OH",
+  "HT",
+  "MT",
+  "SD",
+  "RS",
+  "LT",
+  "CPS",
+  "CB",
+  "BD",
 ]
 
 
@@ -79,9 +106,7 @@ class Cell(BaseModel):
   """A single cell in the pattern grid."""
 
   column: int = Field(description="Column number, 1-indexed")
-  filled: bool = Field(
-    description="True if the cell is filled (black/hit)"
-  )
+  filled: bool = Field(description="True if the cell is filled (black/hit)")
 
 
 class InstrumentRow(BaseModel):
@@ -101,12 +126,8 @@ class InstrumentRow(BaseModel):
 class PatternGrid(BaseModel):
   """A single pattern grid extracted from the page."""
 
-  name: str = Field(
-    description="Pattern name as printed, e.g. 'Rock: 3'"
-  )
-  grid_width: int = Field(
-    description="Number of columns (16 or 12)"
-  )
+  name: str = Field(description="Pattern name as printed, e.g. 'Rock: 3'")
+  grid_width: int = Field(description="Number of columns (16 or 12)")
   rows: list[InstrumentRow] = Field(
     description="Instrument rows from top to bottom"
   )
@@ -318,9 +339,7 @@ def send_to_gemini(
   from google.genai import types
 
   image_data = image_path.read_bytes()
-  image_part = types.Part.from_bytes(
-    data=image_data, mime_type="image/png"
-  )
+  image_part = types.Part.from_bytes(data=image_data, mime_type="image/png")
 
   contents: list[types.PartUnionDict] = [image_part, EXTRACTION_PROMPT]
   response = client.models.generate_content(
@@ -354,10 +373,7 @@ def grid_to_steps_dict(grid: PatternGrid) -> dict[str, str]:
   steps: dict[str, str] = {}
   for row in grid.rows:
     instrument = row.instrument.upper()
-    if (
-      instrument in INSTRUMENT_MAP
-      or instrument in INSTRUMENT_ORDER
-    ):
+    if instrument in INSTRUMENT_MAP or instrument in INSTRUMENT_ORDER:
       steps[instrument] = cells_to_binary_string(row.cells)
   for inst in INSTRUMENT_ORDER:
     if inst not in steps:
@@ -401,8 +417,7 @@ def compute_consensus(
       votes = sum(
         1
         for p in passes
-        if col < len(p.get(instrument, ""))
-        and p[instrument][col] == "1"
+        if col < len(p.get(instrument, "")) and p[instrument][col] == "1"
       )
       majority = votes > len(passes) / 2
       chars.append("1" if majority else "0")
@@ -439,10 +454,7 @@ def parse_page_range(
   if match:
     page = int(match.group(1))
     return page, page
-  raise ValueError(
-    f"Invalid page range: '{pages_str}'. "
-    f"Use 'N' or 'N-M'."
-  )
+  raise ValueError(f"Invalid page range: '{pages_str}'. Use 'N' or 'N-M'.")
 
 
 def name_to_id(name: str) -> str:
@@ -515,13 +527,12 @@ def normalize_pattern(raw: dict[str, Any]) -> dict[str, Any] | None:
   raw_steps = raw.get("steps", {})
   for pdf_key, track_id in INSTRUMENT_MAP.items():
     step_str = raw_steps.get(pdf_key, "0" * 16)
-    if (
-      len(step_str) != 16
-      or not all(c in "01" for c in step_str)
-    ):
+    if len(step_str) != 16 or not all(c in "01" for c in step_str):
       logger.warning(
         "Invalid step string for %s in '%s': '%s'",
-        pdf_key, name, step_str,
+        pdf_key,
+        name,
+        step_str,
       )
       step_str = "0" * 16
     steps[track_id] = step_str
@@ -553,20 +564,23 @@ def render_page_to_disk(
     prefix = os.path.join(tmpdir, "page")
     subprocess.run(
       [
-        "pdftoppm", "-png",
-        "-f", str(page_num),
-        "-l", str(page_num),
-        "-r", "300",
-        str(pdf_path), prefix,
+        "pdftoppm",
+        "-png",
+        "-f",
+        str(page_num),
+        "-l",
+        str(page_num),
+        "-r",
+        "300",
+        str(pdf_path),
+        prefix,
       ],
       check=True,
       capture_output=True,
     )
     pngs = list(Path(tmpdir).glob("*.png"))
     if not pngs:
-      raise RuntimeError(
-        f"pdftoppm produced no output for page {page_num}"
-      )
+      raise RuntimeError(f"pdftoppm produced no output for page {page_num}")
     shutil.move(str(pngs[0]), str(output_path))
 
 
@@ -615,9 +629,7 @@ def do_parse(args: argparse.Namespace) -> None:
       print(f"Page {page_num}: no image, run extract first")
       continue
 
-    consensus_path = (
-      CONSENSUS_DIR / f"page_{page_num:03d}.json"
-    )
+    consensus_path = CONSENSUS_DIR / f"page_{page_num:03d}.json"
     if consensus_path.exists() and not args.force:
       print(f"Page {page_num}: consensus exists, skipping")
       continue
@@ -625,38 +637,28 @@ def do_parse(args: argparse.Namespace) -> None:
     # Run multiple passes
     all_pass_grids: list[list[PatternGrid]] = []
     for pass_idx in range(1, num_passes + 1):
-      pass_path = (
-        PASSES_DIR
-        / f"page_{page_num:03d}_pass{pass_idx}.json"
-      )
+      pass_path = PASSES_DIR / f"page_{page_num:03d}_pass{pass_idx}.json"
 
       if pass_path.exists() and not args.force:
-        print(
-          f"Page {page_num} pass {pass_idx}: "
-          f"exists, loading"
-        )
+        print(f"Page {page_num} pass {pass_idx}: exists, loading")
         raw = json.loads(pass_path.read_text())
         grids = [PatternGrid(**g) for g in raw]
       else:
-        print(
-          f"Page {page_num} pass {pass_idx}: "
-          f"sending to Gemini..."
-        )
+        print(f"Page {page_num} pass {pass_idx}: sending to Gemini...")
         try:
           grids = send_to_gemini(client, image_path, model)
         except Exception as e:
           logger.error(
             "Page %d pass %d: ERROR - %s",
-            page_num, pass_idx, e,
+            page_num,
+            pass_idx,
+            e,
           )
           grids = []
 
         # Save raw pass result
         pass_path.write_text(
-          json.dumps(
-            [g.model_dump() for g in grids], indent=2
-          )
-          + "\n"
+          json.dumps([g.model_dump() for g in grids], indent=2) + "\n"
         )
         time.sleep(1)  # Rate limiting
 
@@ -666,8 +668,7 @@ def do_parse(args: argparse.Namespace) -> None:
     if not all_pass_grids or not all_pass_grids[0]:
       print(f"Page {page_num}: no patterns found")
       consensus_path.write_text(
-        json.dumps({"page": page_num, "patterns": []})
-        + "\n"
+        json.dumps({"page": page_num, "patterns": []}) + "\n"
       )
       continue
 
@@ -681,9 +682,7 @@ def do_parse(args: argparse.Namespace) -> None:
       pass_steps: list[dict[str, str]] = []
       for pass_grids in all_pass_grids:
         if pat_idx < len(pass_grids):
-          pass_steps.append(
-            grid_to_steps_dict(pass_grids[pat_idx])
-          )
+          pass_steps.append(grid_to_steps_dict(pass_grids[pat_idx]))
 
       if not pass_steps:
         continue
@@ -693,12 +692,14 @@ def do_parse(args: argparse.Namespace) -> None:
       )
       total_flagged += flagged
 
-      consensus_patterns.append({
-        "name": ref_grid.name,
-        "grid_width": ref_grid.grid_width,
-        "steps": consensus_steps,
-        "flagged_count": flagged,
-      })
+      consensus_patterns.append(
+        {
+          "name": ref_grid.name,
+          "grid_width": ref_grid.grid_width,
+          "steps": consensus_steps,
+          "flagged_count": flagged,
+        }
+      )
 
     # Save consensus
     consensus_data = {
@@ -706,19 +707,12 @@ def do_parse(args: argparse.Namespace) -> None:
       "patterns": consensus_patterns,
       "total_flagged": total_flagged,
     }
-    consensus_path.write_text(
-      json.dumps(consensus_data, indent=2) + "\n"
-    )
+    consensus_path.write_text(json.dumps(consensus_data, indent=2) + "\n")
 
     names = [p["name"] for p in consensus_patterns]
-    flag_msg = (
-      f" ({total_flagged} flagged cells)"
-      if total_flagged
-      else ""
-    )
+    flag_msg = f" ({total_flagged} flagged cells)" if total_flagged else ""
     print(
-      f"Page {page_num}: {len(consensus_patterns)} "
-      f"patterns{flag_msg} {names}"
+      f"Page {page_num}: {len(consensus_patterns)} patterns{flag_msg} {names}"
     )
 
   print("Done.")
@@ -742,9 +736,7 @@ def do_verify(args: argparse.Namespace) -> None:
   ground_truth_results = []
 
   for page_num in range(start, end + 1):
-    consensus_path = (
-      CONSENSUS_DIR / f"page_{page_num:03d}.json"
-    )
+    consensus_path = CONSENSUS_DIR / f"page_{page_num:03d}.json"
     image_path = IMAGES_DIR / f"page_{page_num:03d}.png"
 
     if not consensus_path.exists():
@@ -762,29 +754,29 @@ def do_verify(args: argparse.Namespace) -> None:
         diff_count = 0
         for tid in ALL_TRACK_IDS:
           gt_steps = gt["steps"].get(tid, "0" * 16)
-          parsed_steps = normalized["steps"].get(
-            tid, "0" * 16
-          )
+          parsed_steps = normalized["steps"].get(tid, "0" * 16)
           for a, b in zip(gt_steps, parsed_steps):
             if a != b:
               diff_count += 1
-        ground_truth_results.append({
-          "id": normalized["id"],
-          "match": diff_count == 0,
-          "diff_count": diff_count,
-        })
+        ground_truth_results.append(
+          {
+            "id": normalized["id"],
+            "match": diff_count == 0,
+            "diff_count": diff_count,
+          }
+        )
 
     rel_image = (
-      str(image_path.relative_to(OUTPUT_DIR))
-      if image_path.exists()
-      else None
+      str(image_path.relative_to(OUTPUT_DIR)) if image_path.exists() else None
     )
 
-    pages_data.append({
-      "number": page_num,
-      "image_path": rel_image,
-      "patterns": patterns,
-    })
+    pages_data.append(
+      {
+        "number": page_num,
+        "image_path": rel_image,
+        "patterns": patterns,
+      }
+    )
 
   template = Template(REPORT_TEMPLATE)
   html = template.render(
@@ -798,31 +790,19 @@ def do_verify(args: argparse.Namespace) -> None:
   report_path = OUTPUT_DIR / "report.html"
   report_path.write_text(html)
   print(f"Report written to {report_path}")
-  print(
-    f"  {total_patterns} patterns, "
-    f"{total_flagged} flagged cells"
-  )
+  print(f"  {total_patterns} patterns, {total_flagged} flagged cells")
   if ground_truth_results:
-    matches = sum(
-      1 for g in ground_truth_results if g["match"]
-    )
-    print(
-      f"  Ground truth: {matches}/"
-      f"{len(ground_truth_results)} match"
-    )
+    matches = sum(1 for g in ground_truth_results if g["match"])
+    print(f"  Ground truth: {matches}/{len(ground_truth_results)} match")
 
 
 def do_merge(args: argparse.Namespace) -> None:
   """Merge consensus patterns into patterns.json."""
   if not CONSENSUS_DIR.exists():
-    logger.error(
-      "No consensus directory. Run parse first."
-    )
+    logger.error("No consensus directory. Run parse first.")
     sys.exit(1)
 
-  consensus_files = sorted(
-    CONSENSUS_DIR.glob("page_*.json")
-  )
+  consensus_files = sorted(CONSENSUS_DIR.glob("page_*.json"))
   if not consensus_files:
     logger.error("No consensus files. Run parse first.")
     sys.exit(1)
@@ -836,14 +816,11 @@ def do_merge(args: argparse.Namespace) -> None:
         parsed[normalized["id"]] = normalized
 
   print(
-    f"Found {len(parsed)} unique patterns "
-    f"from {len(consensus_files)} pages"
+    f"Found {len(parsed)} unique patterns from {len(consensus_files)} pages"
   )
 
   existing_data = json.loads(PATTERNS_JSON.read_text())
-  existing = {
-    p["id"]: p for p in existing_data["patterns"]
-  }
+  existing = {p["id"]: p for p in existing_data["patterns"]}
 
   new_ids = set(parsed) - set(existing)
   updated_ids = set(parsed) & set(existing)
@@ -861,23 +838,14 @@ def do_merge(args: argparse.Namespace) -> None:
   merged = dict(existing)
   merged.update(parsed)
 
-  sorted_patterns = sorted(
-    merged.values(), key=lambda p: p["id"]
-  )
+  sorted_patterns = sorted(merged.values(), key=lambda p: p["id"])
   output = {"patterns": sorted_patterns}
-  PATTERNS_JSON.write_text(
-    json.dumps(output, indent=2) + "\n"
-  )
+  PATTERNS_JSON.write_text(json.dumps(output, indent=2) + "\n")
 
-  print(
-    f"Wrote {len(sorted_patterns)} patterns "
-    f"to {PATTERNS_JSON}"
-  )
+  print(f"Wrote {len(sorted_patterns)} patterns to {PATTERNS_JSON}")
   print(f"  Added: {len(new_ids)}")
   print(f"  Updated: {len(updated_ids)}")
-  print(
-    f"  Kept: {len(existing) - len(updated_ids)}"
-  )
+  print(f"  Kept: {len(existing) - len(updated_ids)}")
 
 
 def main() -> None:
@@ -887,9 +855,7 @@ def main() -> None:
     format="%(message)s",
   )
 
-  parser = argparse.ArgumentParser(
-    description="Extract drum patterns from PDF"
-  )
+  parser = argparse.ArgumentParser(description="Extract drum patterns from PDF")
   parser.add_argument(
     "--pdf",
     default=str(DEFAULT_PDF),

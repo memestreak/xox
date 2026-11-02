@@ -3,9 +3,7 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(
-  0, str(Path(__file__).resolve().parent.parent)
-)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import parse_pdf_patterns as pp
 
 
@@ -47,9 +45,7 @@ class TestNameToId:
     assert pp.name_to_id("New Wave: 1") == "new-wave-1"
 
   def test_spaces(self) -> None:
-    assert pp.name_to_id("Rhythm & Blues: 2") == (
-      "rhythm-blues-2"
-    )
+    assert pp.name_to_id("Rhythm & Blues: 2") == ("rhythm-blues-2")
 
 
 class TestCleanName:
@@ -69,44 +65,38 @@ class TestCellsToBinaryString:
   """Tests for cells_to_binary_string."""
 
   def test_all_empty(self) -> None:
-    cells = [
-      pp.Cell(column=i, filled=False)
-      for i in range(1, 17)
-    ]
-    assert pp.cells_to_binary_string(cells) == (
-      "0000000000000000"
-    )
+    cells = [pp.Cell(column=i, filled=False) for i in range(1, 17)]
+    assert pp.cells_to_binary_string(cells) == ("0000000000000000")
 
   def test_all_filled(self) -> None:
-    cells = [
-      pp.Cell(column=i, filled=True)
-      for i in range(1, 17)
-    ]
-    assert pp.cells_to_binary_string(cells) == (
-      "1111111111111111"
-    )
+    cells = [pp.Cell(column=i, filled=True) for i in range(1, 17)]
+    assert pp.cells_to_binary_string(cells) == ("1111111111111111")
 
   def test_mixed(self) -> None:
     fills = [
-      True, False, True, True, True, False, True, False,
-      True, False, True, False, True, False, True, False,
+      True,
+      False,
+      True,
+      True,
+      True,
+      False,
+      True,
+      False,
+      True,
+      False,
+      True,
+      False,
+      True,
+      False,
+      True,
+      False,
     ]
-    cells = [
-      pp.Cell(column=i + 1, filled=f)
-      for i, f in enumerate(fills)
-    ]
-    assert pp.cells_to_binary_string(cells) == (
-      "1011101010101010"
-    )
+    cells = [pp.Cell(column=i + 1, filled=f) for i, f in enumerate(fills)]
+    assert pp.cells_to_binary_string(cells) == ("1011101010101010")
 
   def test_twelve_columns(self) -> None:
-    cells = [
-      pp.Cell(column=i, filled=(i % 2 == 1))
-      for i in range(1, 13)
-    ]
-    assert pp.cells_to_binary_string(cells) == (
-      "101010101010"
-    )
+    cells = [pp.Cell(column=i, filled=(i % 2 == 1)) for i in range(1, 13)]
+    assert pp.cells_to_binary_string(cells) == ("101010101010")
 
 
 class TestComputeConsensus:
