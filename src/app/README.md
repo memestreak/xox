@@ -120,16 +120,23 @@ at most `RETRIG_DOTS_MAX`).
   desktop only: Free-run, Load sample, Reset to kit
   sample, Reset trig conditions, Clear parameter
   locks (disabled when the track has none), Clear
-  track pattern),
-  `TrackMixer.tsx`, `TrackEndBar.tsx`; an
-  `isMinimized` row renders caret + name + step line
+  track pattern; opens under the name through
+  `ContextMenu`), `TrackMixer.tsx`, `TrackEndBar.tsx`;
+  an `isMinimized` row renders caret + name + step
+  line. `TrackRow` takes the whole `actions` object
+  from `useSequencer()` (it is stable, so the row's
+  `memo` still skips renders) plus its track's data;
+  add a new action there, not as another prop
 - `StepGrid.tsx` → `GridContextMenu.tsx` (grid menu:
   minimize empty / restore all tracks, Reset all samples
   to kit (only when a track is custom), Copy pattern,
   Reset trig conditions, Clear parameter locks
   (disabled when nothing to clear), Reset pattern.
   Opens from the ⋯ key over the track names, the only
-  way in on phones, or a right-click on a blank spot)
+  way in on phones, or a right-click on a blank spot.
+  Mounted only while open, it reads `useSequencer()`
+  itself; its props are just `x`, `y`, `onClose` and
+  `anchorRef`)
 - `CustomSampleDot.tsx` — amber dot button on a track
   with a custom sample: solid when on, hollow when off,
   click toggles, hover explains. On desktop rows it sits
@@ -205,8 +212,9 @@ at most `RETRIG_DOTS_MAX`).
 - `KitSelector.tsx` — Kit dropdown; right-click (or the
   context-menu key) opens the kit menu: Export kit...
 - `ContextMenu.tsx` — floating menu shell (position,
-  focus, arrows, dismissal) used by the grid and kit
-  menus
+  focus, arrows, dismissal on `pointerdown`) used by
+  the grid, kit and track name menus. New menus use it
+  rather than their own dismissal code
 - `ExportKitDialog.tsx` — modal `<dialog>`: Name, ID
   (slug follows the name until edited) and the slots;
   downloads `<id>.zip` for
@@ -288,6 +296,7 @@ at most `RETRIG_DOTS_MAX`).
   auto-focus, and focus restore
 - `TrackNameButton` menu has `role="menu"`,
   `aria-haspopup`, `aria-expanded`, Escape dismiss
+  (from `ContextMenu`)
 - `TransportControls` play/stop has `aria-label` and
   `aria-pressed`
 - `Sequencer` has `aria-live="polite"` for transport

@@ -41,7 +41,12 @@ all hook resets. Exceptions: `useMasterVolume` and
   `*`, shown as "NAME*"; helpers in `patternUtils`);
   mute, solo and the accent level don't. `custom`
   is only a share link or Reset. The chooser opens
-  on a modified preset
+  on a modified preset. Every track edit goes through
+  `editTrack(trackId, fn)` (or `editMixer`), built on
+  the pure `updateTrack`/`updateMixer` helpers;
+  `clearStep(trackId, step, field)` clears one step's
+  conditions or locks. Use them for new setters
+  instead of spreading `prev.tracks` by hand
 - `usePlayback.ts` — audio engine, handleStep, spacebar
 - `useSelection.ts` — multi-step selection (Ctrl/Shift)
 - `useDragPaint.ts` — pointer drag gestures on the grid
