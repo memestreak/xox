@@ -27,7 +27,9 @@ const MODE_OPTIONS: LcdSelectOption<PatternMode>[] = [
   },
 ];
 
-export default function PatternModeSelector() {
+export default function PatternModeSelector(
+  { className = 'col-span-8' }: { className?: string } = {},
+) {
   const { state, actions } = useSequencer();
   const {
     patternMode, tempState, isTempLatched, isPlaying,
@@ -37,7 +39,7 @@ export default function PatternModeSelector() {
     <PanelSection
       label="Pattern change"
       labelFor="mode-select"
-      className="col-span-8 max-lg:order-4"
+      className={className + ' max-lg:order-4'}
     >
       <div className="flex gap-1.5 items-stretch">
         {/* min-w-0: on narrow phones the key gives way

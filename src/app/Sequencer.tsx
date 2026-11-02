@@ -21,6 +21,10 @@ import { useInputModality } from './hooks/useInputModality';
 import { usePreventFileNavigation } from './hooks/useFileDrop';
 import type { Pattern } from './types';
 import { MockSwitcher } from './mocks/MockSwitcher';
+import { useMock } from './mocks/useMock';
+import {
+  PRESET_MOCK, PresetDrawer, PresetTrigger, SplitKey, TabTrigger,
+} from './PresetMock';
 
 const categories = getCategorizedPatterns(
   patternsData.patterns as Pattern[]
@@ -33,6 +37,10 @@ function SequencerInner() {
   const { setPattern } = actions;
   const patternLength = getPatternLength(meta.config.tracks);
   const status = pickStatus(state);
+  // MOCK: a is today's app; b-e are preset layouts.
+  const presetMock = useMock(PRESET_MOCK);
+  const mock = presetMock === 'a' ? null : presetMock.toUpperCase();
+  const [mockOpen, setMockOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(0);
   const [autoFollow, setAutoFollow] = useState(true);
@@ -101,7 +109,46 @@ function SequencerInner() {
           pendingPatternId={state.pendingPatternId}
           onSelect={setPattern}
         >
-          {({ trigger, drawer }) => (
+          {({ trigger, drawer }) => mock === 'E' ? (
+            <>
+              <TransportControls
+                page={page}
+                mock={mock}
+                patternTrigger={
+                  <TabTrigger open={mockOpen} onOpen={setMockOpen} />
+                }
+              />
+              <PresetDrawer variant="D" open={mockOpen} />
+            </>
+          ) : mock === 'D' ? (
+            <>
+              <TransportControls
+                page={page}
+                mock={mock}
+                patternTrigger={
+                  <SplitKey open={mockOpen} onOpen={setMockOpen} />
+                }
+              />
+              <PresetDrawer variant={mock} open={mockOpen} />
+            </>
+          ) : mock ? (
+            <>
+              <TransportControls
+                page={page}
+                mock={mock}
+                patternTrigger={trigger}
+                presetTrigger={
+                  <PresetTrigger
+                    variant={mock}
+                    open={mockOpen}
+                    onToggle={() => setMockOpen(o => !o)}
+                  />
+                }
+              />
+              <PresetDrawer variant={mock} open={mockOpen} />
+              {drawer}
+            </>
+          ) : (
             <>
               <TransportControls
                 page={page}

@@ -19,6 +19,10 @@ import KitSelector from './KitSelector';
 interface TransportControlsProps {
   page: PageNav;
   patternTrigger?: ReactNode;
+  /** MOCK ONLY: preset variant. */
+  mock?: string;
+  /** MOCK ONLY: the Preset key (B, C). */
+  presetTrigger?: ReactNode;
 }
 
 /**
@@ -28,6 +32,8 @@ interface TransportControlsProps {
 function TransportControlsInner({
   page,
   patternTrigger,
+  mock,
+  presetTrigger,
 }: TransportControlsProps) {
   const { state, actions } = useSequencer();
   const {
@@ -135,21 +141,41 @@ function TransportControlsInner({
           rows are Steps + Swing + Share, Pattern, Kit +
           Pattern change, then Volume (set by
           max-lg:order-* on the cells). */}
-      <div className="grid grid-cols-12 lg:flex gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+      <div className="grid grid-cols-12 lg:flex lg:flex-wrap gap-px bg-line border border-line rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+        {/* MOCK: B and C add a Preset key before Kit;
+            Kit and Pattern stay independent. */}
+        {/* MOCK: on desktop B and C wrap the strip: Preset,
+            Kit and Pattern share the first row. */}
+        <div className={(mock === 'B' || mock === 'C') ? 'contents lg:flex lg:w-full gap-px' : 'contents'}>
+        {(mock === 'B' || mock === 'C') && (
+          <PanelSection
+            label="Preset"
+            className="col-span-12 lg:flex-1 max-lg:order-2 lg:rounded-tl-[11px]"
+          >
+            {presetTrigger}
+          </PanelSection>
+        )}
+        {mock === 'D' ? (
+          <PanelSection className="col-span-12 lg:flex-1 max-lg:order-2 lg:rounded-l-[11px]">
+            {patternTrigger}
+          </PanelSection>
+        ) : (<>
         <PanelSection
           label="Kit"
           labelFor="kit-select"
-          className="col-span-4 max-lg:order-4 lg:rounded-l-[11px]"
+          className={'col-span-4 max-lg:order-4' + (mock === 'B' || mock === 'C' ? '' : ' lg:rounded-l-[11px]')}
         >
           <KitSelector />
         </PanelSection>
         <PanelSection
           label="Pattern"
-          className="col-span-12 lg:flex-1 max-lg:order-2"
+          className={'col-span-12 lg:flex-1 max-lg:order-2' + ((mock === 'B' || mock === 'C') ? ' lg:rounded-tr-[11px]' : '')}
         >
           {patternTrigger}
         </PanelSection>
-        <PatternModeSelector />
+        </>)}
+        </div>
+        <PatternModeSelector className={(mock === 'B' || mock === 'C') ? 'col-span-8 lg:flex-1 lg:rounded-bl-[11px]' : mock === 'D' ? 'col-span-12' : undefined} />
         <GlobalControls page={page} />
         <MasterVolume
           variant="strip"
