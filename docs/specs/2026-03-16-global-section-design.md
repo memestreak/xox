@@ -103,7 +103,7 @@ and any future settings.
 ## Swing Timing
 
 Aligns with the existing pattern engine spec
-(`docs/superpowers/specs/2026-03-15-pattern-engine-design.md`
+(`docs/specs/2026-03-15-pattern-engine-design.md`
 section 1c).
 
 Swing delays even-numbered sixteenth notes (zero-indexed

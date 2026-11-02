@@ -20,7 +20,7 @@ passes per page with majority vote per cell.
 Jinja2, pdftoppm (poppler-utils)
 
 **Design doc:**
-`docs/plans/2026-03-02-pdf-pattern-extraction-design.md`
+`docs/specs/2026-03-02-pdf-pattern-extraction-design.md`
 
 **Existing script (reference for ported code):**
 `scripts/parse_pdf_patterns.py` — lines 64-71 (constants),

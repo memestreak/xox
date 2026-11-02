@@ -20,6 +20,28 @@ npm run test:watch  # Vitest in watch mode
 npm run save-pattern  # Grid menu > Copy pattern → patterns.json
 ```
 
+## Keeping this file stable
+
+Every agent session loads this whole file, and PRs open at the
+same time conflict when each one edits it. Keep it to commands,
+rules and the architecture below. Don't edit CLAUDE.md in a
+feature PR unless a rule, convention or command changes. What a
+folder's files do is described in that folder's `README.md`;
+update that instead:
+
+- `src/app/README.md` — components, supporting files, playback,
+  saving and sharing, preferences, parameter locks and retrig
+- `src/app/hooks/README.md` — every hook
+- `src/app/data/README.md` — kits and preset patterns
+- `src/__tests__/README.md` — the test areas
+
+## Docs
+
+Design specs live in `docs/specs/`, named by date and topic.
+Implementation plans live in `plans/`. Plans are historical:
+they record how a change was planned at the time and may name
+files that no longer exist.
+
 ## Architecture
 
 XOX is a step drum sequencer (16 steps by default, up
@@ -52,303 +74,20 @@ memoized and every action is a stable callback, so the
 value changes only when state or config actually changes
 (every consumer still re-renders then). Keep new actions
 stable (read refs, not state) so memoized children that
-take them as props can skip renders. `StepGrid`
-drains a scheduled-step queue (`stepQueue.ts`) in a
-`requestAnimationFrame` loop for visual step sync.
-Below `lg` the whole page scrolls (`Sequencer.tsx`); from
-`lg` up the header is fixed and only the track area
-scrolls. The grid uses `touch-action: pan-y` so vertical
-swipes scroll on phones; don't set `none` on large
-touch areas, or phones can't scroll past them.
-Solo/mute priority: if any track is soloed, only soloed
-tracks play; otherwise non-muted tracks play.
-Accented steps multiply gain by `1 + accentLevel × 2`
-(2x at the default accent level of 0.5, up to 3x). The
-master bus runs through a limiter (`AudioEngine.init`)
-so summed and accented hits don't clip. Master volume
-(`MasterVolume.tsx`, `hooks/useMasterVolume.ts`) is a
-gain after the limiter; it's a preference
-(`xox.sequencer.output`, deliberately not in the
-Settings dialog), not in
-`SequencerConfig`, so share links and Reset leave it
-alone. `LevelMeter.tsx`
-reads `audioEngine.getOutputPeaks()` each frame.
+take them as props can skip renders.
 
 **SequencerConfig (`src/app/types.ts`)** — Canonical type for
 all persistable state (kit, BPM, steps, mixer). Single source
-of truth for serializable configuration.
+of truth for serializable configuration. `configCodec.ts`
+turns it into share links and `configStorage.ts` autosaves it
+(the work); preferences (`preferences.ts`) are per device and
+never in `SequencerConfig` or share links. Details in
+`src/app/README.md`.
 
-**configCodec (`src/app/configCodec.ts`)** — Encodes/decodes
-`SequencerConfig` as compressed JSON + base64url for URL hash
-sharing. Uses `CompressionStream('deflate-raw')`.
-`decodeShareLink` also reports the link's version: older
-versions can't be loaded (the session is kept and a notice
-shown), newer versions load what validates, with a notice.
-
-**configStorage (`src/app/configStorage.ts`)** — Autosaves
-the session (the work) to localStorage at
-`xox.sequencer.works.session` (debounced, flushed on
-`pagehide`) and restores it on load. A share link in the
-URL hash wins over the saved session and is then removed
-from the URL.
-
-**Preferences (`src/app/preferences.ts`)** — Per-viewer,
-per-device settings, never in `SequencerConfig` or share
-links. Follows the `settings-philosophy` skill: one
-localStorage key per Settings section,
-`xox.<page>.<section>` (`xox.general.interface`,
-`xox.sequencer.midi`, plus `xox.sequencer.output` for
-the fader), a JSON
-object checked field by field by the section's parser
-(bad or missing fields take defaults). Each section is a
-`createPreferenceSection` store (`get`/`set`/`update`/
-`useValue`); MIDI is saved by `MidiEngine` at
-`MIDI_PREFS_KEY` (parser in `midiConfig.ts`). Old
-`xox-*` keys are not read (dropped, not migrated). Every
-preference must appear in `SettingsModal`, except the
-master volume (header fader only, by choice); controls
-elsewhere (the grid menu toggle) are shortcuts
-that apply at once to the same saved value. A failed
-save warns once in the console.
-
-**Hooks (`src/app/hooks/`)** — All custom hooks live here:
-- `useFillMode.ts` — fill latch/momentary state, F-key
-- `usePatternMode.ts` — pattern mode state machine, temp
-  and its latch (latched Temp re-arms after each temp
-  pattern; T / Shift+T). A preset sets every grid
-  track's volume and pan when it takes effect (a cued
-  Sequential one at its boundary): its own `mixer`
-  values, else the defaults. Mute, solo and the
-  accent level stay (`mixerUtils.ts`). Temp's home
-  snapshot keeps the mixer, and the revert restores
-  those levels
-- `useTrackConfig.ts` — all track/mixer config actions;
-  a step turned on while Fill is active gets the Fill
-  condition (reads `fillActiveRef`); turning a step
-  off clears its Fill condition (probability and
-  cycle stay). `clearTrackConditions`/`clearTrackLocks`
-  and `clearAllConditions`/`clearAllLocks` (accent
-  too) drop every condition or lock in one go; steps
-  stay. Step edits and track volume/pan
-  changes mark the preset modified (its id gets a
-  `*`, shown as "NAME*"; helpers in `patternUtils`);
-  mute, solo and the accent level don't. `custom`
-  is only a share link or Reset. The chooser opens
-  on a modified preset
-- `usePlayback.ts` — audio engine, handleStep, spacebar
-- `useSelection.ts` — multi-step selection (Ctrl/Shift)
-- `useDragPaint.ts` — pointer drag gestures on the grid
-- `useMasterVolume.ts` — master fader (`outputPrefs`,
-  no `reset()`: Reset deliberately keeps it)
-- `useCustomSamples.ts` — samples loaded from WAV files
-  onto tracks (track name menu: Load sample from
-  file... / Reset to kit sample, or drop a WAV on a
-  row; grid menu: Reset all
-  samples to kit). Memory only, not in
-  `SequencerConfig` or share links; kept by kit changes
-  and by Reset (no `reset()`). Each load/reset bumps a
-  per-track counter so the latest request wins.
-  `toggleSample` (click the dot) switches a custom
-  track to the kit sample and back: the file and its
-  decoded buffer stay, `state.disabledSamples` marks
-  it off, and a new load turns it back on. Checks
-  (WAV only, 20 MB) live in `sampleFiles.ts`;
-  `AudioEngine.customBuffers` win over kit buffers
-- `useMinimizedTracks.ts` — which empty grid rows are
-  drawn minimized (`state.minimizedTracks`), H / Shift+H.
-  View state only: not in `SequencerConfig`, not saved.
-  A track that gains steps leaves the set; AC never
-  minimizes. `StepGrid` passes the visible track order
-  to `useDragPaint`/`useSelection` so drags skip
-  minimized rows. "Auto-minimize empty tracks"
-  (`useAutoMinimizeSetting.ts`, `interfacePrefs`, off
-  by default; toggled in the grid menu and Settings ›
-  Interface) also minimizes a track
-  that loses its last step and every empty track on a
-  pattern load (`loadSeq`, bumped by the setter that
-  pattern loads use). A track that lost its last step
-  waits while the pointer is on its row
-  (`data-row-track`) or pressed on the grid
-  (`holdAutoMinimize`, fed by `StepGrid`), so sparse
-  tracks stay editable and drags don't move rows; it
-  minimizes the moment the pointer moves off. Pattern
-  loads apply at once. Reset still opens every row
-- `useFileDrop.ts` — HTML drag-and-drop of files onto a
-  track row (full or minimized): only drags carrying
-  files react, a depth count keeps the dashed outline
-  steady, and the first file goes to `loadSample`, so
-  drops get the menu's checks. Separate from the pointer
-  events `useDragPaint` uses. `usePreventFileNavigation`
-  (mounted in `Sequencer`) cancels stray drops so the
-  browser doesn't open the file
-- `useInputModality.ts` — mounted once in `Sequencer`:
-  sets `data-input="pointer"` on `<html>` after a
-  click/tap and clears it on a navigation key (Tab,
-  Enter, arrows, Home/End, PageUp/Down). `globals.css`
-  hides focus rings while it's set, so Chromium doesn't
-  ring a clicked button (or the opener a menu/dialog
-  returns focus to) when Space, Esc or a letter
-  shortcut is pressed. Focus never moves. Use
-  `:focus-visible` for new focus styles; the rule
-  covers outlines and Tailwind rings
-
-Every hook that manages resettable state must expose a
-`reset()` method. The orchestrator's `clearAll` composes
-all hook resets. Exceptions: `useMasterVolume` and
-`useCustomSamples`, which Reset deliberately keeps.
-
-**Component decomposition:**
-- `TrackRow.tsx` → `TrackNameButton.tsx` (track menu,
-  desktop only: Free-run, Load sample, Reset to kit
-  sample, Reset trig conditions, Clear parameter
-  locks (disabled when the track has none), Clear
-  track pattern),
-  `TrackMixer.tsx`, `TrackEndBar.tsx`; an
-  `isMinimized` row renders caret + name + step line
-- `StepGrid.tsx` → `GridContextMenu.tsx` (grid menu:
-  minimize empty / restore all tracks, Reset all samples
-  to kit (only when a track is custom), Copy pattern,
-  Reset trig conditions, Clear parameter locks
-  (disabled when nothing to clear), Reset pattern.
-  Opens from the ⋯ key over the track names, the only
-  way in on phones, or a right-click on a blank spot)
-- `CustomSampleDot.tsx` — amber dot button on a track
-  with a custom sample: solid when on, hollow when off,
-  click toggles, hover explains. On desktop rows it sits
-  in an overlay over the name button (an invisible copy
-  of the name places it) so it isn't nested in a button
-- `LatchKey.tsx` — split key for Fill and Temp: the body
-  does the key's action, the right section toggles the
-  latch (its LED means latched only)
-- `menuStyles.ts` — menu item class strings shared by
-  the track name menu and the grid menu
-- `LcdSelect.tsx` — every dropdown (Kit, Pattern
-  change, Cycle, MIDI settings): amber LCD key, list
-  with the chosen row as an inverted amber bar. Use it
-  instead of a native `<select>`. Select-only combobox:
-  focus stays on the key; ↓ ↑ Enter open (Space stays
-  play/stop), typing jumps, Esc closes. An option's
-  `hint` shows beside its row on hover or arrow keys
-  (Pattern change modes; texts in `tooltips.json`).
-  The Pattern key and the chooser's pattern list reuse
-  the LCD look (`ss-lcd-select`, `LcdCaret`)
-- `StepButton.tsx` → `stepColors.ts`, `StepBadges.tsx`
-- `StepPopover.tsx` → `ProbabilityEditor.tsx`,
-  `CycleEditor.tsx`, `FillConditionEditor.tsx`,
-  `StepLockEditors.tsx`
-- `AccentRow.tsx` shares `TrackEndBar` and `trackUtils`
-
-Supporting files:
-- `types.ts` — `TrackId`, `Kit`, `Pattern`, `TrackState`,
-  `SequencerConfig`, `TrackMixerState` types; `TRACK_IDS`
-  and `TRACKS` (grid tracks, display order);
-  `cellKey()`/`parseCellKey()` for selection identifiers
-- `constants.ts` — all timing, threshold, and tuning
-  values (import from here, not inline literals)
-- `trackUtils.ts` — `computeEffectiveStep`, `formatPan`
-- `trigConditions.ts` — `evaluateCondition` for trig gating.
-  Cycle conditions (e.g. 1:2) count the loops each track
-  actually plays: a track's cycle advances whenever its own
-  step wraps to 0, including at pattern boundaries
-- `stepQueue.ts` — scheduled steps for the visual playhead
-- `gridUtils.ts`, `patternUtils.ts` — grid geometry and
-  pattern helpers
-- `MidiEngine.ts` / `MidiContext.tsx` — Web MIDI note
-  output; settings live in `SettingsModal.tsx`.
-  `MidiContext` connects on load when saved as enabled;
-  `applyConfig` saves the whole config
-- `TempoController.tsx` — BPM input (clamped 20-300)
-- `StepsEntry.tsx` — pattern length (1-64): LCD field
-  plus a split ▲/▼ key; drag, hold-to-repeat, ↑/↓
-  (Shift = 4), typing; double-click resets to 16.
-  Each gesture passes the tracks
-  from its start as `setPatternLength(n, base)`, so
-  going down and back up within it keeps the steps
-- `SettingsButton.tsx` — gear key, the last header
-  key (after `?`); mounts `SettingsModal` while open.
-  The dialog is REAPER-style: a list of two sections
-  (Interface, MIDI; no groups, by choice) and a pane
-  headed with the section name, one row per field. It
-  opens at Interface. Its size is fixed
-  (`h-[min(540px,…)]`); the list and the pane scroll
-  inside it, so it never resizes. Below `sm` the list
-  is a strip of section keys. Changes are staged: OK
-  saves and closes, Apply saves (disabled until
-  something differs), Cancel / Esc / × discard.
-  Double-click a field's label (long-press on touch)
-  stages its default; the control itself never
-  resets. It has no Help key
-- `ShareLinkButton.tsx` — Copy share link key in its
-  own Share cell after Swing (Swing has no % readout);
-  its note says custom samples aren't included. Below
-  `lg` the strip is a 12-column grid
-- `KitSelector.tsx` — Kit dropdown; right-click (or the
-  context-menu key) opens the kit menu: Export kit...
-- `ContextMenu.tsx` — floating menu shell (position,
-  focus, arrows, dismissal) used by the grid and kit
-  menus
-- `ExportKitDialog.tsx` — modal `<dialog>`: Name, ID
-  (slug follows the name until edited) and the slots;
-  downloads `<id>.zip` for
-  `scripts/kit_builder/import_kit.py`. Helpers in
-  `kitExport.ts` (slug rule, `exportPlan`: a custom
-  sample that is on, else the current kit's, and
-  `buildKitZip`); `zipStore.ts` writes the stored zip
-- `HelpContext.tsx` / `HelpModal.tsx` — Help dialog
-  (shortcuts and gestures), opened by the header
-  "?" key (hidden below `sm`) or the `?` key. Its text lives in `helpContent.ts`:
-  **update it whenever a shortcut or gesture changes**
-- `Tooltip.tsx` — hover tooltips (texts in
-  `data/tooltips.json`). On hover a tooltip shifts
-  sideways to stay inside the window and any clipping
-  ancestor, such as the scrolling track area
-  (`tooltipFit.ts`), and wraps if wider than the window
-- `keyboardUtils.ts` — `shouldIgnoreShortcut` for global
-  key handlers: skips form fields and any open modal
-  `<dialog>` (Help, Settings, Export kit).
-  `isPopupOpen` (a menu or the step editor) and `isPatternChooserOpen` set the
-  Esc order: dialog, then popup, then the pattern
-  chooser, then the step selection
-- `PatternPicker.tsx` — pattern chooser drawer. P opens
-  and closes it; inside, arrows move a cursor that is
-  real focus (roving tabindex) over the category keys
-  and the pattern list, and Enter picks (same as a
-  click, so Sequential cues it). Cursor math lives in
-  `patternUtils.moveChooserCursor`: ← → wrap; on the
-  category keys ↑ ↓ move between their wrapped lines
-  (measured from the DOM); in the list ↑ from the top
-  row goes to the categories. A click beside the app's
-  column (outside `data-chooser-area` in `Sequencer`)
-  closes it like Esc and does nothing else (the step
-  selection stays; `keyboardUtils.isChooserClickAway`).
-  Settings › Interface turns that off
-  (`useChooserClickAwaySetting.ts`, `interfacePrefs`,
-  on by default)
-- `mocks/useMock.ts`, `mocks/MockSwitcher.tsx` — UI
-  options on a branch while Jeremy picks
-  (`docs/specs/2026-11-01-mock-switcher-design.md`).
-  Declare each with `useMock(MOCK_CONST)` (link
-  parameter, label, options; first is the default),
-  never by reading the query string. `Sequencer` mounts
-  the switcher card, shown only when the link names a
-  declared mock. `noMocksLeft.test.ts` fails while any
-  file outside `src/app/mocks/` calls `useMock(`, so a
-  mock branch stays red in CI until the pick: open it as
-  a draft, and afterwards keep only the chosen option
-- `data/kits.json` — Kit definitions (id, name, folder path)
-- `patternExport.ts` — Copy pattern (grid menu): the
-  grid as a `patterns.json` entry (preset id without
-  `*`, name, category, tracks, non-default volume/pan;
-  no BPM, swing, kit, mute or solo).
-  `scripts/save_pattern.py` (`npm run save-pattern`,
-  reads a file, piped stdin or `pbpaste`) checks it and
-  replaces the preset with that id, or appends it. This
-  is how the developer updates a preset's default
-- `data/patterns.json` — preset patterns, one binary step
-  string per track (`"1010101010101010"`), plus an
-  optional `mixer` of per-track `gain`/`pan` (0-1)
-- `data/trackPatterns.json` — single-track presets
-- `public/kits/{808,electro}/` — .wav samples per kit
+All custom hooks live in `src/app/hooks/`. Every hook that
+manages resettable state must expose a `reset()` method; the
+orchestrator's `clearAll` composes them (see
+`src/app/hooks/README.md` for the exceptions).
 
 ## Testing
 
@@ -358,34 +97,20 @@ tests, and a production build on every PR and push to
 `main`. Vitest does not typecheck, so run
 `npm run typecheck` locally too.
 
-Test areas (not exhaustive; most components have a
-matching `<Component>.test.tsx`):
-- `configCodec.test.ts` — round-trip, defensive decoding,
-  field validation, version status
-- `configCodec.golden.test.ts` — backward-compatible
-  serialization (golden hashes, base64url safety)
-- `types.test.ts` — TRACK_IDS ordering, cellKey/parseCellKey
-- `SequencerContext.test.tsx` — state actions, derived
-  state, pattern state machine, URL hash import, autosave,
-  context memoization
-- `computeStep.test.ts` — pure unit tests: swing,
-  solo/mute, trig conditions, accent, parameter locks,
-  cycle counts, pattern boundary signals
-- `computeStep.integration.test.ts` — ref-threading
-  wiring between SequencerContext and computeStep
-- `audioEngine.test.ts` — timing math, step wrapping
-- `trackUtils.test.ts` — computeEffectiveStep, formatPan
-- `hooks/` — per-hook tests for useFillMode,
-  usePatternMode, useTrackConfig, usePlayback
-  (useSelection and useDragPaint tests sit at the top level)
-- `helpers/` — `TestWrapper`, compression polyfill,
-  `encodeRaw` for building arbitrary share links
-- `constants.test.ts` — snapshot of every constant
-- `HelpModal.test.tsx`, `HelpContext.test.tsx`,
-  `helpContent.test.ts` — help dialog, `?` key, tabs
-
 Run `npm test` after any logic change. Run `npm test --
 -u` to update snapshots after intentional format changes.
+
+The test areas are listed in `src/__tests__/README.md`.
+
+## Testing Gotchas
+
+- **jsdom lacks `document.elementFromPoint`.** Tests that
+  mock it must define the function first:
+  ```ts
+  if (!document.elementFromPoint) {
+    document.elementFromPoint = () => null;
+  }
+  ```
 
 ## Issue Workflow
 
@@ -421,25 +146,11 @@ gh api repos/memestreak/xox/commits/<SHA>/check-runs \
 Dashboard:
 https://dash.cloudflare.com/24104e90cc6b2473822a3e91479614cb/pages/view/xox
 
-## iOS Audio
-
-iOS routes Web Audio through the "ambient" audio session
-by default, which obeys the hardware Silent Mode switch.
-`AudioEngine.bypassSilentMode()` forces the "playback"
-category by playing a looping silent `<audio>` element
-(WAV data URI) on first `start()`. This runs within the
-user gesture context and requires no external library.
-
-The AudioContext is created eagerly in `preloadKit()` —
-`decodeAudioData` works on a suspended context, so
-deferring init to a user gesture is unnecessary and
-introduces race conditions.
-
 ## Key Conventions
 
 - State management is local React state only (no external stores)
 - AudioContext must be resumed on a user gesture (it is
-  created eagerly; see iOS Audio above)
+  created eagerly; see iOS audio in `src/app/README.md`)
 - 12 track IDs: `ac bd sd ch oh cy ht mt lt rs cp cb`
   (`ac` is accent — hidden from UI, affects gain only)
 - Patterns use binary step strings per track; tracks can
@@ -461,6 +172,14 @@ introduces race conditions.
   `hide-scrollbar`)
 - Step keys are colored by group of four (808 style):
   `stepColors.ts` maps step index to group
+- Every dropdown is an `LcdSelect`, never a native
+  `<select>`
+- Help text lives in `helpContent.ts`: **update it
+  whenever a shortcut or gesture changes**
+- UI options waiting for a pick are mocks
+  (`src/app/mocks/`, `docs/specs/2026-11-01-mock-switcher-design.md`);
+  a mock branch opens as a draft and stays red in CI
+  (`noMocksLeft.test.ts`) until only the chosen option is left
 - TypeScript strict mode
 
 ## Multi-PR Workflow
@@ -473,43 +192,16 @@ order. This avoids rebase/conflict churn after each merge.
 If PRs are truly independent (no file overlap), branching
 from `main` is fine.
 
-## Testing Gotchas
-
-- **jsdom lacks `document.elementFromPoint`.** Tests that
-  mock it must define the function first:
-  ```ts
-  if (!document.elementFromPoint) {
-    document.elementFromPoint = () => null;
-  }
-  ```
-
-## Error Boundaries
-
-- Top-level `ErrorBoundary` wraps the entire
-  `SequencerProvider` in `Sequencer.tsx`
-- `StepGrid.tsx` wraps `StepPopover` in a boundary
-- `StatusBanner` shows kit load errors, refused samples
-  and share-link notices, one at a time in that order
-  (`statusMessage.pickStatus`; uses `role="alert"`). MIDI
-  unavailability is shown in the MIDI tab of
-  `SettingsModal` instead
-
 ## Accessibility
 
 - `globals.css` disables animations under
   `@media (prefers-reduced-motion: reduce)`
 - `eslint-plugin-jsx-a11y` enforces a11y rules at
   error severity
-- `StepPopover` has `aria-modal`, manual focus trap,
-  auto-focus, and focus restore
-- `TrackNameButton` menu has `role="menu"`,
-  `aria-haspopup`, `aria-expanded`, Escape dismiss
-- `TransportControls` play/stop has `aria-label` and
-  `aria-pressed`
-- `Sequencer` has `aria-live="polite"` for transport
-  state announcements
 - New components must include `aria-label` on
   interactive elements and keyboard navigation
+- Use `:focus-visible` for new focus styles
+  (`useInputModality` hides rings after a click)
 
 ## CSS / Layout Rules
 
@@ -527,3 +219,6 @@ from `main` is fine.
   — gap still applies to 0-height children. Use `mt-*` on
   the panel (only when open) and on the next sibling
   instead.
+- **Let phones scroll.** The grid uses
+  `touch-action: pan-y`; don't set `none` on large touch
+  areas, or phones can't scroll past them.

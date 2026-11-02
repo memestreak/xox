@@ -17,7 +17,7 @@ toggle mixer panel. Above it: desktop layout unchanged.
 state
 
 **Spec:**
-`docs/superpowers/specs/2026-03-14-mobile-responsive-design.md`
+`docs/specs/2026-03-14-mobile-responsive-design.md`
 
 ---
 
