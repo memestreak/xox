@@ -1,18 +1,17 @@
 "use client";
 
-import {
-  memo, useCallback, useEffect, useRef, useState,
-} from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import type { TrackId } from './types';
 import Tooltip from './Tooltip';
+import ContextMenu from './ContextMenu';
 import {
   MENU_HINT, MENU_ITEM, MENU_ITEM_BASE,
 } from './menuStyles';
 import { SAMPLE_ACCEPT } from './sampleFiles';
 import CustomSampleDot from './CustomSampleDot';
 
-// Menu items the arrow keys can reach.
-const ENABLED_ITEMS = '[role="menuitem"]:not(:disabled)';
+/** Space between the name and the menu under it. */
+const MENU_GAP_PX = 4;
 
 interface TrackNameButtonProps {
   size: 'sm' | 'lg';
@@ -39,9 +38,10 @@ interface TrackNameButtonProps {
 }
 
 /**
- * Track name button with optional popover menu.
- * The popover (with free-run toggle) only renders
- * at 'lg' size. Owns its own menu state and refs.
+ * Track name button. A press plays the sound,
+ * Shift-click clears the track. At 'lg' size a
+ * right-click or Ctrl/Cmd-click opens the track menu
+ * (the shared ContextMenu) under the name.
  */
 function TrackNameButtonInner({
   size,
@@ -62,99 +62,27 @@ function TrackNameButtonInner({
   onResetSample,
   onToggleSample,
 }: TrackNameButtonProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  // Where the menu opens (viewport px), or null.
+  const [menuAt, setMenuAt] = useState<{
+    x: number; y: number;
+  } | null>(null);
+  const menuOpen = menuAt !== null;
   const nameRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const closeMenu = useCallback(() => {
-    setMenuOpen(false);
-    nameRef.current?.focus();
+  // Opens the menu under the name, or closes it.
+  const toggleMenu = useCallback(() => {
+    setMenuAt(open => {
+      const rect = nameRef.current?.getBoundingClientRect();
+      if (open !== null || !rect) return null;
+      return { x: rect.left, y: rect.bottom + MENU_GAP_PX };
+    });
   }, []);
 
-  // Click-outside dismiss
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (
-        menuRef.current
-        && !menuRef.current.contains(
-          e.target as Node
-        )
-        && nameRef.current
-        && !nameRef.current.contains(
-          e.target as Node
-        )
-      ) {
-        closeMenu();
-      }
-    };
-    document.addEventListener(
-      'mousedown', handleClick
-    );
-    return () =>
-      document.removeEventListener(
-        'mousedown', handleClick
-      );
-  }, [menuOpen, closeMenu]);
-
-  // Escape key dismiss + auto-focus first item
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        closeMenu();
-      }
-    };
-    document.addEventListener(
-      'keydown', handleKeyDown
-    );
-    // Auto-focus first menu item
-    const firstItem =
-      menuRef.current?.querySelector<HTMLElement>(
-        ENABLED_ITEMS
-      );
-    firstItem?.focus();
-    return () =>
-      document.removeEventListener(
-        'keydown', handleKeyDown
-      );
-  }, [menuOpen, closeMenu]);
-
-  // Arrow-key navigation between menu items
-  // (WAI-ARIA menu pattern). Focus wraps at both ends.
-  const handleMenuKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      const items = Array.from(
-        e.currentTarget.querySelectorAll<HTMLElement>(
-          ENABLED_ITEMS
-        )
-      );
-      if (items.length === 0) return;
-      const current = items.indexOf(
-        document.activeElement as HTMLElement
-      );
-      let next: number;
-      if (e.key === 'ArrowDown') {
-        next = (current + 1) % items.length;
-      } else if (e.key === 'ArrowUp') {
-        next = current <= 0
-          ? items.length - 1
-          : current - 1;
-      } else if (e.key === 'Home') {
-        next = 0;
-      } else if (e.key === 'End') {
-        next = items.length - 1;
-      } else {
-        return;
-      }
-      e.preventDefault();
-      e.stopPropagation();
-      items[next].focus();
-    },
-    []
-  );
+  const closeMenu = useCallback(() => {
+    setMenuAt(null);
+    nameRef.current?.focus();
+  }, []);
 
   return (
     <div className="relative">
@@ -178,7 +106,7 @@ function TrackNameButtonInner({
                 return;
               }
               if (e.metaKey || e.ctrlKey) {
-                setMenuOpen(v => !v);
+                if (size === 'lg') toggleMenu();
                 return;
               }
               onPlayPreview();
@@ -186,7 +114,7 @@ function TrackNameButtonInner({
             onTouchStart={() => onPlayPreview()}
             onContextMenu={(e: React.MouseEvent) => {
               e.preventDefault();
-              setMenuOpen(v => !v);
+              if (size === 'lg') toggleMenu();
             }}
             className={
               (size === 'sm'
@@ -243,14 +171,14 @@ function TrackNameButtonInner({
           }}
         />
       )}
-      {menuOpen && size === 'lg' && (
-        <div
-          ref={menuRef}
-          role="menu"
+      {menuAt !== null && size === 'lg' && (
+        <ContextMenu
+          x={menuAt.x}
+          y={menuAt.y}
           aria-label={`${trackName} options`}
-          tabIndex={-1}
-          onKeyDown={handleMenuKeyDown}
-          className="ss-menu absolute left-0 top-full mt-1 w-64 p-1.5 z-30 flex flex-col"
+          onClose={closeMenu}
+          anchorRef={nameRef}
+          widthClass="w-64"
         >
           <Tooltip tooltipKey="freeRun">
             <button
@@ -305,7 +233,7 @@ function TrackNameButtonInner({
               <span>Reset to kit sample</span>
             </button>
           )}
-          <div className="h-px bg-line mx-1.5 my-1" />
+          <div role="separator" className="h-px bg-line mx-1.5 my-1" />
           <button
             role="menuitem"
             disabled={!hasConditions}
@@ -339,7 +267,7 @@ function TrackNameButtonInner({
             <span>Clear track pattern</span>
             <span className={MENU_HINT}>Shift-click</span>
           </button>
-        </div>
+        </ContextMenu>
       )}
     </div>
   );

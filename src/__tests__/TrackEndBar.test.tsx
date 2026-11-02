@@ -4,6 +4,7 @@ import {
   beforeEach, describe, it, expect, vi,
 } from 'vitest';
 import TrackRow from '../app/TrackRow';
+import { fakeTrackRowActions } from './helpers/trackRowActions';
 
 // jsdom lacks setPointerCapture
 beforeEach(() => {
@@ -27,14 +28,7 @@ const base = {
   pan: 0.5,
   currentStep: -1,
   totalSteps: 0,
-  onToggleStep: vi.fn(),
-  onToggleMute: vi.fn(),
-  onToggleSolo: vi.fn(),
-  onSetGain: vi.fn(),
-  onSetTrackLength: vi.fn(),
-  onToggleFreeRun: vi.fn(),
-  onSetPan: vi.fn(),
-  onClearTrack: vi.fn(),
+  actions: fakeTrackRowActions(),
   onPlayPreview: vi.fn(),
   isTriggered: false,
 };
@@ -46,7 +40,7 @@ describe('TrackEndBar', () => {
       name: 'BD length',
     });
     fireEvent.contextMenu(slider);
-    expect(base.onToggleFreeRun).toHaveBeenCalledWith(
+    expect(vi.mocked(base.actions.toggleFreeRun)).toHaveBeenCalledWith(
       'bd'
     );
   });
@@ -71,10 +65,10 @@ describe('TrackEndBar', () => {
       expect(
         slider.className
       ).not.toContain('hover:before:bg-ink');
-      base.onToggleFreeRun.mockClear();
+      vi.mocked(base.actions.toggleFreeRun).mockClear();
       fireEvent.contextMenu(slider);
       expect(
-        base.onToggleFreeRun
+        vi.mocked(base.actions.toggleFreeRun)
       ).not.toHaveBeenCalled();
     }
   );

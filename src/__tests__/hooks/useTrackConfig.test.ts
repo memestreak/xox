@@ -196,6 +196,29 @@ describe('useTrackConfig: conditions and locks', () => {
     expect(r.current.config.tracks.bd.parameterLocks)
       .toBeUndefined();
   });
+
+  it('clearing one step keeps the other steps', () => {
+    const r = setup();
+    act(() => {
+      r.current.tc.setParameterLock('bd', 0, { gain: 0.4 });
+      r.current.tc.setParameterLock('bd', 3, { pan: 0.2 });
+      r.current.tc.setTrigCondition('bd', 1, { fill: 'fill' });
+    });
+    act(() => r.current.tc.clearParameterLock('bd', 0));
+    expect(r.current.config.tracks.bd.parameterLocks)
+      .toEqual({ 3: { pan: 0.2 } });
+    // Conditions are a separate map.
+    expect(r.current.config.tracks.bd.trigConditions)
+      .toEqual({ 1: { fill: 'fill' } });
+  });
+
+  it('clearing a step with nothing on it changes nothing', () => {
+    const r = setup();
+    const before = r.current.config;
+    act(() => r.current.tc.clearTrigCondition('bd', 5));
+    act(() => r.current.tc.clearParameterLock('sd', 5));
+    expect(r.current.config).toBe(before);
+  });
 });
 
 describe('useTrackConfig: bulk clear', () => {

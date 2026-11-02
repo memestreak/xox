@@ -13,33 +13,27 @@ import GridContextMenu from './GridContextMenu';
 import Tooltip from './Tooltip';
 import { useDragPaint } from './hooks/useDragPaint';
 import { useSelection } from './hooks/useSelection';
-import type { Pattern, TrackId, TrackPattern } from './types';
+import type { TrackId, TrackPattern } from './types';
 import {
-  TRACKS, TRACK_IDS, cellKey, getPatternLength,
+  TRACKS, cellKey, getPatternLength,
   parseCellKey,
 } from './types';
-import { hasStepData } from './trackUtils';
 import { TRIGGER_FLASH_MS } from './constants';
 import { audioEngine } from './AudioEngine';
 import { drainDueSteps } from './stepQueue';
 import trackPatternData from './data/trackPatterns.json';
-import patternsData from './data/patterns.json';
-import {
-  buildPatternEntry, formatPatternEntry,
-} from './patternExport';
 
 const TRACK_PATTERNS: TrackPattern[] =
   trackPatternData.patterns;
-const PRESETS = patternsData.patterns as Pattern[];
+
+/** Space between the ⋯ key and the menu it opens. */
+const GRID_MENU_KEY_GAP_PX = 4;
 
 /**
  * Right-clicks on these keep their own behavior (or the
  * browser's); anywhere else in the panel opens the grid
  * menu.
  */
-/** Space between the ⋯ key and the menu it opens. */
-const GRID_MENU_KEY_GAP_PX = 4;
-
 const OWN_CONTEXT_MENU =
   'button, input, select, [role="slider"], [data-step]';
 
@@ -68,22 +62,15 @@ export default function StepGrid({
 }: StepGridProps) {
   const { state, actions, meta } = useSequencer();
   const {
-    trackStates, minimizedTracks, minimizableCount,
-    autoMinimize, customSamples, disabledSamples,
-    selectedPatternId,
+    trackStates, minimizedTracks,
+    customSamples, disabledSamples,
   } = state;
   const {
     toggleStep, setStep, setTrackSteps,
-    toggleMute, toggleSolo,
-    setGain, setPan, setTrackLength, toggleFreeRun,
+    setGain, setTrackLength, toggleFreeRun,
     clearTrack, playPreview,
     clearTrigCondition, clearParameterLock,
-    setTrigCondition,
-    minimizeEmptyTracks, restoreTrack, restoreAllTracks,
-    setAutoMinimize, holdAutoMinimize,
-    clearAll, loadSample, resetSample, resetAllSamples,
-    toggleSample, clearTrackConditions, clearTrackLocks,
-    clearAllConditions, clearAllLocks,
+    setTrigCondition, holdAutoMinimize,
   } = actions;
   const { stepRef, stepQueueRef, config } = meta;
   const patternLength = getPatternLength(config.tracks);
@@ -115,17 +102,6 @@ export default function StepGrid({
     () => setGridMenu(null), []
   );
   const menuKeyRef = useRef<HTMLButtonElement>(null);
-
-  // Grid menu > Copy pattern: the grid as a
-  // patterns.json entry (see patternExport.ts).
-  const copyPattern = useCallback(
-    () => navigator.clipboard.writeText(
-      formatPatternEntry(buildPatternEntry(
-        config, selectedPatternId, PRESETS
-      ))
-    ),
-    [config, selectedPatternId]
-  );
 
   // The ⋯ key over the track names opens the same menu
   // below itself (the only way in on phones), and
@@ -539,7 +515,6 @@ export default function StepGrid({
               && i + 1 < TRACKS.length
               && minimizedTracks.has(TRACKS[i + 1].id)
             }
-            onRestore={restoreTrack}
             trackId={track.id}
             trackName={track.name}
             steps={config.tracks[track.id].steps}
@@ -555,16 +530,7 @@ export default function StepGrid({
             pan={trackStates[track.id].pan}
             currentStep={displayStep}
             totalSteps={displayTotal}
-            onToggleStep={toggleStep}
-            onToggleMute={toggleMute}
-            onToggleSolo={toggleSolo}
-            onSetGain={setGain}
-            onSetPan={setPan}
-            onSetTrackLength={setTrackLength}
-            onToggleFreeRun={toggleFreeRun}
-            onClearTrack={clearTrack}
-            onResetConditions={clearTrackConditions}
-            onClearLocks={clearTrackLocks}
+            actions={actions}
             onPlayPreview={handlePlayPreview}
             isTriggered={
               triggeredTracks.has(track.id)
@@ -586,9 +552,6 @@ export default function StepGrid({
             onClearSelection={clearSelection}
             customSampleName={customSamples[track.id]?.name}
             isCustomSampleOn={!disabledSamples[track.id]}
-            onLoadSample={loadSample}
-            onResetSample={resetSample}
-            onToggleSample={toggleSample}
           />
         ))}
         <AccentRow
@@ -636,26 +599,6 @@ export default function StepGrid({
         <GridContextMenu
           x={gridMenu.x}
           y={gridMenu.y}
-          canMinimize={minimizableCount > 0}
-          canRestore={minimizedTracks.size > 0}
-          onMinimize={minimizeEmptyTracks}
-          onRestoreAll={restoreAllTracks}
-          autoMinimize={autoMinimize}
-          onSetAutoMinimize={setAutoMinimize}
-          onReset={clearAll}
-          hasCustomSamples={
-            Object.keys(customSamples).length > 0
-          }
-          onResetAllSamples={resetAllSamples}
-          onCopyPattern={copyPattern}
-          hasConditions={TRACK_IDS.some(id =>
-            hasStepData(config.tracks[id].trigConditions)
-          )}
-          onResetConditions={clearAllConditions}
-          hasLocks={TRACK_IDS.some(id =>
-            hasStepData(config.tracks[id].parameterLocks)
-          )}
-          onClearLocks={clearAllLocks}
           onClose={closeGridMenu}
           anchorRef={menuKeyRef}
         />

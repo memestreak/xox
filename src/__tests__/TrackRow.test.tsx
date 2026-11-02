@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import TrackRow from '../app/TrackRow';
 import type { TrackId } from '../app/types';
 import { PLAYHEAD_CLASS } from '../app/stepColors';
+import { fakeTrackRowActions } from './helpers/trackRowActions';
 
 const noop = vi.fn();
 
@@ -25,14 +26,7 @@ function baseProps() {
     pan: 0.5,
     currentStep: -1,
     totalSteps: 0,
-    onToggleStep: noop,
-    onToggleMute: noop,
-    onToggleSolo: noop,
-    onSetGain: noop,
-    onSetPan: noop,
-    onSetTrackLength: noop,
-    onToggleFreeRun: noop,
-    onClearTrack: noop,
+    actions: fakeTrackRowActions(),
     onPlayPreview: noop,
   };
 }
@@ -143,7 +137,9 @@ describe('TrackNameButton interactions', () => {
 
   it('Shift+click clears track', () => {
     const onClearTrack = vi.fn();
-    renderTrackRow({ onClearTrack });
+    renderTrackRow({
+      actions: fakeTrackRowActions({ clearTrack: onClearTrack }),
+    });
     const btn = screen.getAllByText('BD')[0];
     fireEvent.mouseDown(btn, {
       button: 0, shiftKey: true,
@@ -159,14 +155,19 @@ function stepButtons() {
 describe('TrackRow step interactions', () => {
   it('click toggles the global step on page 1', () => {
     const onToggleStep = vi.fn();
-    renderTrackRow({ onToggleStep });
+    renderTrackRow({
+      actions: fakeTrackRowActions({ toggleStep: onToggleStep }),
+    });
     fireEvent.click(stepButtons()[5]);
     expect(onToggleStep).toHaveBeenCalledWith('bd', 5);
   });
 
   it('click on page 2 adds the page offset', () => {
     const onToggleStep = vi.fn();
-    renderTrackRow({ onToggleStep, pageOffset: 16 });
+    renderTrackRow({
+      pageOffset: 16,
+      actions: fakeTrackRowActions({ toggleStep: onToggleStep }),
+    });
     fireEvent.click(stepButtons()[2]);
     expect(onToggleStep).toHaveBeenCalledWith('bd', 18);
   });
@@ -176,8 +177,10 @@ describe('TrackRow step interactions', () => {
     const onShiftClick = vi.fn();
     const onToggleStep = vi.fn();
     renderTrackRow({
-      onCtrlClick, onShiftClick, onToggleStep,
+      onCtrlClick,
+      onShiftClick,
       pageOffset: 16,
+      actions: fakeTrackRowActions({ toggleStep: onToggleStep }),
     });
     fireEvent.click(stepButtons()[0], { ctrlKey: true });
     fireEvent.click(stepButtons()[1], { shiftKey: true });
@@ -202,8 +205,9 @@ describe('TrackRow step interactions', () => {
     const onPlainClick = vi.fn(() => true);
     const onToggleStep = vi.fn();
     renderTrackRow({
-      onPlainClick, onToggleStep,
+      onPlainClick,
       selectedSteps: new Set([4]),
+      actions: fakeTrackRowActions({ toggleStep: onToggleStep }),
     });
     expect(stepButtons()[4].className)
       .toContain('ring-blue-400');
@@ -314,7 +318,7 @@ describe('TrackRow layout and sub-components', () => {
     const onSetGain = vi.fn();
     const onSetPan = vi.fn();
     renderTrackRow({
-      onToggleMute, onToggleSolo, onSetGain, onSetPan,
+      actions: fakeTrackRowActions({ toggleMute: onToggleMute, toggleSolo: onToggleSolo, setGain: onSetGain, setPan: onSetPan }),
     });
     fireEvent.click(
       screen.getAllByRole('button', { name: /mute bd/i })[0]
@@ -377,7 +381,9 @@ describe('TrackRow minimized', () => {
   it('the caret and the line restore the track', () => {
     const onRestore = vi.fn();
     renderTrackRow({
-      steps: emptySteps, isMinimized: true, onRestore,
+      steps: emptySteps,
+      isMinimized: true,
+      actions: fakeTrackRowActions({ restoreTrack: onRestore }),
     });
     fireEvent.click(
       screen.getByRole('button', { name: 'Restore BD' })
@@ -394,8 +400,10 @@ describe('TrackRow minimized', () => {
     const onRestore = vi.fn();
     const onPlayPreview = vi.fn();
     renderTrackRow({
-      steps: emptySteps, isMinimized: true,
-      onRestore, onPlayPreview,
+      steps: emptySteps,
+      isMinimized: true,
+      onPlayPreview,
+      actions: fakeTrackRowActions({ restoreTrack: onRestore }),
     });
     fireEvent.pointerDown(
       screen.getByRole('button', { name: 'BD' }),
@@ -443,8 +451,8 @@ describe('TrackRow custom samples', () => {
     const onPlayPreview = vi.fn();
     renderTrackRow({
       customSampleName: 'kick.wav',
-      onToggleSample,
       onPlayPreview,
+      actions: fakeTrackRowActions({ toggleSample: onToggleSample }),
     });
     for (const dot of dots()) {
       fireEvent.mouseDown(dot);
@@ -473,7 +481,7 @@ describe('TrackRow custom samples', () => {
       patternLength: 16,
       isMinimized: true,
       customSampleName: 'kick.wav',
-      onToggleSample,
+      actions: fakeTrackRowActions({ toggleSample: onToggleSample }),
     });
     fireEvent.click(dots()[0]);
     expect(onToggleSample).toHaveBeenCalledWith('bd');
@@ -501,8 +509,7 @@ describe('TrackRow custom samples', () => {
     const onResetSample = vi.fn();
     renderTrackRow({
       customSampleName: 'kick.wav',
-      onLoadSample,
-      onResetSample,
+      actions: fakeTrackRowActions({ loadSample: onLoadSample, resetSample: onResetSample }),
     });
     const file = new File(['x'], 'snare.wav');
     fireEvent.change(
@@ -531,7 +538,9 @@ describe('TrackRow file drop', () => {
 
   it('a dropped file loads onto the track', () => {
     const onLoadSample = vi.fn();
-    const { container } = renderTrackRow({ onLoadSample });
+    const { container } = renderTrackRow({
+      actions: fakeTrackRowActions({ loadSample: onLoadSample }),
+    });
     const row = container.querySelector('[data-row-track="bd"]')!;
     const file = new File(['x'], 'kick.wav');
     fireEvent.dragEnter(row, fileDrag());
@@ -548,7 +557,7 @@ describe('TrackRow file drop', () => {
       trackLength: 16,
       patternLength: 16,
       isMinimized: true,
-      onLoadSample,
+      actions: fakeTrackRowActions({ loadSample: onLoadSample }),
     });
     const row = container.querySelector('[data-minimized="BD"]')!;
     const file = new File(['x'], 'kick.wav');

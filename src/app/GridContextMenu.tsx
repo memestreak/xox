@@ -5,36 +5,21 @@ import type { RefObject } from 'react';
 import ContextMenu from './ContextMenu';
 import { MENU_COPIED_CLOSE_MS } from './constants';
 import { MENU_HINT, MENU_ITEM } from './menuStyles';
+import { useSequencer } from './SequencerContext';
+import type { Pattern } from './types';
+import { TRACK_IDS } from './types';
+import { hasStepData } from './trackUtils';
+import patternsData from './data/patterns.json';
+import {
+  buildPatternEntry, formatPatternEntry,
+} from './patternExport';
+
+const PRESETS = patternsData.patterns as Pattern[];
 
 interface GridContextMenuProps {
   /** Pointer position the menu opens at (viewport px). */
   x: number;
   y: number;
-  /** True when some empty track isn't minimized yet. */
-  canMinimize: boolean;
-  /** True when at least one row is minimized. */
-  canRestore: boolean;
-  onMinimize: () => void;
-  onRestoreAll: () => void;
-  /** The "Auto-minimize empty tracks" setting. */
-  autoMinimize: boolean;
-  onSetAutoMinimize: (value: boolean) => void;
-  /** Clears the pattern (the app's Reset). */
-  onReset: () => void;
-  /** True when at least one track has a custom sample. */
-  hasCustomSamples: boolean;
-  onResetAllSamples: () => void;
-  /**
-   * Copies the pattern as a patterns.json entry.
-   * Rejects when the clipboard refuses.
-   */
-  onCopyPattern: () => Promise<void>;
-  /** True when some step on any track has a condition. */
-  hasConditions: boolean;
-  onResetConditions: () => void;
-  /** True when some step on any track has a lock. */
-  hasLocks: boolean;
-  onClearLocks: () => void;
   onClose: () => void;
   /**
    * The key that toggles the menu. A press on it is not
@@ -53,28 +38,37 @@ interface GridContextMenuProps {
  * part of the grid, or under the ⋯ key over the
  * track names; kept inside the viewport. Closes on a
  * choice, Escape, a press outside, scroll or resize,
- * and returns focus to where it was.
+ * and returns focus to where it was. It is mounted
+ * only while open, so it reads the sequencer itself.
  */
 export default function GridContextMenu({
   x,
   y,
-  canMinimize,
-  canRestore,
-  onMinimize,
-  onRestoreAll,
-  autoMinimize,
-  onSetAutoMinimize,
-  onReset,
-  hasCustomSamples,
-  onResetAllSamples,
-  onCopyPattern,
-  hasConditions,
-  onResetConditions,
-  hasLocks,
-  onClearLocks,
   onClose,
   anchorRef,
 }: GridContextMenuProps) {
+  const { state, actions, meta } = useSequencer();
+  const {
+    minimizableCount, minimizedTracks, autoMinimize,
+    customSamples, selectedPatternId,
+  } = state;
+  const {
+    minimizeEmptyTracks, restoreAllTracks,
+    setAutoMinimize, clearAll, resetAllSamples,
+    clearAllConditions, clearAllLocks,
+  } = actions;
+  const { config } = meta;
+  const canMinimize = minimizableCount > 0;
+  const canRestore = minimizedTracks.size > 0;
+  const hasCustomSamples =
+    Object.keys(customSamples).length > 0;
+  const hasConditions = TRACK_IDS.some(id =>
+    hasStepData(config.tracks[id].trigConditions)
+  );
+  const hasLocks = TRACK_IDS.some(id =>
+    hasStepData(config.tracks[id].parameterLocks)
+  );
+
   const [copyResult, setCopyResult] =
     useState<'copied' | 'failed' | null>(null);
 
@@ -86,12 +80,18 @@ export default function GridContextMenu({
     return () => clearTimeout(timer);
   }, [copyResult, onClose]);
 
+  // Copy pattern: the grid as a patterns.json entry
+  // (see patternExport.ts).
   const handleCopyPattern = useCallback(() => {
-    onCopyPattern().then(
+    navigator.clipboard.writeText(
+      formatPatternEntry(buildPatternEntry(
+        config, selectedPatternId, PRESETS
+      ))
+    ).then(
       () => setCopyResult('copied'),
       () => setCopyResult('failed')
     );
-  }, [onCopyPattern]);
+  }, [config, selectedPatternId]);
 
   return (
     <ContextMenu
@@ -106,7 +106,7 @@ export default function GridContextMenu({
         disabled={!canMinimize}
         aria-keyshortcuts="H"
         onClick={() => {
-          onMinimize();
+          minimizeEmptyTracks();
           onClose();
         }}
         className={MENU_ITEM}
@@ -119,7 +119,7 @@ export default function GridContextMenu({
         disabled={!canRestore}
         aria-keyshortcuts="Shift+H"
         onClick={() => {
-          onRestoreAll();
+          restoreAllTracks();
           onClose();
         }}
         className={MENU_ITEM}
@@ -131,7 +131,7 @@ export default function GridContextMenu({
         role="menuitemcheckbox"
         aria-checked={autoMinimize}
         onClick={() => {
-          onSetAutoMinimize(!autoMinimize);
+          setAutoMinimize(!autoMinimize);
           onClose();
         }}
         className={MENU_ITEM}
@@ -149,7 +149,7 @@ export default function GridContextMenu({
         <button
           role="menuitem"
           onClick={() => {
-            onResetAllSamples();
+            resetAllSamples();
             onClose();
           }}
           className={MENU_ITEM}
@@ -173,7 +173,7 @@ export default function GridContextMenu({
         role="menuitem"
         disabled={!hasConditions}
         onClick={() => {
-          onResetConditions();
+          clearAllConditions();
           onClose();
         }}
         className={MENU_ITEM}
@@ -184,7 +184,7 @@ export default function GridContextMenu({
         role="menuitem"
         disabled={!hasLocks}
         onClick={() => {
-          onClearLocks();
+          clearAllLocks();
           onClose();
         }}
         className={MENU_ITEM}
@@ -194,7 +194,7 @@ export default function GridContextMenu({
       <button
         role="menuitem"
         onClick={() => {
-          onReset();
+          clearAll();
           onClose();
         }}
         className={MENU_ITEM}

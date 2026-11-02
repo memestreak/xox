@@ -241,7 +241,7 @@ export default function StepPopover({
 
   // ─── Dismiss + focus trap ─────────────────────
   useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
+    const handlePointerDown = (e: PointerEvent) => {
       if (
         popoverRef.current
         && !popoverRef.current.contains(
@@ -255,14 +255,14 @@ export default function StepPopover({
     setTimeout(() => {
       if (active) {
         document.addEventListener(
-          'mousedown', handleMouseDown
+          'pointerdown', handlePointerDown
         );
       }
     }, 0);
     return () => {
       active = false;
       document.removeEventListener(
-        'mousedown', handleMouseDown
+        'pointerdown', handlePointerDown
       );
     };
   }, [onClose]);

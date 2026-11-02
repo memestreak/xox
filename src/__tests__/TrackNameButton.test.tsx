@@ -70,6 +70,37 @@ describe('TrackNameButton', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'true');
   });
 
+  it('opens the menu under the name', () => {
+    renderButton();
+    const btn = screen.getByRole('button', { name: 'SD' });
+    btn.getBoundingClientRect = () =>
+      ({ left: 40, bottom: 100 }) as DOMRect;
+    const menu = openMenu();
+    expect(menu.style.left).toBe('40px');
+    expect(menu.style.top).toBe('104px');
+  });
+
+  it('a second right-click on the name closes the menu', () => {
+    renderButton();
+    openMenu();
+    const btn = screen.getByRole('button', { name: 'SD' });
+    // The press on the name is not an outside press.
+    fireEvent.pointerDown(btn);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.contextMenu(btn);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('Ctrl+click toggles the menu without a preview', () => {
+    const props = renderButton();
+    const btn = screen.getByRole('button', { name: 'SD' });
+    fireEvent.mouseDown(btn, { button: 0, ctrlKey: true });
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.mouseDown(btn, { button: 0, ctrlKey: true });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(props.onPlayPreview).not.toHaveBeenCalled();
+  });
+
   it('focuses the first menu item on open', () => {
     renderButton();
     openMenu();
@@ -163,7 +194,7 @@ describe('TrackNameButton', () => {
   it('clicking outside closes the menu', () => {
     renderButton();
     openMenu();
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
     expect(screen.queryByRole('menu')).toBeNull();
   });
 

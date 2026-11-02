@@ -25,13 +25,15 @@ interface ContextMenuProps {
    * the menu instead of reopening it.
    */
   anchorRef?: RefObject<HTMLElement | null>;
+  /** Tailwind width class; 'w-60' unless given. */
+  widthClass?: string;
   /** Menu items (role="menuitem" buttons). */
   children: ReactNode;
 }
 
 /**
- * Floating menu shell shared by the grid menu and the
- * kit menu. Opens at a point, kept inside the viewport.
+ * Floating menu shell shared by the grid menu, the
+ * kit menu and the track name menu. Opens at a point, kept inside the viewport.
  * Focuses its first usable item, moves between items
  * with the arrow keys, Home and End, closes on Escape,
  * a press outside, scroll or resize, and returns focus
@@ -43,6 +45,7 @@ export default function ContextMenu({
   'aria-label': ariaLabel,
   onClose,
   anchorRef,
+  widthClass = 'w-60',
   children,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -168,7 +171,7 @@ export default function ContextMenu({
       onKeyDown={handleKeyDown}
       onContextMenu={e => e.preventDefault()}
       style={{ position: 'fixed', ...pos }}
-      className="ss-menu w-60 p-1.5 z-40 flex flex-col focus:outline-none"
+      className={`ss-menu ${widthClass} p-1.5 z-40 flex flex-col focus:outline-none`}
     >
       {children}
     </div>

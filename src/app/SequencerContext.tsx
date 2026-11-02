@@ -102,7 +102,7 @@ interface SequencerState {
   sampleError: string | null;
 }
 
-interface SequencerActions {
+export interface SequencerActions {
   togglePlay: () => void;
   setBpm: (bpm: number) => void;
   setKit: (kit: Kit) => void;
